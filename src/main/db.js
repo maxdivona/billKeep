@@ -191,6 +191,13 @@ export function getCustomers() {
 }
 
 export function addCustomer(customer) {
+  const existing = db
+    .prepare('SELECT id FROM customers WHERE LOWER(name) = LOWER(?)')
+    .get(customer.name)
+  if (existing) {
+    return { success: false, error: 'Un cliente con questo nome esiste già.' }
+  }
+
   const insert = db.prepare('INSERT INTO customers (id, name, email) VALUES (?, ?, ?)')
   insert.run(customer.id, customer.name, customer.email)
   return { success: true }

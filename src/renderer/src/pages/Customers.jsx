@@ -28,6 +28,12 @@ export default function Customers() {
       return
     }
 
+    const duplicate = customers.find((c) => c.name.toLowerCase() === name.trim().toLowerCase())
+    if (duplicate) {
+      setFormError('Un cliente con questo nome esiste già.')
+      return
+    }
+
     const newCustomer = {
       id: `cust-${Date.now()}`,
       name: name.trim(),
