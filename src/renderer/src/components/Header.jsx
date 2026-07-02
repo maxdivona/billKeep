@@ -6,7 +6,7 @@ export default function Header() {
         <span className="material-symbols-outlined text-on-surface-variant mr-sm">search</span>
         <input
           className="bg-transparent border-none outline-none w-full text-body-md text-on-surface placeholder:text-on-surface-variant/70 focus:ring-0 p-0"
-          placeholder="Search..."
+          placeholder="Cerca..."
           type="text"
         />
       </div>

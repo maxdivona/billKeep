@@ -13,7 +13,7 @@ export default function Sidebar() {
       <div className="mb-xl mt-sm">
         <h1 className="font-headline-lg text-headline-lg font-bold text-primary">BillKeep</h1>
         <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
-          Financial Management
+          Gestione Finanziaria
         </p>
       </div>
 
@@ -27,19 +27,19 @@ export default function Sidebar() {
         <li>
           <NavLink to="/clients" className={linkClass}>
             <span className="material-symbols-outlined">group</span>
-            Clients
+            Clienti
           </NavLink>
         </li>
         <li>
           <NavLink to="/invoices" className={linkClass}>
             <span className="material-symbols-outlined">receipt_long</span>
-            Invoices
+            Fatture
           </NavLink>
         </li>
         <li>
           <NavLink to="/payments" className={linkClass}>
             <span className="material-symbols-outlined">payments</span>
-            Payments
+            Pagamenti
           </NavLink>
         </li>
       </ul>
@@ -52,7 +52,7 @@ export default function Sidebar() {
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOjLBH5q8KCcnaWXjBMqoqpExB2rIlnS6mo-AVLNyZkVG0kpp8myT8B6Gq-f6cmEf1muLZ2Fh7FHVhe-tzbnECRWGT8Sr0Rqd0Q6a8AcySpee1nVzVcEzC8KQ4oALrMh8x2zN67x51pHqhY49eHLerCRZnXTmN8MKdj9lDUqlWhAQpn-dStGQj09a_-njKEx6XoawYoIalOX03FfrwS9cNYHworbgHXTtFK2aAfsAyvoLS71tPpzHxUA"
           />
           <div className="flex flex-col">
-            <span className="font-label-md text-label-md text-on-surface">Admin User</span>
+            <span className="font-label-md text-label-md text-on-surface">Amministratore</span>
             <span className="font-label-sm text-label-sm text-on-surface-variant">
               admin@billkeep.io
             </span>

@@ -38,9 +38,9 @@ export default function Dashboard() {
   return (
     <div>
       <header className="mb-xl">
-        <h2 className="font-headline-xl text-headline-xl text-on-surface mb-xs">Dashboard Overview</h2>
+        <h2 className="font-headline-xl text-headline-xl text-on-surface mb-xs">Panoramica Dashboard</h2>
         <p className="font-body-md text-body-md text-on-surface-variant">
-          Welcome back. Here is your financial summary for this month.
+          Bentornato. Ecco il riepilogo finanziario di questo mese.
         </p>
       </header>
 
