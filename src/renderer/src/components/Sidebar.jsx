@@ -2,15 +2,15 @@ import { NavLink } from 'react-router-dom'
 
 export default function Sidebar() {
   const linkClass = ({ isActive }) =>
-    `flex items-center gap-md px-md py-sm rounded-lg transition-colors duration-200 ease-in-out ${
+    `flex items-center gap-md px-sm py-sm rounded-lg transition-colors duration-200 ease-in-out ${
       isActive
         ? 'text-primary dark:text-inverse-primary font-bold border-r-4 border-primary dark:border-inverse-primary bg-surface-container-low'
         : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-low'
     }`
 
   return (
-    <nav className="bg-surface text-primary font-body-md text-body-md h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex flex-col py-md px-lg z-20">
-      <div className="mb-xl mt-sm">
+    <nav className="bg-surface text-primary font-body-md text-body-md h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex flex-col py-md px-md z-20">
+      <div className="mb-lg mt-sm">
         <h1 className="font-headline-lg text-headline-lg font-bold text-primary">BillKeep</h1>
         <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
           Gestione Finanziaria
@@ -44,7 +44,7 @@ export default function Sidebar() {
         </li>
       </ul>
 
-      <div className="mt-auto pt-lg border-t border-outline-variant">
+      <div className="mt-auto pt-md border-t border-outline-variant">
         <div className="flex items-center gap-md">
           <img
             alt="User profile photo"
