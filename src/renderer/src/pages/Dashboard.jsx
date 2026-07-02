@@ -1,0 +1,241 @@
+import { useEffect } from 'react'
+import { useStore } from '../store/useStore'
+import { Link } from 'react-router-dom'
+
+export default function Dashboard() {
+  const { stats, loading, fetchAllData } = useStore()
+
+  useEffect(() => {
+    fetchAllData()
+  }, [])
+
+  const formatCurrency = (val) => {
+    return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val)
+  }
+
+  const formatDateTime = (dateStr) => {
+    const d = new Date(dateStr)
+    if (isNaN(d)) return dateStr
+    // Ogg, Ieri, or standard date format
+    const today = new Date()
+    const yesterday = new Date()
+    yesterday.setDate(today.getDate() - 1)
+
+    if (d.toDateString() === today.toDateString()) {
+      return `Oggi, ${d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
+    } else if (d.toDateString() === yesterday.toDateString()) {
+      return `Ieri, ${d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`
+    }
+    return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr)
+    if (isNaN(d)) return dateStr
+    return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  return (
+    <div>
+      <header className="mb-xl">
+        <h2 className="font-headline-xl text-headline-xl text-on-surface mb-xs">Dashboard Overview</h2>
+        <p className="font-body-md text-body-md text-on-surface-variant">
+          Welcome back. Here is your financial summary for this month.
+        </p>
+      </header>
+
+      {/* KPI Section */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-2xl">
+        {/* KPI 1 - Totale Fatturato */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col hover:border-primary/50 transition-colors shadow-sm">
+          <div className="flex justify-between items-start mb-md">
+            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
+              Totale Fatturato
+            </span>
+            <div className="p-sm bg-primary-container/10 rounded-full">
+              <span className="material-symbols-outlined text-primary">receipt_long</span>
+            </div>
+          </div>
+          <div className="font-headline-xl text-headline-xl text-on-surface mb-sm tabular-nums">
+            {formatCurrency(stats.totalInvoiced)}
+          </div>
+          <div className="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
+            <span className="material-symbols-outlined text-[16px]">trending_up</span>
+            <span>+12.5% rispetto al mese scorso</span>
+          </div>
+        </div>
+
+        {/* KPI 2 - Totale Incassato */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col hover:border-secondary/50 transition-colors shadow-sm">
+          <div className="flex justify-between items-start mb-md">
+            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
+              Totale Incassato
+            </span>
+            <div className="p-sm bg-secondary-container/20 rounded-full">
+              <span className="material-symbols-outlined text-secondary">payments</span>
+            </div>
+          </div>
+          <div className="font-headline-xl text-headline-xl text-on-surface mb-sm tabular-nums">
+            {formatCurrency(stats.totalPaid)}
+          </div>
+          <div className="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
+            <span className="material-symbols-outlined text-[16px]">trending_up</span>
+            <span>+8.2% rispetto al mese scorso</span>
+          </div>
+        </div>
+
+        {/* KPI 3 - Da Incassare */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col hover:border-error/50 transition-colors shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-error/5 rounded-bl-full -mr-10 -mt-10"></div>
+          <div className="flex justify-between items-start mb-md relative z-10">
+            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
+              Da Incassare
+            </span>
+            <div className="p-sm bg-error-container/30 rounded-full">
+              <span className="material-symbols-outlined text-error">account_balance_wallet</span>
+            </div>
+          </div>
+          <div className="font-headline-xl text-headline-xl text-on-surface mb-sm relative z-10 tabular-nums">
+            {formatCurrency(stats.balance)}
+          </div>
+          <div className="flex items-center gap-xs font-label-sm text-label-sm text-error relative z-10">
+            <span className="material-symbols-outlined text-[16px]">warning</span>
+            <span>{stats.expiredCount} {stats.expiredCount === 1 ? 'fattura scaduta' : 'fatture scadute'}</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Loading Skeleton Loader wrapper */}
+      {loading && stats.recentInvoices.length === 0 ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg h-64 animate-pulse"></div>
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg h-64 animate-pulse"></div>
+        </div>
+      ) : (
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
+          {/* Ultime Fatture */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+            <div className="p-lg border-b border-outline-variant flex justify-between items-center bg-surface">
+              <h3 className="font-headline-md text-headline-md text-on-surface">Ultime Fatture</h3>
+              <Link
+                to="/invoices"
+                className="font-label-md text-label-md text-primary hover:text-primary-container transition-colors"
+              >
+                Vedi tutte
+              </Link>
+            </div>
+            <div className="p-0 overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-surface-container-low font-label-sm text-label-sm text-on-surface-variant uppercase">
+                  <tr>
+                    <th className="py-md px-lg font-medium">Cliente</th>
+                    <th className="py-md px-lg font-medium">Importo</th>
+                    <th className="py-md px-lg font-medium">Stato</th>
+                    <th className="py-md px-lg font-medium">Scadenza</th>
+                  </tr>
+                </thead>
+                <tbody className="font-body-md text-body-md text-on-surface divide-y divide-outline-variant">
+                  {stats.recentInvoices.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-surface-container-lowest/50 transition-colors">
+                      <td className="py-md px-lg">{inv.customer_name}</td>
+                      <td className="py-md px-lg font-medium tabular-nums">{formatCurrency(inv.amount)}</td>
+                      <td className="py-md px-lg">
+                        {inv.status === 'paid' && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-[11px] uppercase tracking-wide">
+                            Pagata
+                          </span>
+                        )}
+                        {inv.status === 'partial' && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-[11px] uppercase tracking-wide">
+                            Parziale
+                          </span>
+                        )}
+                        {inv.status === 'unpaid' && (
+                          new Date(inv.due_date) < new Date() ? (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full bg-error-container/30 text-error font-label-sm text-[11px] uppercase tracking-wide">
+                              Scaduta
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-[11px] uppercase tracking-wide">
+                              Attesa
+                            </span>
+                          )
+                        )}
+                      </td>
+                      <td
+                        className={`py-md px-lg ${
+                          inv.status !== 'paid' && new Date(inv.due_date) < new Date()
+                            ? 'text-error font-medium'
+                            : 'text-on-surface-variant'
+                        }`}
+                      >
+                        {formatDate(inv.due_date)}
+                      </td>
+                    </tr>
+                  ))}
+                  {stats.recentInvoices.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="py-lg px-lg text-center text-on-surface-variant">
+                        Nessuna fattura inserita.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagamenti Recenti */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
+            <div className="p-lg border-b border-outline-variant flex justify-between items-center bg-surface">
+              <h3 className="font-headline-md text-headline-md text-on-surface">Pagamenti Recenti</h3>
+              <Link
+                to="/payments"
+                className="font-label-md text-label-md text-primary hover:text-primary-container transition-colors"
+              >
+                Storicizzazione
+              </Link>
+            </div>
+            <div className="p-lg flex-1">
+              <ul className="flex flex-col gap-md">
+                {stats.recentPayments.map((pay) => (
+                  <li
+                    key={pay.id}
+                    className="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-md">
+                      <div className="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
+                        <span className="material-symbols-outlined">arrow_downward</span>
+                      </div>
+                      <div>
+                        <p className="font-label-md text-label-md text-on-surface">
+                          {pay.method} da {pay.customer_name}
+                        </p>
+                        <p className="font-label-sm text-label-sm text-on-surface-variant">
+                          Fattura #{pay.invoice_id}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-label-md text-label-md text-secondary font-medium tabular-nums">
+                        + {formatCurrency(pay.amount)}
+                      </p>
+                      <p className="font-label-sm text-label-sm text-on-surface-variant">
+                        {formatDateTime(pay.payment_date)}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+                {stats.recentPayments.length === 0 && (
+                  <li className="py-lg text-center text-on-surface-variant">
+                    Nessun pagamento registrato.
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  )
+}

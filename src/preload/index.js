@@ -1,8 +1,21 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  // Clienti
+  getCustomers: () => ipcRenderer.invoke('db:get-customers'),
+  addCustomer: (customer) => ipcRenderer.invoke('db:add-customer', customer),
+
+  // Fatture e Pagamenti
+  getInvoices: () => ipcRenderer.invoke('db:get-invoices'),
+  addInvoice: (invoice) => ipcRenderer.invoke('db:add-invoice', invoice),
+  getPayments: () => ipcRenderer.invoke('db:get-payments'),
+  addPayment: (payment) => ipcRenderer.invoke('db:add-payment', payment),
+
+  // Reportistica
+  getDashboardStats: () => ipcRenderer.invoke('db:get-stats')
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise

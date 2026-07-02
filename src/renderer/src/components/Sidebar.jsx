@@ -1,0 +1,64 @@
+import { NavLink } from 'react-router-dom'
+
+export default function Sidebar() {
+  const linkClass = ({ isActive }) =>
+    `flex items-center gap-md px-md py-sm rounded-lg transition-colors duration-200 ease-in-out ${
+      isActive
+        ? 'text-primary dark:text-inverse-primary font-bold border-r-4 border-primary dark:border-inverse-primary bg-surface-container-low'
+        : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-low'
+    }`
+
+  return (
+    <nav className="bg-surface text-primary font-body-md text-body-md h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex flex-col py-md px-lg z-20">
+      <div className="mb-xl mt-sm">
+        <h1 className="font-headline-lg text-headline-lg font-bold text-primary">BillKeep</h1>
+        <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
+          Financial Management
+        </p>
+      </div>
+
+      <ul className="flex flex-col gap-sm flex-grow">
+        <li>
+          <NavLink to="/" className={linkClass}>
+            <span className="material-symbols-outlined fill">dashboard</span>
+            Dashboard
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/clients" className={linkClass}>
+            <span className="material-symbols-outlined">group</span>
+            Clients
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/invoices" className={linkClass}>
+            <span className="material-symbols-outlined">receipt_long</span>
+            Invoices
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/payments" className={linkClass}>
+            <span className="material-symbols-outlined">payments</span>
+            Payments
+          </NavLink>
+        </li>
+      </ul>
+
+      <div className="mt-auto pt-lg border-t border-outline-variant">
+        <div className="flex items-center gap-md">
+          <img
+            alt="User profile photo"
+            className="w-10 h-10 rounded-full object-cover border border-outline-variant"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOjLBH5q8KCcnaWXjBMqoqpExB2rIlnS6mo-AVLNyZkVG0kpp8myT8B6Gq-f6cmEf1muLZ2Fh7FHVhe-tzbnECRWGT8Sr0Rqd0Q6a8AcySpee1nVzVcEzC8KQ4oALrMh8x2zN67x51pHqhY49eHLerCRZnXTmN8MKdj9lDUqlWhAQpn-dStGQj09a_-njKEx6XoawYoIalOX03FfrwS9cNYHworbgHXTtFK2aAfsAyvoLS71tPpzHxUA"
+          />
+          <div className="flex flex-col">
+            <span className="font-label-md text-label-md text-on-surface">Admin User</span>
+            <span className="font-label-sm text-label-sm text-on-surface-variant">
+              admin@billkeep.io
+            </span>
+          </div>
+        </div>
+      </div>
+    </nav>
+  )
+}

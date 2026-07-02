@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+
+<html lang="it"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Fatture e Pagamenti - BillKeep</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "tertiary-fixed": "#ffdbd1",
+                "surface-bright": "#faf9f5",
+                "on-surface": "#1a1c1a",
+                "tertiary": "#76473a",
+                "tertiary-container": "#925f51",
+                "outline-variant": "#c4c6cc",
+                "primary": "#455565",
+                "on-background": "#1a1c1a",
+                "surface-tint": "#506071",
+                "inverse-on-surface": "#f1f1ed",
+                "on-tertiary-container": "#ffe9e4",
+                "on-error": "#ffffff",
+                "surface": "#faf9f5",
+                "primary-fixed": "#d3e4f8",
+                "on-tertiary-fixed-variant": "#673b2e",
+                "on-secondary-fixed-variant": "#374b43",
+                "on-primary-fixed": "#0c1d2b",
+                "inverse-primary": "#b8c8db",
+                "on-secondary-container": "#52675e",
+                "on-secondary": "#ffffff",
+                "on-tertiary": "#ffffff",
+                "on-primary-fixed-variant": "#394858",
+                "secondary": "#4e635a",
+                "surface-variant": "#e2e3df",
+                "on-error-container": "#93000a",
+                "surface-container-high": "#e8e8e4",
+                "secondary-fixed-dim": "#b5ccc1",
+                "surface-container": "#eeeeea",
+                "on-primary-container": "#e2efff",
+                "tertiary-fixed-dim": "#f7b8a6",
+                "background": "#faf9f5",
+                "inverse-surface": "#2f312e",
+                "secondary-fixed": "#d1e8dd",
+                "surface-dim": "#dadad6",
+                "secondary-container": "#cee5da",
+                "surface-container-lowest": "#ffffff",
+                "primary-fixed-dim": "#b8c8db",
+                "on-primary": "#ffffff",
+                "surface-container-highest": "#e2e3df",
+                "primary-container": "#5d6d7e",
+                "error-container": "#ffdad6",
+                "on-tertiary-fixed": "#331107",
+                "surface-container-low": "#f4f4f0",
+                "error": "#ba1a1a",
+                "outline": "#74777c",
+                "on-surface-variant": "#43474c",
+                "on-secondary-fixed": "#0b1f18"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "gutter": "24px",
+                "base": "8px",
+                "lg": "48px",
+                "xl": "64px",
+                "margin-desktop": "40px",
+                "xs": "4px",
+                "md": "24px",
+                "margin-mobile": "16px",
+                "sm": "12px"
+        },
+        "fontFamily": {
+                "headline-md": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "label-md": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "headline-lg-mobile": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "body-lg": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "label-sm": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "headline-lg": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "body-md": [
+                        "Atkinson Hyperlegible Next"
+                ]
+        },
+        "fontSize": {
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.02em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "26px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar -->
+<aside class="bg-surface dark:bg-surface h-screen w-64 fixed left-0 top-0 border-r border-outline-variant dark:border-outline flex flex-col h-full py-md px-lg z-20">
+<div class="mb-xl">
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-inverse-primary">BillKeep</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Financial Management</p>
+</div>
+<nav class="flex-1 space-y-sm">
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined text-outline group-hover:text-primary">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined text-outline group-hover:text-primary">group</span>
+<span>Clients</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-primary dark:text-inverse-primary font-bold border-r-4 border-primary dark:border-inverse-primary bg-surface-container-low font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span>Invoices</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-primary dark:text-inverse-primary font-bold border-r-4 border-primary dark:border-inverse-primary bg-surface-container-low mt-xs font-label-md text-label-md group" href="#">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span>Payments</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out font-label-md text-label-md group mt-auto" href="#">
+<span class="material-symbols-outlined text-outline group-hover:text-primary">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+<div class="mt-auto pt-lg flex items-center gap-md border-t border-outline-variant pt-md">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="A small circular profile picture of a professional individual in a corporate setting. Light neutral background, soft studio lighting. Minimalist corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBadmPwBda5-cw8zoKTXt0qytn6FUXnpjX3FglR17HS103vxC_X-5dCbIwObkEWLgZohHrZY2DaH38Cb4BKVT35fFGtUudpwleFm7WvB7t1r9zo5ADQRfG7yxj07mCFbtmDzWy6AbxbxJDlcesLfgI6GuLoqKCJURnpMy2lDEbdK0LvmOWjIss5a9Om5WbsHu1Ixlh3WhHkqzsUE3jC7FzBchFW6ttNCDfm0q556ZP30crRFcB1M6EH9w"/>
+<div>
+<p class="font-label-md text-label-md">Admin User</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">admin@billkeep.com</p>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<div class="flex-1 ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface h-16 fixed top-0 right-0 left-64 border-b border-outline-variant dark:border-outline z-10 flex justify-between items-center px-margin-desktop w-[calc(100%-16rem)]">
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface dark:text-inverse-on-surface">Fatture &amp; Pagamenti</h2>
+<div class="flex items-center gap-lg">
+<!-- Search could go here if search_bar was fully defined, omitting for now based on prompt focus -->
+<div class="flex items-center gap-sm">
+<button class="p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high rounded-full transition-all duration-150">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high rounded-full transition-all duration-150">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<img class="w-10 h-10 rounded-full object-cover border border-outline-variant cursor-pointer" data-alt="A high quality headshot profile photo of a person looking directly at the camera, professional lighting, isolated on a light grey background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoin5gjpU4hpCRGjkbMceU0-kAjReAEZq4gLfvWw1ZTm0gADDdaU_t5BBU9Cr-uFKYooihlYVcB04K4KqOVYgyyIstMH2THxh91laiEpBHtWRAYsMT9XjClvnc4wMBNSiHWkBJdizgUx-4slStXZgx4s-OMM9w7h8ExRSnz90ACrE4WSY2L77BY9MxVGiNcaXQAfMkrHwXI7WSUwtEg2XkFK6JypL8ZWPlvpnyxqW1yKVaDDfLvIsyyw"/>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 mt-16 p-margin-desktop flex gap-gutter">
+<!-- Left Column: Tables (Bento/Card Style) -->
+<div class="flex-1 flex flex-col gap-gutter">
+<!-- Invoices Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col shadow-sm">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-md text-headline-md font-semibold">Fatture Recenti</h3>
+<button class="text-primary font-label-md text-label-md hover:underline">Vedi tutte</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant text-on-surface-variant font-label-sm text-label-sm">
+<th class="py-sm px-xs">ID</th>
+<th class="py-sm px-xs">Cliente</th>
+<th class="py-sm px-xs">Data</th>
+<th class="py-sm px-xs text-right">Importo</th>
+<th class="py-sm px-xs text-center">Stato</th>
+<th class="py-sm px-xs"></th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-xs font-medium">#INV-2023-041</td>
+<td class="py-md px-xs">TechCorp S.p.A.</td>
+<td class="py-md px-xs text-on-surface-variant">12 Ott 2023</td>
+<td class="py-md px-xs text-right font-medium">€ 4.500,00</td>
+<td class="py-md px-xs text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm">Pagata</span>
+</td>
+<td class="py-md px-xs text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-outline hover:text-primary"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-xs font-medium">#INV-2023-042</td>
+<td class="py-md px-xs">Studio Legale Bianchi</td>
+<td class="py-md px-xs text-on-surface-variant">15 Ott 2023</td>
+<td class="py-md px-xs text-right font-medium">€ 1.250,00</td>
+<td class="py-md px-xs text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-tertiary-container text-on-tertiary-container font-label-sm text-label-sm">Parziale</span>
+</td>
+<td class="py-md px-xs text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-outline hover:text-primary"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-xs font-medium">#INV-2023-039</td>
+<td class="py-md px-xs">Global Retail Ldt</td>
+<td class="py-md px-xs text-on-surface-variant">01 Ott 2023</td>
+<td class="py-md px-xs text-right font-medium">€ 8.900,00</td>
+<td class="py-md px-xs text-center">
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-error-container text-on-error-container font-label-sm text-label-sm">Scaduta</span>
+</td>
+<td class="py-md px-xs text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-outline hover:text-primary"><span class="material-symbols-outlined text-[18px]">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Payments Log Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col shadow-sm">
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-md text-headline-md font-semibold">Registro Pagamenti</h3>
+<div class="flex gap-sm">
+<button class="px-md py-sm rounded-lg border border-outline-variant text-on-surface font-label-md text-label-md hover:bg-surface-container-low transition-colors flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px]">filter_list</span> Filtra
+                            </button>
+</div>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant text-on-surface-variant font-label-sm text-label-sm">
+<th class="py-sm px-xs">Data</th>
+<th class="py-sm px-xs">Cliente</th>
+<th class="py-sm px-xs text-right">Importo</th>
+<th class="py-sm px-xs">Metodo</th>
+<th class="py-sm px-xs">Fattura Correlata</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-md px-xs text-on-surface-variant">16 Ott 2023</td>
+<td class="py-md px-xs font-medium">TechCorp S.p.A.</td>
+<td class="py-md px-xs text-right text-secondary font-medium">+ € 4.500,00</td>
+<td class="py-md px-xs">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">account_balance</span>
+                                            Bonifico Bancario
+                                        </div>
+</td>
+<td class="py-md px-xs"><a class="text-primary hover:underline" href="#">#INV-2023-041</a></td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-md px-xs text-on-surface-variant">14 Ott 2023</td>
+<td class="py-md px-xs font-medium">Studio Legale Bianchi</td>
+<td class="py-md px-xs text-right text-secondary font-medium">+ € 500,00</td>
+<td class="py-md px-xs">
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">credit_card</span>
+                                            Carta di Credito
+                                        </div>
+</td>
+<td class="py-md px-xs"><a class="text-primary hover:underline" href="#">#INV-2023-042</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Right Column: Registration Drawer (simulated as always open side panel for bento layout) -->
+<aside class="w-96 bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm flex flex-col overflow-hidden">
+<div class="p-lg border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+<h3 class="font-headline-md text-headline-md font-semibold text-primary">Registra Nuovo Pagamento</h3>
+<button class="text-outline hover:text-on-surface transition-colors p-1 rounded-full hover:bg-surface-variant">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-lg flex-1 overflow-y-auto">
+<form class="space-y-lg">
+<!-- Invoice Selection -->
+<div class="space-y-sm">
+<label class="block font-label-sm text-label-sm text-on-surface-variant" for="invoice_select">Fattura Correlata</label>
+<div class="relative">
+<select class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" id="invoice_select">
+<option disabled="" selected="" value="">Seleziona una fattura da saldare...</option>
+<option value="INV-039">#INV-2023-039 - Global Retail Ldt (€ 8.900,00)</option>
+<option value="INV-042">#INV-2023-042 - Studio Legale Bianchi (€ 750,00 rimanenti)</option>
+</select>
+<span class="material-symbols-outlined absolute right-md top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+</div>
+</div>
+<!-- Amount & Date -->
+<div class="grid grid-cols-2 gap-md">
+<div class="space-y-sm">
+<label class="block font-label-sm text-label-sm text-on-surface-variant" for="amount">Importo Ricevuto</label>
+<div class="relative">
+<span class="absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant">€</span>
+<input class="w-full pl-xl pr-md py-sm bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary" id="amount" placeholder="0,00" type="text"/>
+</div>
+</div>
+<div class="space-y-sm">
+<label class="block font-label-sm text-label-sm text-on-surface-variant" for="date">Data Pagamento</label>
+<input class="w-full px-md py-sm bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-on-surface" id="date" type="date"/>
+</div>
+</div>
+<!-- Payment Method -->
+<div class="space-y-sm">
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-xs">Metodo di Pagamento</label>
+<div class="grid grid-cols-2 gap-sm">
+<label class="flex items-center gap-sm p-sm border border-outline-variant rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary-container/10">
+<input checked="" class="text-primary focus:ring-primary" name="payment_method" type="radio"/>
+<span class="font-body-md text-body-md flex items-center gap-xs"><span class="material-symbols-outlined text-[18px]">account_balance</span> Bonifico</span>
+</label>
+<label class="flex items-center gap-sm p-sm border border-outline-variant rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary-container/10">
+<input class="text-primary focus:ring-primary" name="payment_method" type="radio"/>
+<span class="font-body-md text-body-md flex items-center gap-xs"><span class="material-symbols-outlined text-[18px]">credit_card</span> Carta</span>
+</label>
+<label class="flex items-center gap-sm p-sm border border-outline-variant rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary-container/10">
+<input class="text-primary focus:ring-primary" name="payment_method" type="radio"/>
+<span class="font-body-md text-body-md flex items-center gap-xs"><span class="material-symbols-outlined text-[18px]">account_balance_wallet</span> Contanti</span>
+</label>
+<label class="flex items-center gap-sm p-sm border border-outline-variant rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors has-[:checked]:border-primary has-[:checked]:bg-primary-container/10">
+<input class="text-primary focus:ring-primary" name="payment_method" type="radio"/>
+<span class="font-body-md text-body-md flex items-center gap-xs"><span class="material-symbols-outlined text-[18px]">more_horiz</span> Altro</span>
+</label>
+</div>
+</div>
+<!-- Notes -->
+<div class="space-y-sm">
+<label class="block font-label-sm text-label-sm text-on-surface-variant" for="notes">Note (Opzionale)</label>
+<textarea class="w-full px-md py-sm bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none" id="notes" placeholder="Riferimenti transazione, note contabili..." rows="3"></textarea>
+</div>
+</form>
+</div>
+<div class="p-lg border-t border-outline-variant bg-surface-container-lowest mt-auto flex gap-md">
+<button class="flex-1 py-sm px-md rounded-lg bg-surface-container-low text-on-surface font-label-md text-label-md hover:bg-surface-variant transition-colors border border-outline-variant" type="button">
+                        Annulla
+                    </button>
+<button class="flex-1 py-sm px-md rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-surface-tint transition-colors shadow-sm" type="button">
+                        Registra Pagamento
+                    </button>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

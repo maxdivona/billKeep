@@ -2,6 +2,16 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import {
+  initDatabase,
+  getCustomers,
+  addCustomer,
+  getInvoices,
+  addInvoice,
+  addPayment,
+  getPayments,
+  getDashboardStats
+} from './db'
 
 function createWindow() {
   // Create the browser window.
@@ -39,6 +49,9 @@ function createWindow() {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // Inizializza il database SQLite locale
+  initDatabase()
+
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -51,6 +64,15 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  // Registrazione canali IPC per SQLite
+  ipcMain.handle('db:get-customers', () => getCustomers())
+  ipcMain.handle('db:add-customer', (event, customer) => addCustomer(customer))
+  ipcMain.handle('db:get-invoices', () => getInvoices())
+  ipcMain.handle('db:add-invoice', (event, invoice) => addInvoice(invoice))
+  ipcMain.handle('db:get-payments', () => getPayments())
+  ipcMain.handle('db:add-payment', (event, payment) => addPayment(payment))
+  ipcMain.handle('db:get-stats', () => getDashboardStats())
 
   createWindow()
 

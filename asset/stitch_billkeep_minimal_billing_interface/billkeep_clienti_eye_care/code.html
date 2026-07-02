@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-surface" lang="it"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Clienti - BillKeep</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "tertiary-fixed": "#ffdbd1",
+                "surface-bright": "#faf9f5",
+                "on-surface": "#1a1c1a",
+                "tertiary": "#76473a",
+                "tertiary-container": "#925f51",
+                "outline-variant": "#c4c6cc",
+                "primary": "#455565",
+                "on-background": "#1a1c1a",
+                "surface-tint": "#506071",
+                "inverse-on-surface": "#f1f1ed",
+                "on-tertiary-container": "#ffe9e4",
+                "on-error": "#ffffff",
+                "surface": "#faf9f5",
+                "primary-fixed": "#d3e4f8",
+                "on-tertiary-fixed-variant": "#673b2e",
+                "on-secondary-fixed-variant": "#374b43",
+                "on-primary-fixed": "#0c1d2b",
+                "inverse-primary": "#b8c8db",
+                "on-secondary-container": "#52675e",
+                "on-secondary": "#ffffff",
+                "on-tertiary": "#ffffff",
+                "on-primary-fixed-variant": "#394858",
+                "secondary": "#4e635a",
+                "surface-variant": "#e2e3df",
+                "on-error-container": "#93000a",
+                "surface-container-high": "#e8e8e4",
+                "secondary-fixed-dim": "#b5ccc1",
+                "surface-container": "#eeeeea",
+                "on-primary-container": "#e2efff",
+                "tertiary-fixed-dim": "#f7b8a6",
+                "background": "#faf9f5",
+                "inverse-surface": "#2f312e",
+                "secondary-fixed": "#d1e8dd",
+                "surface-dim": "#dadad6",
+                "secondary-container": "#cee5da",
+                "surface-container-lowest": "#ffffff",
+                "primary-fixed-dim": "#b8c8db",
+                "on-primary": "#ffffff",
+                "surface-container-highest": "#e2e3df",
+                "primary-container": "#5d6d7e",
+                "error-container": "#ffdad6",
+                "on-tertiary-fixed": "#331107",
+                "surface-container-low": "#f4f4f0",
+                "error": "#ba1a1a",
+                "outline": "#74777c",
+                "on-surface-variant": "#43474c",
+                "on-secondary-fixed": "#0b1f18"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "gutter": "24px",
+                "base": "8px",
+                "lg": "48px",
+                "xl": "64px",
+                "margin-desktop": "40px",
+                "xs": "4px",
+                "md": "24px",
+                "margin-mobile": "16px",
+                "sm": "12px"
+        },
+        "fontFamily": {
+                "headline-md": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "label-md": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "headline-lg-mobile": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "body-lg": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "label-sm": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "headline-lg": [
+                        "Atkinson Hyperlegible Next"
+                ],
+                "body-md": [
+                        "Atkinson Hyperlegible Next"
+                ]
+        },
+        "fontSize": {
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.02em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "26px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .skeleton-shimmer {
+            background: linear-gradient(90deg, #f0ecf9 25%, #e4e1ee 50%, #f0ecf9 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="bg-surface dark:bg-surface h-screen w-64 fixed left-0 top-0 border-r border-outline-variant dark:border-outline flex flex-col h-full py-md px-lg z-20 hidden md:flex">
+<div class="flex items-center gap-3 mb-12">
+<div class="w-10 h-10 rounded bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" data-icon="account_balance">account_balance</span>
+</div>
+<div>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-inverse-primary">BillKeep</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Financial Management</p>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-primary dark:text-inverse-primary font-bold border-r-4 border-primary dark:border-inverse-primary bg-surface-container-low font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="group" data-weight="fill" style="font-variation-settings: 'FILL' 1;">group</span>
+                Clienti
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+                Invoices
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+                Payments
+            </a>
+<a class="flex items-center gap-4 px-4 py-3 rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                Settings
+            </a>
+</div>
+</nav>
+<!-- Main Content Wrapper -->
+<div class="flex-1 md:ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-surface dark:bg-surface h-16 fixed top-0 right-0 left-0 md:left-64 border-b border-outline-variant dark:border-outline flex justify-between items-center px-margin-mobile md:px-margin-desktop z-10 transition-all duration-150">
+<div class="flex items-center gap-4">
+<button class="md:hidden text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface dark:text-inverse-on-surface">Clienti</h2>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="pl-10 pr-4 py-2 bg-surface-container rounded-full text-body-sm font-body-sm text-on-surface border-none focus:ring-2 focus:ring-primary w-64" placeholder="Cerca clienti..." type="text"/>
+</div>
+<button class="w-10 h-10 rounded-full hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="w-10 h-10 rounded-full hover:bg-surface-container flex items-center justify-center text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<img alt="User profile photo" class="w-10 h-10 rounded-full object-cover border border-outline-variant" data-alt="A professional headshot of a financial advisor. The lighting is soft and studio-quality, emphasizing a modern corporate aesthetic. The background is a subtle blurred office environment. High resolution, clean composition, fitting a light-mode SaaS application profile image." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCU4Uascs-_GMmzfnsi7U0Yaw6HkYK1VCzF8dX9yT2p78dXx04mG821jw27dGAJoEGN0NLfkMAsnA3FIrwq9nlJ89c2bwoaTbB4vyAgQY2f016Ei8m6C8HQ9_WZjreopNG-6HJyTxEpsrbFO9CGPH5h313jfWa2cALE2nV3LNBVH5nVLdSA7ghO1mFAHMdaz2PX34niIaJC39W-RPoCOzJpDvmxZMynVUPzVA4u8pH_2ivswqBOy-qLRQ"/>
+</div>
+</header>
+<!-- Page Content -->
+<main class="flex-1 mt-16 p-margin-mobile md:p-margin-desktop">
+<!-- Header Section -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+<div>
+<p class="text-on-surface-variant font-body-md text-body-md">Gestisci la tua rubrica clienti e monitora i saldi.</p>
+</div>
+<button class="bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md px-6 py-3 rounded-md flex items-center gap-2 transition-colors" onclick="document.getElementById('new-client-modal').classList.remove('hidden')">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                    Nuovo Cliente
+                </button>
+</div>
+<!-- Bento Grid Stats (Optional but good for SaaS) -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary" data-icon="group">group</span>
+<h3 class="font-label-md text-label-md text-on-surface-variant">Totale Clienti</h3>
+</div>
+<p class="font-headline-lg text-headline-lg text-on-surface font-bold">142</p>
+</div>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-secondary" data-icon="account_balance_wallet">account_balance_wallet</span>
+<h3 class="font-label-md text-label-md text-on-surface-variant">Fatturato Annuo</h3>
+</div>
+<p class="font-headline-lg text-headline-lg text-on-surface font-bold">€ 1.25M</p>
+</div>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-sm">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-error" data-icon="warning">warning</span>
+<h3 class="font-label-md text-label-md text-on-surface-variant">Crediti Scaduti</h3>
+</div>
+<p class="font-headline-lg text-headline-lg text-on-surface font-bold">€ 45,300</p>
+</div>
+</div>
+<!-- Client Table Container -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl shadow-sm overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-container">
+<th class="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider">Nome / Ragione Sociale</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider">Email</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider text-right">Fatturato Totale</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider text-right">Saldo Corrente</th>
+<th class="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider text-center">Azioni</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant font-body-sm text-body-sm text-on-surface">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high transition-colors group cursor-pointer">
+<td class="py-4 px-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">
+                                            TC
+                                        </div>
+<span class="font-medium text-on-surface">TechCorp S.p.A.</span>
+</div>
+</td>
+<td class="py-4 px-6 text-on-surface-variant">amministrazione@techcorp.it</td>
+<td class="py-4 px-6 text-right">€ 124,500.00</td>
+<td class="py-4 px-6 text-right">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-container text-on-secondary-container">
+                                        € 0.00
+                                    </span>
+</td>
+<td class="py-4 px-6 text-center">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-high transition-colors group cursor-pointer">
+<td class="py-4 px-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center font-bold text-xs">
+                                            GS
+                                        </div>
+<span class="font-medium text-on-surface">Global Solutions Ltd</span>
+</div>
+</td>
+<td class="py-4 px-6 text-on-surface-variant">finance@globalsolutions.com</td>
+<td class="py-4 px-6 text-right">€ 89,200.00</td>
+<td class="py-4 px-6 text-right">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-error-container text-on-error-container">
+                                        - € 12,400.00
+                                    </span>
+</td>
+<td class="py-4 px-6 text-center">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-high transition-colors group cursor-pointer">
+<td class="py-4 px-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center font-bold text-xs">
+                                            MR
+                                        </div>
+<span class="font-medium text-on-surface">Mario Rossi S.r.l.</span>
+</div>
+</td>
+<td class="py-4 px-6 text-on-surface-variant">info@mariorossi.it</td>
+<td class="py-4 px-6 text-right">€ 15,300.00</td>
+<td class="py-4 px-6 text-right">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-container text-on-secondary-container">
+                                        € 0.00
+                                    </span>
+</td>
+<td class="py-4 px-6 text-center">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Loading Skeleton Row -->
+<tr>
+<td class="py-4 px-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full skeleton-shimmer"></div>
+<div class="h-4 w-32 rounded skeleton-shimmer"></div>
+</div>
+</td>
+<td class="py-4 px-6">
+<div class="h-4 w-48 rounded skeleton-shimmer"></div>
+</td>
+<td class="py-4 px-6">
+<div class="h-4 w-24 rounded skeleton-shimmer ml-auto"></div>
+</td>
+<td class="py-4 px-6">
+<div class="h-6 w-20 rounded-full skeleton-shimmer ml-auto"></div>
+</td>
+<td class="py-4 px-6 text-center">
+<div class="h-6 w-6 rounded-full skeleton-shimmer mx-auto"></div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="bg-surface-container-low px-6 py-4 border-t border-outline-variant flex items-center justify-between">
+<p class="text-on-surface-variant font-body-sm text-body-sm">Visualizzando 1-4 di 142 clienti</p>
+<div class="flex gap-2">
+<button class="p-2 rounded hover:bg-surface-container text-on-surface-variant disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="p-2 rounded hover:bg-surface-container text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Modal: Nuovo Cliente -->
+<div class="fixed inset-0 z-50 hidden" id="new-client-modal">
+<!-- Backdrop -->
+<div class="absolute inset-0 bg-on-surface/50 backdrop-blur-sm transition-opacity" onclick="document.getElementById('new-client-modal').classList.add('hidden')"></div>
+<!-- Modal Panel -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-surface-container-low rounded-xl shadow-[0_10px_15px_-3px_rgba(0,0,0,0.05)] border border-outline-variant p-6 z-10 flex flex-col max-h-[921px]">
+<div class="flex justify-between items-center mb-6">
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface">Aggiungi Nuovo Cliente</h2>
+<button class="text-on-surface-variant hover:text-on-surface rounded-full p-1 hover:bg-surface-container transition-colors" onclick="document.getElementById('new-client-modal').classList.add('hidden')">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="overflow-y-auto flex-1 pr-2">
+<form class="flex flex-col gap-5">
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-1">Ragione Sociale / Nome</label>
+<input class="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md placeholder-outline" placeholder="es. Acme Corp S.p.A." type="text"/>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-1">Partita IVA</label>
+<input class="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md placeholder-outline" placeholder="IT01234567890" type="text"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-1">Codice Fiscale</label>
+<input class="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md placeholder-outline" placeholder="Opcionale" type="text"/>
+</div>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-1">Indirizzo Email Principale</label>
+<input class="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md placeholder-outline" placeholder="amministrazione@azienda.it" type="email"/>
+</div>
+<div>
+<label class="block font-label-md text-label-md text-on-surface mb-1">Indirizzo Sede Legale</label>
+<textarea class="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md placeholder-outline resize-none" placeholder="Via Roma 1, 00100 Roma (RM)" rows="2"></textarea>
+</div>
+</form>
+</div>
+<div class="mt-6 flex justify-end gap-3 pt-4 border-t border-outline-variant">
+<button class="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors" onclick="document.getElementById('new-client-modal').classList.add('hidden')">Annulla</button>
+<button class="px-4 py-2 rounded-md font-label-md text-label-md bg-primary hover:bg-primary-container text-on-primary transition-colors shadow-sm">Salva Cliente</button>
+</div>
+</div>
+</div>
+</body></html>
