@@ -220,3 +220,8 @@ Tutti i componenti UI generati o sviluppati devono essere atomici e flessibili, 
 2. **Validazione Preventiva:** Prima di invocare i canali IPC, valida i dati nel frontend (es. impedisci l'invio di importi negativi o ID cliente vuoti). Replica la validazione nel processo Main tramite i vincoli `CHECK` nativi di SQLite.
 
 3. **Disaccoppiamento della Logica:** Le viste di React devono occuparsi solo della presentazione. La logica di fetch dei dati deve essere isolata all'interno di Custom Hooks (es. `useFetchCustomers`) o azioni dedicate nello store Zustand.
+
+4. **Ottimizzazione del Layout per Risoluzioni Standard (1600x900):** Per evitare lo scroll verticale non necessario e tagli orizzontali delle tabelle, utilizzare paddings compatti. Nello specifico, il contenitore principale deve utilizzare al massimo `p-md` (24px) anziché `p-xl` (64px), e le tabelle dati devono limitare il padding delle celle a `py-sm px-sm` (12px) per assicurare che tutte le colonne siano visibili senza scorrimento.
+
+5. **Localizzazione della UI:** Tutte le etichette, placeholder, messaggi di errore e diciture mostrate all'utente finale nel Renderer process devono essere rigorosamente scritte in lingua italiana per mantenere la coerenza dell'interfaccia.
+
