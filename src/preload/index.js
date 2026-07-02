@@ -6,15 +6,21 @@ const api = {
   // Clienti
   getCustomers: () => ipcRenderer.invoke('db:get-customers'),
   addCustomer: (customer) => ipcRenderer.invoke('db:add-customer', customer),
+  getCustomerUnpaidInvoices: (customerId) =>
+    ipcRenderer.invoke('db:get-customer-unpaid-invoices', customerId),
+  getCustomerPayments: (customerId) => ipcRenderer.invoke('db:get-customer-payments', customerId),
 
   // Fatture e Pagamenti
   getInvoices: () => ipcRenderer.invoke('db:get-invoices'),
   addInvoice: (invoice) => ipcRenderer.invoke('db:add-invoice', invoice),
   getPayments: () => ipcRenderer.invoke('db:get-payments'),
   addPayment: (payment) => ipcRenderer.invoke('db:add-payment', payment),
+  addMultiPayment: (paymentData) => ipcRenderer.invoke('db:add-multi-payment', paymentData),
+  allocateAcconto: (data) => ipcRenderer.invoke('db:allocate-acconto', data),
 
   // Reportistica
-  getDashboardStats: () => ipcRenderer.invoke('db:get-stats')
+  getDashboardStats: () => ipcRenderer.invoke('db:get-stats'),
+  getJournalEntries: (filters) => ipcRenderer.invoke('db:get-journal-entries', filters)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -42,6 +42,12 @@ export default function Sidebar() {
             Pagamenti
           </NavLink>
         </li>
+        <li>
+          <NavLink to="/journal" className={linkClass}>
+            <span className="material-symbols-outlined">menu_book</span>
+            Prima Nota
+          </NavLink>
+        </li>
       </ul>
 
       <div className="mt-auto pt-md border-t border-outline-variant">

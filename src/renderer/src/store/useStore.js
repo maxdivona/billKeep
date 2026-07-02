@@ -13,6 +13,7 @@ export const useStore = create((set, get) => ({
   customers: [],
   invoices: [],
   payments: [],
+  journalEntries: [],
   loading: false,
   error: null,
 
@@ -57,16 +58,27 @@ export const useStore = create((set, get) => ({
     }
   },
 
+  fetchJournalEntries: async (filters = {}) => {
+    set({ loading: true, error: null })
+    try {
+      const journalEntries = await window.api.getJournalEntries(filters)
+      set({ journalEntries, loading: false })
+    } catch (err) {
+      set({ error: err.message, loading: false })
+    }
+  },
+
   fetchAllData: async () => {
     set({ loading: true, error: null })
     try {
-      const [stats, customers, invoices, payments] = await Promise.all([
+      const [stats, customers, invoices, payments, journalEntries] = await Promise.all([
         window.api.getDashboardStats(),
         window.api.getCustomers(),
         window.api.getInvoices(),
-        window.api.getPayments()
+        window.api.getPayments(),
+        window.api.getJournalEntries()
       ])
-      set({ stats, customers, invoices, payments, loading: false })
+      set({ stats, customers, invoices, payments, journalEntries, loading: false })
     } catch (err) {
       set({ error: err.message, loading: false })
     }
@@ -93,7 +105,12 @@ export const useStore = create((set, get) => ({
     try {
       const result = await window.api.addInvoice(invoice)
       if (result.success) {
-        await Promise.all([get().fetchInvoices(), get().fetchStats(), get().fetchCustomers()])
+        await Promise.all([
+          get().fetchInvoices(),
+          get().fetchStats(),
+          get().fetchCustomers(),
+          get().fetchJournalEntries()
+        ])
       } else {
         throw new Error(result.error)
       }
@@ -113,7 +130,52 @@ export const useStore = create((set, get) => ({
           get().fetchInvoices(),
           get().fetchStats(),
           get().fetchCustomers(),
-          get().fetchPayments()
+          get().fetchPayments(),
+          get().fetchJournalEntries()
+        ])
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      set({ error: err.message, loading: false })
+      return { success: false, error: err.message }
+    }
+    return { success: true }
+  },
+
+  addMultiPayment: async (paymentData) => {
+    set({ loading: true, error: null })
+    try {
+      const result = await window.api.addMultiPayment(paymentData)
+      if (result.success) {
+        await Promise.all([
+          get().fetchInvoices(),
+          get().fetchStats(),
+          get().fetchCustomers(),
+          get().fetchPayments(),
+          get().fetchJournalEntries()
+        ])
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      set({ error: err.message, loading: false })
+      return { success: false, error: err.message }
+    }
+    return { success: true }
+  },
+
+  allocateAcconto: async (data) => {
+    set({ loading: true, error: null })
+    try {
+      const result = await window.api.allocateAcconto(data)
+      if (result.success) {
+        await Promise.all([
+          get().fetchInvoices(),
+          get().fetchStats(),
+          get().fetchCustomers(),
+          get().fetchPayments(),
+          get().fetchJournalEntries()
         ])
       } else {
         throw new Error(result.error)

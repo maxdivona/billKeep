@@ -10,7 +10,12 @@ import {
   addInvoice,
   addPayment,
   getPayments,
-  getDashboardStats
+  getDashboardStats,
+  getCustomerUnpaidInvoices,
+  getCustomerPayments,
+  addMultiPayment,
+  allocateAcconto,
+  getJournalEntries
 } from './db'
 
 function createWindow() {
@@ -73,6 +78,13 @@ app.whenReady().then(() => {
   ipcMain.handle('db:get-payments', () => getPayments())
   ipcMain.handle('db:add-payment', (event, payment) => addPayment(payment))
   ipcMain.handle('db:get-stats', () => getDashboardStats())
+  ipcMain.handle('db:get-customer-unpaid-invoices', (event, customerId) =>
+    getCustomerUnpaidInvoices(customerId)
+  )
+  ipcMain.handle('db:get-customer-payments', (event, customerId) => getCustomerPayments(customerId))
+  ipcMain.handle('db:add-multi-payment', (event, paymentData) => addMultiPayment(paymentData))
+  ipcMain.handle('db:allocate-acconto', (event, data) => allocateAcconto(data))
+  ipcMain.handle('db:get-journal-entries', (event, filters) => getJournalEntries(filters))
 
   createWindow()
 

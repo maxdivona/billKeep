@@ -123,7 +123,15 @@ export default function Payments() {
                   {pay.method}
                 </div>
               </td>
-              <td className="py-sm px-sm font-medium text-primary">#{pay.invoice_id}</td>
+              <td className="py-sm px-sm font-medium">
+                {pay.invoice_id ? (
+                  <span className="text-primary">#{pay.invoice_id}</span>
+                ) : (
+                  <span className="inline-flex px-2 py-0.5 bg-secondary-container text-on-secondary-container text-xs font-semibold rounded-full">
+                    Acconto
+                  </span>
+                )}
+              </td>
             </tr>
           )}
         />

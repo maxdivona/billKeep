@@ -13,7 +13,43 @@ db.pragma('foreign_keys = ON')
  * Inizializza lo schema del database e inserisce dati mock se vuoto
  */
 export function initDatabase() {
-  // 1. Creazione Tabelle
+  // 1. Eseguiamo la migrazione se la tabella payments ha ancora il vincolo NOT NULL su invoice_id
+  const tableCheck = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='payments'")
+    .get()
+  if (tableCheck) {
+    const tableInfo = db.pragma('table_info(payments)')
+    const invoiceIdCol = tableInfo.find((c) => c.name === 'invoice_id')
+    if (invoiceIdCol && invoiceIdCol.notnull === 1) {
+      console.log('[DB] Migrazione tabella payments per consentire acconti (invoice_id NULL)...')
+      db.transaction(() => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS payments_new (
+              id TEXT PRIMARY KEY,
+              invoice_id TEXT, -- nullable
+              customer_id TEXT NOT NULL,
+              amount REAL NOT NULL CHECK(amount > 0),
+              payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+              method TEXT,
+              FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
+              FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+          );
+          
+          INSERT INTO payments_new (id, invoice_id, customer_id, amount, payment_date, method)
+          SELECT id, invoice_id, customer_id, amount, payment_date, method FROM payments;
+          
+          DROP TABLE payments;
+          ALTER TABLE payments_new RENAME TO payments;
+          
+          CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
+          CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
+        `)
+      })()
+      console.log('[DB] Migrazione completata con successo.')
+    }
+  }
+
+  // 2. Creazione Tabelle Core
   db.exec(`
     CREATE TABLE IF NOT EXISTS customers (
         id TEXT PRIMARY KEY,
@@ -34,7 +70,7 @@ export function initDatabase() {
 
     CREATE TABLE IF NOT EXISTS payments (
         id TEXT PRIMARY KEY,
-        invoice_id TEXT NOT NULL,
+        invoice_id TEXT, -- nullable per gli acconti
         customer_id TEXT NOT NULL,
         amount REAL NOT NULL CHECK(amount > 0),
         payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -43,12 +79,34 @@ export function initDatabase() {
         FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
     );
 
+    CREATE TABLE IF NOT EXISTS journal_entries (
+        id TEXT PRIMARY KEY,
+        entry_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        description TEXT NOT NULL,
+        reference_type TEXT NOT NULL, -- 'invoice', 'payment', 'allocation'
+        reference_id TEXT NOT NULL,
+        customer_id TEXT,
+        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS journal_lines (
+        id TEXT PRIMARY KEY,
+        entry_id TEXT NOT NULL,
+        account_name TEXT NOT NULL, -- 'Crediti v/Clienti', 'Ricavi per Vendite', 'Cassa/Banca', 'Acconti da Clienti'
+        type TEXT NOT NULL CHECK(type IN ('debit', 'credit')),
+        amount REAL NOT NULL CHECK(amount > 0),
+        FOREIGN KEY (entry_id) REFERENCES journal_entries(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
     CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
     CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(entry_date);
+    CREATE INDEX IF NOT EXISTS idx_journal_entries_customer ON journal_entries(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
   `)
 
-  // 2. Popolamento Dati Mock se il DB è vuoto
+  // 3. Popolamento Dati Mock se il DB è vuoto
   const customerCount = db.prepare('SELECT COUNT(*) as count FROM customers').get().count
   if (customerCount === 0) {
     console.log('[DB] Database vuoto. Inserimento dati mock in corso...')
@@ -99,6 +157,78 @@ export function initDatabase() {
     insertPayment.run('PAY-004', 'INV-004', 'cust-3', 50.5, '2026-06-22 14:00:00', 'Bonifico')
 
     console.log('[DB] Popolamento dati mock completato con successo.')
+  }
+
+  // 4. Generazione Retroattiva Prima Nota per allineare i dati storici esistenti
+  const journalCount = db.prepare('SELECT COUNT(*) as count FROM journal_entries').get().count
+  if (journalCount === 0) {
+    console.log('[DB] Generazione retroattiva Prima Nota...')
+    db.transaction(() => {
+      // Get all invoices
+      const invoices = db.prepare('SELECT * FROM invoices').all()
+      const insertEntry = db.prepare(`
+        INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `)
+      const insertLine = db.prepare(`
+        INSERT INTO journal_lines (id, entry_id, account_name, type, amount)
+        VALUES (?, ?, ?, ?, ?)
+      `)
+
+      for (const inv of invoices) {
+        const entryId = `entry-${inv.id}`
+        const entryDate = inv.issue_date + ' 08:00:00'
+        insertEntry.run(
+          entryId,
+          entryDate,
+          `Emissione fattura ${inv.id}`,
+          'invoice',
+          inv.id,
+          inv.customer_id
+        )
+
+        // Debit: Crediti v/Clienti
+        insertLine.run(`line-${inv.id}-1`, entryId, 'Crediti v/Clienti', 'debit', inv.amount)
+        // Credit: Ricavi per Vendite
+        insertLine.run(`line-${inv.id}-2`, entryId, 'Ricavi per Vendite', 'credit', inv.amount)
+      }
+
+      // Get all payments
+      const payments = db.prepare('SELECT * FROM payments').all()
+      for (const pay of payments) {
+        const entryId = `entry-${pay.id}`
+        const entryDate = pay.payment_date
+
+        if (pay.invoice_id) {
+          insertEntry.run(
+            entryId,
+            entryDate,
+            `Incasso fattura ${pay.invoice_id}`,
+            'payment',
+            pay.id,
+            pay.customer_id
+          )
+          // Debit: Cassa/Banca
+          insertLine.run(`line-${pay.id}-1`, entryId, 'Cassa/Banca', 'debit', pay.amount)
+          // Credit: Crediti v/Clienti
+          insertLine.run(`line-${pay.id}-2`, entryId, 'Crediti v/Clienti', 'credit', pay.amount)
+        } else {
+          insertEntry.run(
+            entryId,
+            entryDate,
+            `Incasso acconto cliente`,
+            'payment',
+            pay.id,
+            pay.customer_id
+          )
+          // Debit: Cassa/Banca
+          insertLine.run(`line-${pay.id}-1`, entryId, 'Cassa/Banca', 'debit', pay.amount)
+          // Credit: Acconti da Clienti
+          insertLine.run(`line-${pay.id}-2`, entryId, 'Acconti da Clienti', 'credit', pay.amount)
+        }
+      }
+    })()
+    console.log('[DB] Generazione retroattiva Prima Nota completata.')
   }
 }
 
@@ -169,7 +299,7 @@ export function getDashboardStats() {
  * Gestione Clienti
  */
 export function getCustomers() {
-  // Ritorna la lista dei clienti con i saldi aggregati come da linee guida
+  // Utilizziamo subquery aggregate per evitare la distorsione del prodotto cartesiano derivante dal join multiplo
   return db
     .prepare(
       `
@@ -177,13 +307,11 @@ export function getCustomers() {
         c.id, 
         c.name,
         c.email,
-        COALESCE(SUM(DISTINCT i.amount), 0) as total_invoiced,
-        COALESCE(SUM(p.amount), 0) as total_paid,
-        (COALESCE(SUM(DISTINCT i.amount), 0) - COALESCE(SUM(p.amount), 0)) as balance
+        (SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE customer_id = c.id) as total_invoiced,
+        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE customer_id = c.id) as total_paid,
+        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE customer_id = c.id AND invoice_id IS NULL) as total_acconto,
+        ((SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE customer_id = c.id) - (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE customer_id = c.id)) as balance
     FROM customers c
-    LEFT JOIN invoices i ON c.id = i.customer_id
-    LEFT JOIN payments p ON c.id = p.customer_id
-    GROUP BY c.id
     ORDER BY c.name ASC
   `
     )
@@ -240,24 +368,60 @@ export function addInvoice(invoice) {
     INSERT INTO invoices (id, customer_id, issue_date, due_date, amount, status)
     VALUES (?, ?, ?, ?, ?, ?)
   `)
-  insert.run(
-    invoice.id,
-    invoice.customer_id,
-    invoice.issue_date,
-    invoice.due_date,
-    invoice.amount,
-    invoice.status || 'unpaid'
-  )
-  return { success: true }
+  const insertEntry = db.prepare(`
+    INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  const insertLine = db.prepare(`
+    INSERT INTO journal_lines (id, entry_id, account_name, type, amount)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+
+  const executeTx = db.transaction(() => {
+    const status = invoice.status || 'unpaid'
+    insert.run(
+      invoice.id,
+      invoice.customer_id,
+      invoice.issue_date,
+      invoice.due_date,
+      invoice.amount,
+      status
+    )
+
+    // Journal Entry
+    const entryId = `entry-${invoice.id}`
+    const entryDate = invoice.issue_date + ' 08:00:00'
+    insertEntry.run(
+      entryId,
+      entryDate,
+      `Emissione fattura ${invoice.id}`,
+      'invoice',
+      invoice.id,
+      invoice.customer_id
+    )
+
+    // Scrittura in Partita Doppia (Dare Crediti, Avere Ricavi)
+    insertLine.run(`line-${invoice.id}-1`, entryId, 'Crediti v/Clienti', 'debit', invoice.amount)
+    insertLine.run(`line-${invoice.id}-2`, entryId, 'Ricavi per Vendite', 'credit', invoice.amount)
+
+    return { success: true }
+  })
+
+  try {
+    return executeTx()
+  } catch (err) {
+    console.error('[ADD INVOICE TRANSACTION FAILED]:', err.message)
+    return { success: false, error: err.message }
+  }
 }
 
 /**
- * Gestione Pagamenti (Transazione Atomica con Rollback)
+ * Gestione Pagamenti (Transazione Atomica con Rollback e Scrittura Prima Nota)
  */
 export function addPayment(payment) {
   const insertPayment = db.prepare(`
-    INSERT INTO payments (id, invoice_id, customer_id, amount, method) 
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) 
+    VALUES (?, ?, ?, ?, ?, ?)
   `)
 
   const updateInvoiceStatus = db.prepare(`
@@ -270,32 +434,71 @@ export function addPayment(payment) {
     FROM invoices WHERE id = ?
   `)
 
-  const payId = payment.id
+  const insertEntry = db.prepare(`
+    INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+
+  const insertLine = db.prepare(`
+    INSERT INTO journal_lines (id, entry_id, account_name, type, amount)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+
+  const payId = payment.id || `PAY-${Date.now()}`
   const invoiceId = payment.invoiceId || payment.invoice_id
   const customerId = payment.customerId || payment.customer_id
   const amount = payment.amount
   const method = payment.method
+  const paymentDate =
+    payment.payment_date || new Date().toISOString().replace('T', ' ').substring(0, 19)
 
-  // Transazione eseguita atomicamente
   const executePaymentTransaction = db.transaction(() => {
     try {
       // Inserimento del pagamento
-      insertPayment.run(payId, invoiceId, customerId, amount, method)
+      insertPayment.run(payId, invoiceId, customerId, amount, method, paymentDate)
 
-      // Calcolo del saldo aggiornato per la fattura
-      const invoiceData = checkInvoiceBalance.get(invoiceId, invoiceId)
-      if (!invoiceData) {
-        throw new Error(`Fattura ${invoiceId} non trovata`)
+      const entryId = `entry-${payId}`
+
+      if (invoiceId) {
+        // Calcolo del saldo aggiornato per la fattura
+        const invoiceData = checkInvoiceBalance.get(invoiceId, invoiceId)
+        if (!invoiceData) {
+          throw new Error(`Fattura ${invoiceId} non trovata`)
+        }
+
+        const newTotalPaid = invoiceData.total_paid
+        let newStatus = 'partial'
+        if (newTotalPaid >= invoiceData.amount) {
+          newStatus = 'paid'
+        }
+
+        // Aggiornamento dello stato della fattura
+        updateInvoiceStatus.run(newStatus, invoiceId)
+
+        // Prima Nota e Partita Doppia (Dare Cassa/Banca, Avere Crediti v/Clienti)
+        insertEntry.run(
+          entryId,
+          paymentDate,
+          `Incasso fattura ${invoiceId}`,
+          'payment',
+          payId,
+          customerId
+        )
+        insertLine.run(`line-${payId}-1`, entryId, 'Cassa/Banca', 'debit', amount)
+        insertLine.run(`line-${payId}-2`, entryId, 'Crediti v/Clienti', 'credit', amount)
+      } else {
+        // Incasso Acconto (Dare Cassa/Banca, Avere Acconti da Clienti)
+        insertEntry.run(
+          entryId,
+          paymentDate,
+          `Incasso acconto cliente`,
+          'payment',
+          payId,
+          customerId
+        )
+        insertLine.run(`line-${payId}-1`, entryId, 'Cassa/Banca', 'debit', amount)
+        insertLine.run(`line-${payId}-2`, entryId, 'Acconti da Clienti', 'credit', amount)
       }
-
-      const newTotalPaid = invoiceData.total_paid + amount
-      let newStatus = 'partial'
-      if (newTotalPaid >= invoiceData.amount) {
-        newStatus = 'paid'
-      }
-
-      // Aggiornamento dello stato della fattura
-      updateInvoiceStatus.run(newStatus, invoiceId)
 
       return { success: true }
     } catch (transactionError) {
@@ -309,4 +512,295 @@ export function addPayment(payment) {
   } catch (err) {
     return { success: false, error: err.message }
   }
+}
+
+/**
+ * Ritorna le fatture insolute o parzialmente pagate per un cliente specifico
+ */
+export function getCustomerUnpaidInvoices(customerId) {
+  return db
+    .prepare(
+      `
+    SELECT 
+        i.id, 
+        i.issue_date, 
+        i.due_date, 
+        i.amount, 
+        i.status,
+        (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = i.id) as total_paid,
+        (i.amount - (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = i.id)) as remaining_amount
+    FROM invoices i
+    WHERE i.customer_id = ? AND i.status != 'paid'
+    ORDER BY i.due_date ASC, i.id ASC
+  `
+    )
+    .all(customerId)
+}
+
+/**
+ * Ritorna tutti i pagamenti effettuati da un determinato cliente
+ */
+export function getCustomerPayments(customerId) {
+  return db
+    .prepare(
+      `
+    SELECT p.id, p.invoice_id, p.amount, p.payment_date, p.method
+    FROM payments p
+    WHERE p.customer_id = ?
+    ORDER BY p.payment_date DESC, p.id DESC
+  `
+    )
+    .all(customerId)
+}
+
+/**
+ * Registra un pagamento cumulativo distribuito su più fatture, lasciando l'eventuale surplus come acconto
+ */
+export function addMultiPayment(paymentData) {
+  const insertPayment = db.prepare(`
+    INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  const updateInvoiceStatus = db.prepare(`
+    UPDATE invoices SET status = ? WHERE id = ?
+  `)
+  const checkInvoiceBalance = db.prepare(`
+    SELECT amount,
+    (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?) as total_paid
+    FROM invoices WHERE id = ?
+  `)
+  const insertEntry = db.prepare(`
+    INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  const insertLine = db.prepare(`
+    INSERT INTO journal_lines (id, entry_id, account_name, type, amount)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+
+  const customerId = paymentData.customerId
+  const method = paymentData.method
+  const paymentDate =
+    paymentData.date || new Date().toISOString().replace('T', ' ').substring(0, 19)
+
+  const executeTx = db.transaction(() => {
+    try {
+      // 1. Registra le allocazioni sulle fatture specificate
+      for (const alloc of paymentData.allocations) {
+        const payId = `PAY-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
+        insertPayment.run(payId, alloc.invoiceId, customerId, alloc.amount, method, paymentDate)
+
+        // Ricalcola lo stato della fattura
+        const invoiceData = checkInvoiceBalance.get(alloc.invoiceId, alloc.invoiceId)
+        if (!invoiceData) {
+          throw new Error(`Fattura ${alloc.invoiceId} non trovata`)
+        }
+        let newStatus = 'partial'
+        if (invoiceData.total_paid >= invoiceData.amount) {
+          newStatus = 'paid'
+        }
+        updateInvoiceStatus.run(newStatus, alloc.invoiceId)
+
+        // Prima Nota e Partita Doppia per singola allocazione (Dare Cassa/Banca, Avere Crediti v/Clienti)
+        const entryId = `entry-${payId}`
+        insertEntry.run(
+          entryId,
+          paymentDate,
+          `Incasso fattura ${alloc.invoiceId}`,
+          'payment',
+          payId,
+          customerId
+        )
+        insertLine.run(`line-${payId}-1`, entryId, 'Cassa/Banca', 'debit', alloc.amount)
+        insertLine.run(`line-${payId}-2`, entryId, 'Crediti v/Clienti', 'credit', alloc.amount)
+      }
+
+      // 2. Registra l'eventuale acconto residuo
+      if (paymentData.accontoAmount > 0) {
+        const payId = `PAY-ACC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
+        insertPayment.run(payId, null, customerId, paymentData.accontoAmount, method, paymentDate)
+
+        // Prima Nota e Partita Doppia per acconto (Dare Cassa/Banca, Avere Acconti da Clienti)
+        const entryId = `entry-${payId}`
+        insertEntry.run(
+          entryId,
+          paymentDate,
+          `Incasso acconto cliente`,
+          'payment',
+          payId,
+          customerId
+        )
+        insertLine.run(
+          `line-${payId}-1`,
+          entryId,
+          'Cassa/Banca',
+          'debit',
+          paymentData.accontoAmount
+        )
+        insertLine.run(
+          `line-${payId}-2`,
+          entryId,
+          'Acconti da Clienti',
+          'credit',
+          paymentData.accontoAmount
+        )
+      }
+
+      return { success: true }
+    } catch (err) {
+      console.error('[MULTI-PAYMENT TX ERROR - ROLLBACK]:', err.message)
+      throw err
+    }
+  })
+
+  try {
+    return executeTx()
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Alloca parte o tutto l'acconto accumulato di un cliente su una o più fatture insolute
+ */
+export function allocateAcconto(data) {
+  const getAcconti = db.prepare(`
+    SELECT id, amount FROM payments
+    WHERE customer_id = ? AND invoice_id IS NULL
+    ORDER BY payment_date ASC, id ASC
+  `)
+  const deletePayment = db.prepare('DELETE FROM payments WHERE id = ?')
+  const updatePaymentAmount = db.prepare('UPDATE payments SET amount = ? WHERE id = ?')
+  const insertPayment = db.prepare(`
+    INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  const updateInvoiceStatus = db.prepare(`
+    UPDATE invoices SET status = ? WHERE id = ?
+  `)
+  const checkInvoiceBalance = db.prepare(`
+    SELECT amount,
+    (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?) as total_paid
+    FROM invoices WHERE id = ?
+  `)
+  const insertEntry = db.prepare(`
+    INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  const insertLine = db.prepare(`
+    INSERT INTO journal_lines (id, entry_id, account_name, type, amount)
+    VALUES (?, ?, ?, ?, ?)
+  `)
+
+  const customerId = data.customerId
+  const amountToAllocate = data.amountToAllocate
+  const allocations = data.allocations
+
+  const executeTx = db.transaction(() => {
+    try {
+      let toConsume = amountToAllocate
+      const acconti = getAcconti.all(customerId)
+
+      // Consuma gli acconti registrati (dal più vecchio al più recente)
+      for (const acc of acconti) {
+        if (toConsume <= 0) break
+
+        if (acc.amount <= toConsume) {
+          toConsume -= acc.amount
+          deletePayment.run(acc.id)
+        } else {
+          const newAmount = acc.amount - toConsume
+          toConsume = 0
+          updatePaymentAmount.run(newAmount, acc.id)
+        }
+      }
+
+      if (toConsume > 0) {
+        throw new Error("Credito acconto insufficiente per completare l'allocazione.")
+      }
+
+      // Crea pagamenti collegati alle fatture di destinazione
+      const paymentDate = new Date().toISOString().replace('T', ' ').substring(0, 19)
+      for (const alloc of allocations) {
+        const payId = `PAY-ALLOC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
+        insertPayment.run(
+          payId,
+          alloc.invoiceId,
+          customerId,
+          alloc.amount,
+          'Uso Credito',
+          paymentDate
+        )
+
+        // Ricalcola lo stato della fattura
+        const invoiceData = checkInvoiceBalance.get(alloc.invoiceId, alloc.invoiceId)
+        if (!invoiceData) {
+          throw new Error(`Fattura ${alloc.invoiceId} non trovata`)
+        }
+        let newStatus = 'partial'
+        if (invoiceData.total_paid >= invoiceData.amount) {
+          newStatus = 'paid'
+        }
+        updateInvoiceStatus.run(newStatus, alloc.invoiceId)
+
+        // Prima Nota e Partita Doppia per storno acconto (Dare Acconti da Clienti, Avere Crediti v/Clienti)
+        const entryId = `entry-${payId}`
+        insertEntry.run(
+          entryId,
+          paymentDate,
+          `Allocazione credito su fattura ${alloc.invoiceId}`,
+          'allocation',
+          payId,
+          customerId
+        )
+        insertLine.run(`line-${payId}-1`, entryId, 'Acconti da Clienti', 'debit', alloc.amount)
+        insertLine.run(`line-${payId}-2`, entryId, 'Crediti v/Clienti', 'credit', alloc.amount)
+      }
+
+      return { success: true }
+    } catch (err) {
+      console.error('[ALLOCATE ACCONTO TX ERROR - ROLLBACK]:', err.message)
+      throw err
+    }
+  })
+
+  try {
+    return executeTx()
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Ottiene il giornale di prima nota con le righe di partita doppia, eventualmente filtrando per cliente
+ */
+export function getJournalEntries(filters = {}) {
+  let sql = `
+    SELECT je.id, je.entry_date, je.description, je.reference_type, je.reference_id, je.customer_id, c.name as customer_name
+    FROM journal_entries je
+    LEFT JOIN customers c ON je.customer_id = c.id
+  `
+  const params = []
+  const conditions = []
+  if (filters.customerId) {
+    conditions.push('je.customer_id = ?')
+    params.push(filters.customerId)
+  }
+  if (conditions.length > 0) {
+    sql += ' WHERE ' + conditions.join(' AND ')
+  }
+  sql += ' ORDER BY je.entry_date DESC, je.id DESC'
+
+  const entries = db.prepare(sql).all(...params)
+
+  const getLines = db.prepare(`
+    SELECT id, account_name, type, amount
+    FROM journal_lines
+    WHERE entry_id = ?
+  `)
+
+  return entries.map((entry) => {
+    entry.lines = getLines.all(entry.id)
+    return entry
+  })
 }

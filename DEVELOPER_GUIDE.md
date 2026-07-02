@@ -1,62 +1,37 @@
-Ecco il file di istruzioni completo in un unico blocco di codice per facilitarne la copia. Puoi salvarlo direttamente come `DEVELOPER_GUIDE.md` nella root del tuo progetto.
-
-Markdown
-
-```
 # 📘 Manuale Tecnico e Linee Guida di Sviluppo: BillKeep
 
-Questo documento stabilisce l'architettura tecnica, le best practices e gli standard di codifica per lo sviluppo dell'applicazione desktop locale di gestione fatture e pagamenti.
+Questo documento stabilisce l'architettura tecnica, le best practices e gli standard di codifica per lo sviluppo dell'applicazione desktop locale di gestione fatture, pagamenti e contabilità in partita doppia (Prima Nota).
 
 ---
 
 ## 🛠️ 1. Stack Tecnico di Riferimento
 
-* **Shell/Runtime:** Electron (gestione del ciclo di vita desktop su Linux/Cross-platform).
-* **Frontend:** React + Vite + Tailwind CSS.
-* **Database:** SQLite tramite la libreria `better-sqlite3` (scelta per stabilità, performance sincrone sul processo Main e pieno supporto alle transazioni).
-* **Stato Globale Frontend:** Zustand (leggero, reattivo e disaccoppiato dal ciclo di render di React).
+- **Shell/Runtime:** Electron (gestione del ciclo di vita desktop su Linux/Cross-platform).
+- **Frontend:** React + Vite + Tailwind CSS.
+- **Database:** SQLite tramite la libreria `better-sqlite3` (scelta per stabilità, performance sincrone sul processo Main e pieno supporto alle transazioni).
+- **Stato Globale Frontend:** Zustand (leggero, reattivo e disaccoppiato dal ciclo di render di React).
 
 ---
 
 ## 🏗️ 2. Architettura e Sicurezza (IPC & Context Isolation)
 
-L'applicazione deve rispettare rigorosamente il principio di separazione dei privileges di Electron. Il processo di Rendering (la UI) non ha accesso diretto a Node.js o al File System.
+L'applicazione deve rispettare rigorosamente il principio di separazione dei privilegi di Electron. Il processo di Rendering (la UI) non ha accesso diretto a Node.js o al File System.
 
 ### Flusso dei Dati
-Tutte le operazioni sul database avvengono nel **Processo Main**. Il **Processo Renderer** invoca i metodi esposti dal file `preload.js`.
+
+Tutte le operazioni sul database avvengono nel **Processo Main**. Il **Processo Renderer** invoca i metodi esposti dal file `preload.js` via IPC.
+
+```
+[ React UI (Renderer) ] <--- (IPC Invoke) ---> [ Preload (Context Bridge) ] <--- (IPC Handle) ---> [ Node.js + SQLite (Main) ]
 ```
 
-[ React UI (Renderer) ] <--- (IPC Invoke) ---> [ Preload (Context Bridge) ] <--- (IPC Handle) ---> [ Node.js + SQLite (Main) ]
-
-````
-### Configurazione `src/main/preload.js`
-Nel file di preload, esponiamo solo le funzioni strettamente necessarie tramite canali IPC sicuri e tipizzati:
-
-```javascript
-const { contextBridge, ipcRenderer } = require('electron');
-
-contextBridge.exposeInMainWorld('api', {
-  // Clienti
-  getCustomers: () => ipcRenderer.invoke('db:get-customers'),
-  addCustomer: (customer) => ipcRenderer.invoke('db:add-customer', customer),
-
-  // Fatture e Pagamenti
-  getInvoices: () => ipcRenderer.invoke('db:get-invoices'),
-  addInvoice: (invoice) => ipcRenderer.invoke('db:add-invoice', invoice),
-  addPayment: (payment) => ipcRenderer.invoke('db:add-payment', payment),
-
-  // Reportistica
-  getDashboardStats: () => ipcRenderer.invoke('db:get-stats')
-});
-````
+---
 
 ## 🗄️ 3. Schema del Database (SQLite)
 
 Il database è relazionale e locale. Sfrutta le chiavi esterne (`FOREIGN KEY`) per garantire l'integrità dei dati. I calcoli di saldi e report vengono eseguiti a livello di query (senza duplicazione o denormalizzazione dei dati).
 
-SQL
-
-```
+```sql
 -- Abilita il supporto alle chiavi esterne ad ogni connessione
 PRAGMA foreign_keys = ON;
 
@@ -82,7 +57,7 @@ CREATE TABLE IF NOT EXISTS invoices (
 -- Tabella Pagamenti Ricevuti
 CREATE TABLE IF NOT EXISTS payments (
     id TEXT PRIMARY KEY,
-    invoice_id TEXT NOT NULL,
+    invoice_id TEXT, -- NULLABLE: se NULL, il pagamento è considerato un acconto generico
     customer_id TEXT NOT NULL,
     amount REAL NOT NULL CHECK(amount > 0),
     payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -91,143 +66,210 @@ CREATE TABLE IF NOT EXISTS payments (
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
 );
 
+-- Tabella Testate Prima Nota (Giornale Contabile)
+CREATE TABLE IF NOT EXISTS journal_entries (
+    id TEXT PRIMARY KEY,
+    entry_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    description TEXT NOT NULL,
+    reference_type TEXT NOT NULL, -- 'invoice', 'payment', 'allocation'
+    reference_id TEXT NOT NULL,
+    customer_id TEXT,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+);
+
+-- Tabella Righe Partita Doppia (Dettagli Dare/Avere)
+CREATE TABLE IF NOT EXISTS journal_lines (
+    id TEXT PRIMARY KEY,
+    entry_id TEXT NOT NULL,
+    account_name TEXT NOT NULL, -- es. 'Crediti v/Clienti', 'Ricavi per Vendite', 'Cassa/Banca', 'Acconti da Clienti'
+    type TEXT NOT NULL CHECK(type IN ('debit', 'credit')),
+    amount REAL NOT NULL CHECK(amount > 0),
+    FOREIGN KEY (entry_id) REFERENCES journal_entries(id) ON DELETE CASCADE
+);
+
 -- Indici per ottimizzazione performance sulle ricerche e join frequenti
 CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(entry_date);
+CREATE INDEX IF NOT EXISTS idx_journal_entries_customer ON journal_entries(customer_id);
+CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
 ```
+
+---
 
 ## 🛡️ 4. Gestione Errori & Transazioni Atomiche
 
-### Politica dei Blocchi Try-Catch (Processo Main)
+### Politica dei Blocchi Try-Catch e Transazioni Contabili (Processo Main)
 
-La registrazione di un pagamento richiede un'operazione atomica: l'inserimento del pagamento e il contestuale cambio di stato della fattura correlata. Se una delle due operazioni fallisce, la transazione deve fare un _rollback_ automatico.
+La registrazione di un pagamento o l'allocazione di un acconto richiede un'operazione atomica: l'inserimento o modifica dei record dei pagamenti, l'aggiornamento dello stato delle fatture e l'inserimento delle relative righe contabili in partita doppia. Se una sola operazione fallisce, la transazione deve eseguire il _rollback_ automatico.
 
 Ecco lo standard di implementazione nel processo Main utilizzando `better-sqlite3`:
 
-JavaScript
+```javascript
+const path = require('path')
+const Database = require('better-sqlite3')
 
-```
-const path = require('path');
-const { app, ipcMain } = require('electron');
-const Database = require('better-sqlite3');
+const dbPath = path.join(app.getPath('userData'), 'billkeep.db')
+const db = new Database(dbPath)
+db.pragma('foreign_keys = ON')
 
-// Posizionamento sicuro del database nella cartella config dell'utente su Linux
-const dbPath = path.join(app.getPath('userData'), 'billkeep.db');
-const db = new Database(dbPath);
-db.pragma('foreign_keys = ON');
+// Esempio di transazione per registrazione di incasso multiplo e scrittura in prima nota
+export function addMultiPayment(paymentData) {
+  const insertPayment = db.prepare(`
+    INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  const updateInvoiceStatus = db.prepare(`
+    UPDATE invoices SET status = ? WHERE id = ?
+  `)
+  const checkInvoiceBalance = db.prepare(`
+    SELECT amount,
+    (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?) as total_paid
+    FROM invoices WHERE id = ?
+  `)
+  const insertEntry = db.prepare(`
+    INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+  const insertLine = db.prepare(`
+    INSERT INTO journal_lines (id, entry_id, account_name, type, amount)
+    VALUES (?, ?, ?, ?, ?)
+  `)
 
-ipcMain.handle('db:add-payment', async (event, payment) => {
-  // 1. Prepariamo gli statement SQL
-  const insertPayment = db.prepare(`    INSERT INTO payments (id, invoice_id, customer_id, amount, method)     VALUES (?, ?, ?, ?, ?)  `);
+  const customerId = paymentData.customerId
+  const method = paymentData.method
+  const paymentDate = paymentData.date
 
-  const updateInvoiceStatus = db.prepare(`    UPDATE invoices SET status = ? WHERE id = ?  `);
+  const executeTx = db.transaction(() => {
+    // 1. Alloca quote su singole fatture
+    for (const alloc of paymentData.allocations) {
+      const payId = `PAY-${Date.now()}`
+      insertPayment.run(payId, alloc.invoiceId, customerId, alloc.amount, method, paymentDate)
 
-  const checkInvoiceBalance = db.prepare(`    SELECT amount,     (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?) as total_paid     FROM invoices WHERE id = ?  `);
+      // Aggiorna stato fattura
+      const invoiceData = checkInvoiceBalance.get(alloc.invoiceId, alloc.invoiceId)
+      let newStatus = invoiceData.total_paid >= invoiceData.amount ? 'paid' : 'partial'
+      updateInvoiceStatus.run(newStatus, alloc.invoiceId)
 
-  // 2. Definiamo la transazione atomica
-  const executePaymentTransaction = db.transaction((pay) => {
-    try {
-      // Inserimento record pagamento
-      insertPayment.run(pay.id, pay.invoiceId, pay.customerId, pay.amount, pay.method);
-
-      // Calcolo del nuovo stato basato sul totale pagato aggiornato
-      const invoiceData = checkInvoiceBalance.get(pay.invoiceId, pay.invoiceId);
-      const newTotalPaid = invoiceData.total_paid + pay.amount;
-
-      let newStatus = 'partial';
-      if (newTotalPaid >= invoiceData.amount) {
-        newStatus = 'paid';
-      }
-
-      // Aggiornamento stato fattura
-      updateInvoiceStatus.run(newStatus, pay.invoiceId);
-
-      return { success: true };
-    } catch (transactionError) {
-      // better-sqlite3 intercetta l'errore ed esegue il ROLLBACK in automatico
-      console.error("[TRANSACTION FAILED - ROLLBACK APPLIED]:", transactionError.message);
-      throw transactionError;
+      // Scrittura in Partita Doppia (Dare Cassa/Banca, Avere Crediti v/Clienti)
+      const entryId = `entry-${payId}`
+      insertEntry.run(
+        entryId,
+        paymentDate,
+        `Incasso fattura ${alloc.invoiceId}`,
+        'payment',
+        payId,
+        customerId
+      )
+      insertLine.run(`line-${payId}-1`, entryId, 'Cassa/Banca', 'debit', alloc.amount)
+      insertLine.run(`line-${payId}-2`, entryId, 'Crediti v/Clienti', 'credit', alloc.amount)
     }
-  });
 
-  // 3. Esecuzione del blocco con gestione errore dell'operazione
+    // 2. Alloca surplus come acconto libero
+    if (paymentData.accontoAmount > 0) {
+      const payId = `PAY-ACC-${Date.now()}`
+      insertPayment.run(payId, null, customerId, paymentData.accontoAmount, method, paymentDate)
+
+      // Scrittura in Partita Doppia (Dare Cassa/Banca, Avere Acconti da Clienti)
+      const entryId = `entry-${payId}`
+      insertEntry.run(entryId, paymentDate, `Incasso acconto cliente`, 'payment', payId, customerId)
+      insertLine.run(`line-${payId}-1`, entryId, 'Cassa/Banca', 'debit', paymentData.accontoAmount)
+      insertLine.run(
+        `line-${payId}-2`,
+        entryId,
+        'Acconti da Clienti',
+        'credit',
+        paymentData.accontoAmount
+      )
+    }
+    return { success: true }
+  })
+
   try {
-    return executePaymentTransaction(payment);
+    return executeTx()
   } catch (err) {
-    return { success: false, error: err.message };
+    console.error('[MULTI-PAYMENT TX FAILED]:', err.message)
+    return { success: false, error: err.message }
   }
-});
+}
 ```
+
+---
 
 ## ⚡ 5. Performance, Lazy Loading & UI Boundaries
 
 ### Lazy Loading dei Componenti (Frontend)
 
-Per mantenere l'applicazione snella e ridurre i tempi di reazione al cambio rotta, implementare il Code Splitting nativo di React:
+Per ridurre i tempi di caricamento del pacchetto JavaScript iniziale, i componenti di pagina devono essere caricati in modo asincrono (Lazy Loading) tramite React:
 
-JavaScript
+```javascript
+import React, { Suspense } from 'react'
+import { Routes, Route } from 'react-router-dom'
 
-```
-import React, { Suspense } from 'react';
-
-const Dashboard = React.lazy(() => import('./pages/Dashboard'));
-const Customers = React.lazy(() => import('./pages/Customers'));
-const Invoices = React.lazy(() => import('./pages/Invoices'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'))
+const Customers = React.lazy(() => import('./pages/Customers'))
+const Journal = React.lazy(() => import('./pages/Journal'))
 
 function App() {
   return (
-    <Suspense className="skeleton-loader-fullscreen" fallback="{<div"/>}>      <Routes>
-        <Route element="{<Dashboard" path="/"/>} />        <Route element="{<Customers" path="/customers"/>} />        <Route element="{<Invoices" path="/invoices"/>} />      </Routes>
+    <Suspense fallback={<div>Caricamento...</div>}>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/clients" element={<Customers />} />
+        <Route path="/journal" element={<Journal />} />
+      </Routes>
     </Suspense>
-  );
+  )
 }
 ```
 
-### Calcolo Saldi e Performance SQL
+### Calcolo Saldi ed Evitamento del Prodotto Cartesiano
 
-Non calcolare mai il saldo filtrando o iterando gli array di dati nel frontend via JavaScript. Sfrutta il motore relazionale di SQLite per estrarre la situazione contabile in un'unica query aggregata:
+Non calcolare mai i saldi filtrando o aggregando arrays nel frontend via JavaScript. Sfrutta il motore relazionale di SQLite.
+**IMPORTANTE:** Evitare i double join diretti su tabelle di relazioni differenti (es. join simultaneo su `invoices` e `payments`) per non moltiplicare i record (effetto prodotto cartesiano). Utilizzare sempre subquery aggregate:
 
-SQL
-
-```
+```sql
 SELECT
     c.id,
     c.name,
-    COALESCE(SUM(DISTINCT i.amount), 0) as total_invoiced,
-    COALESCE(SUM(p.amount), 0) as total_paid,
-    (COALESCE(SUM(DISTINCT i.amount), 0) - COALESCE(SUM(p.amount), 0)) as balance
+    c.email,
+    (SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE customer_id = c.id) as total_invoiced,
+    (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE customer_id = c.id) as total_paid,
+    (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE customer_id = c.id AND invoice_id IS NULL) as total_acconto,
+    ((SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE customer_id = c.id) - (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE customer_id = c.id)) as balance
 FROM customers c
-LEFT JOIN invoices i ON c.id = i.customer_id
-LEFT JOIN payments p ON c.id = p.customer_id
-GROUP BY c.id;
+ORDER BY c.name ASC;
 ```
+
+---
 
 ## 🧱 6. Componenti Riutilizzabili (UI Design Tokens)
 
-Tutti i componenti UI generati o sviluppati devono essere atomici e flessibili, accettando props per configurare lo stato visivo.
+- **`StatCard`** (`src/renderer/src/components/StatCard.jsx`): Componente KPI per visualizzazione totali e saldi.
+- **`DataTable`** (`src/renderer/src/components/DataTable.jsx`): Wrapper per tabelle dati che integra nativamente gli _Skeleton Loader_ animati (`animate-pulse`).
+- **`Modal`** (`src/renderer/src/components/Modal.jsx`): Contenitore modale per form di input. Gestisce lo sfondo scuro sfocato (`backdrop-blur`) e intercetta il tasto `Esc` per la chiusura automatica.
 
-- **`StatCard`** (`src/renderer/src/components/StatCard.jsx`): Componente KPI per la dashboard (visualizzazione totali, saldi).
-  - **Props:** `title` (string), `value` (string/number), `icon` (string/Material icon), `trendText` (string, opzionale), `trendIcon` (string, opzionale), `variant` (`'primary' | 'secondary' | 'error'`).
-  - **Logica:** Regola la combinazione di colori e gli indicatori visivi in base alla variante (inclusa una decorazione absolute rossa per la variante `error`).
+---
 
-- **`DataTable`** (`src/renderer/src/components/DataTable.jsx`): Wrapper per le tabelle dati che integra nativamente gli _Skeleton Loader_ animati (`animate-pulse`) durante il caricamento dei dati da IPC.
-  - **Props:** `headers` (array di stringhe o oggetti `{ text, align, className }`), `data` (array di oggetti), `loading` (boolean), `renderRow` (funzione di render riga), `renderSkeletonRow` (funzione di render scheletro personalizzato, opzionale), `skeletonCount` (number, default `3`), `emptyMessage` (string).
+## ⚖️ 7. Regole di Partita Doppia (Doppio Controllo Contabile)
 
-- **`Modal`** (`src/renderer/src/components/Modal.jsx`): Contenitore modale per form di input.
-  - **Props:** `isOpen` (boolean), `onClose` (funzione), `title` (string), `children` (React node).
-  - **Logica:** Gestisce lo sfondo scuro sfocato (`backdrop-blur`), inibisce lo scorrimento della pagina principale (`overflow: hidden` su `body`), e intercetta il tasto `Esc` per la chiusura automatica. Il backdrop è posizionato come elemento fratello separato rispetto al pannello del form per prevenire errori di propagazione dei click.
+Ogni evento amministrativo dell'applicazione scrive automaticamente sul giornale di Prima Nota cronologico generando righe Dare/Avere bilanciate.
 
-## 🚀 7. Regole d'oro dello Sviluppatore
+| Evento                  | Conto Addebitato (Dare) | Conto Accreditato (Avere) | Significato                                            |
+| :---------------------- | :---------------------- | :------------------------ | :----------------------------------------------------- |
+| **Emissione Fattura**   | `Crediti v/Clienti`     | `Ricavi per Vendite`      | Rilevazione del credito e del ricavo                   |
+| **Incasso Fattura**     | `Cassa/Banca`           | `Crediti v/Clienti`       | Rilevazione dell'entrata monetaria e storno credito    |
+| **Incasso Acconto**     | `Cassa/Banca`           | `Acconti da Clienti`      | Entrata monetaria e insorgenza debito futuro (acconto) |
+| **Allocazione Acconto** | `Acconti da Clienti`    | `Crediti v/Clienti`       | Compensazione debito acconto con credito fattura       |
+
+---
+
+## 🚀 8. Regole d'oro dello Sviluppatore
 
 1. **Immutabilità del Calcolo Contabile:** Il saldo cliente o fattura non viene mai salvato come colonna statica modificabile arbitrariamente. È rigorosamente derivato dalla formula: `Saldo = Totale Emesso - Totale Ricevuto`.
-
-2. **Validazione Preventiva e Controllo Duplicati:** Prima di invocare i canali IPC, valida i dati nel frontend (es. impedisci l'invio di importi negativi o ID cliente vuoti). Controlla preventivamente la presenza di nomi di clienti duplicati sia sul frontend (per feedback istantaneo) sia nel processo Main di backend (`db.js`) con query _case-insensitive_ per garantire l'integrità dei dati.
-
+2. **Validazione Preventiva e Controllo Duplicati:** Prima di invocare i canali IPC, valida i dati nel frontend. Controlla preventivamente la presenza di nomi di clienti duplicati sia sul frontend sia nel processo Main con query _case-insensitive_.
 3. **Disaccoppiamento della Logica:** Le viste di React devono occuparsi solo della presentazione. La logica di fetch dei dati deve essere isolata all'interno di Custom Hooks o azioni dedicate nello store Zustand.
-
 4. **Ottimizzazione del Layout per Risoluzioni Standard (1600x900):** Per evitare lo scroll verticale non necessario e tagli orizzontali delle tabelle, utilizzare paddings compatti. Nello specifico, il contenitore principale deve utilizzare al massimo `p-md` (24px) anziché `p-xl` (64px), e le tabelle dati devono limitare il padding delle celle a `py-sm px-sm` (12px) per assicurare che tutte le colonne siano visibili senza scorrimento.
-
-5. **Localizzazione della UI:** Tutte le etichette, placeholder, messaggi di errore e diciture mostrate all'utente finale nel Renderer process devono essere rigorosamente scritte in lingua italiana per mantenere la coerenza dell'interfaccia.
-
-6. **Gestione del Layout e Dimensionamento con Tailwind CSS v4:** A causa degli override definiti sul tema (es. `--spacing-lg: 48px`, `--spacing-md: 24px`), evitare l'uso delle classi di larghezza massima predefinite come `max-w-md` o `max-w-lg` per elementi di layout generali (quali dialoghi o barre di ricerca), poiché Tailwind v4 le mappa direttamente sulle variabili di spacing riducendo le dimensioni a pochi pixel. Utilizzare invece valori arbitrari espliciti, ad esempio `max-w-[500px]` o `max-w-[400px]`.
+5. **Localizzazione della UI:** Tutte le etichette, placeholder, messaggi di errore e diciture mostrate all'utente finale nel Renderer process devono essere rigorosamente scritte in lingua italiana.
+6. **Gestione del Layout e Dimensionamento con Tailwind CSS v4:** A causa degli override definiti sul tema, evitare l'uso delle classi di larghezza massima predefinite come `max-w-md` o `max-w-lg` per elementi di layout generali. Utilizzare invece valori arbitrari espliciti, ad esempio `max-w-[500px]` o `max-w-[400px]`.
