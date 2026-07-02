@@ -45,10 +45,10 @@ export default function Dashboard() {
       </header>
 
       {/* KPI Section */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-2xl">
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-md">
         {/* KPI 1 - Totale Fatturato */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col hover:border-primary/50 transition-colors shadow-sm">
-          <div className="flex justify-between items-start mb-md">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col hover:border-primary/50 transition-colors shadow-sm">
+          <div className="flex justify-between items-start mb-sm">
             <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
               Totale Fatturato
             </span>
@@ -56,7 +56,7 @@ export default function Dashboard() {
               <span className="material-symbols-outlined text-primary">receipt_long</span>
             </div>
           </div>
-          <div className="font-headline-xl text-headline-xl text-on-surface mb-sm tabular-nums">
+          <div className="font-headline-md text-headline-md text-on-surface mb-xs tabular-nums">
             {formatCurrency(stats.totalInvoiced)}
           </div>
           <div className="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
@@ -66,8 +66,8 @@ export default function Dashboard() {
         </div>
 
         {/* KPI 2 - Totale Incassato */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col hover:border-secondary/50 transition-colors shadow-sm">
-          <div className="flex justify-between items-start mb-md">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col hover:border-secondary/50 transition-colors shadow-sm">
+          <div className="flex justify-between items-start mb-sm">
             <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
               Totale Incassato
             </span>
@@ -75,7 +75,7 @@ export default function Dashboard() {
               <span className="material-symbols-outlined text-secondary">payments</span>
             </div>
           </div>
-          <div className="font-headline-xl text-headline-xl text-on-surface mb-sm tabular-nums">
+          <div className="font-headline-md text-headline-md text-on-surface mb-xs tabular-nums">
             {formatCurrency(stats.totalPaid)}
           </div>
           <div className="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
@@ -85,9 +85,9 @@ export default function Dashboard() {
         </div>
 
         {/* KPI 3 - Da Incassare */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col hover:border-error/50 transition-colors shadow-sm relative overflow-hidden">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col hover:border-error/50 transition-colors shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-error/5 rounded-bl-full -mr-10 -mt-10"></div>
-          <div className="flex justify-between items-start mb-md relative z-10">
+          <div className="flex justify-between items-start mb-sm relative z-10">
             <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
               Da Incassare
             </span>
@@ -95,7 +95,7 @@ export default function Dashboard() {
               <span className="material-symbols-outlined text-error">account_balance_wallet</span>
             </div>
           </div>
-          <div className="font-headline-xl text-headline-xl text-on-surface mb-sm relative z-10 tabular-nums">
+          <div className="font-headline-md text-headline-md text-on-surface mb-xs relative z-10 tabular-nums">
             {formatCurrency(stats.balance)}
           </div>
           <div className="flex items-center gap-xs font-label-sm text-label-sm text-error relative z-10">
@@ -108,14 +108,14 @@ export default function Dashboard() {
       {/* Loading Skeleton Loader wrapper */}
       {loading && stats.recentInvoices.length === 0 ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg h-64 animate-pulse"></div>
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-lg h-64 animate-pulse"></div>
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md h-64 animate-pulse"></div>
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md h-64 animate-pulse"></div>
         </div>
       ) : (
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
           {/* Ultime Fatture */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
-            <div className="p-lg border-b border-outline-variant flex justify-between items-center bg-surface">
+            <div className="p-md border-b border-outline-variant flex justify-between items-center bg-surface">
               <h3 className="font-headline-md text-headline-md text-on-surface">Ultime Fatture</h3>
               <Link
                 to="/invoices"
@@ -128,18 +128,18 @@ export default function Dashboard() {
               <table className="w-full text-left border-collapse">
                 <thead className="bg-surface-container-low font-label-sm text-label-sm text-on-surface-variant uppercase">
                   <tr>
-                    <th className="py-md px-lg font-medium">Cliente</th>
-                    <th className="py-md px-lg font-medium">Importo</th>
-                    <th className="py-md px-lg font-medium">Stato</th>
-                    <th className="py-md px-lg font-medium">Scadenza</th>
+                    <th className="py-sm px-sm font-medium">Cliente</th>
+                    <th className="py-sm px-sm font-medium">Importo</th>
+                    <th className="py-sm px-sm font-medium">Stato</th>
+                    <th className="py-sm px-sm font-medium">Scadenza</th>
                   </tr>
                 </thead>
                 <tbody className="font-body-md text-body-md text-on-surface divide-y divide-outline-variant">
                   {stats.recentInvoices.map((inv) => (
                     <tr key={inv.id} className="hover:bg-surface-container-lowest/50 transition-colors">
-                      <td className="py-md px-lg">{inv.customer_name}</td>
-                      <td className="py-md px-lg font-medium tabular-nums">{formatCurrency(inv.amount)}</td>
-                      <td className="py-md px-lg">
+                      <td className="py-sm px-sm">{inv.customer_name}</td>
+                      <td className="py-sm px-sm font-medium tabular-nums">{formatCurrency(inv.amount)}</td>
+                      <td className="py-sm px-sm">
                         {inv.status === 'paid' && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-[11px] uppercase tracking-wide">
                             Pagata
@@ -163,7 +163,7 @@ export default function Dashboard() {
                         )}
                       </td>
                       <td
-                        className={`py-md px-lg ${
+                        className={`py-sm px-sm ${
                           inv.status !== 'paid' && new Date(inv.due_date) < new Date()
                             ? 'text-error font-medium'
                             : 'text-on-surface-variant'
@@ -175,7 +175,7 @@ export default function Dashboard() {
                   ))}
                   {stats.recentInvoices.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-lg px-lg text-center text-on-surface-variant">
+                      <td colSpan={4} className="py-md px-md text-center text-on-surface-variant">
                         Nessuna fattura inserita.
                       </td>
                     </tr>
@@ -187,7 +187,7 @@ export default function Dashboard() {
 
           {/* Pagamenti Recenti */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
-            <div className="p-lg border-b border-outline-variant flex justify-between items-center bg-surface">
+            <div className="p-md border-b border-outline-variant flex justify-between items-center bg-surface">
               <h3 className="font-headline-md text-headline-md text-on-surface">Pagamenti Recenti</h3>
               <Link
                 to="/payments"
@@ -196,12 +196,12 @@ export default function Dashboard() {
                 Storicizzazione
               </Link>
             </div>
-            <div className="p-lg flex-1">
-              <ul className="flex flex-col gap-md">
+            <div className="p-md flex-1">
+              <ul className="flex flex-col gap-sm">
                 {stats.recentPayments.map((pay) => (
                   <li
                     key={pay.id}
-                    className="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer"
+                    className="flex items-center justify-between p-sm rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer"
                   >
                     <div className="flex items-center gap-md">
                       <div className="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
@@ -227,7 +227,7 @@ export default function Dashboard() {
                   </li>
                 ))}
                 {stats.recentPayments.length === 0 && (
-                  <li className="py-lg text-center text-on-surface-variant">
+                  <li className="py-md text-center text-on-surface-variant">
                     Nessun pagamento registrato.
                   </li>
                 )}

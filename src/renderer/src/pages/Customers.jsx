@@ -135,16 +135,16 @@ export default function Customers() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-outline-variant bg-surface-container">
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider">
                   Nome / Ragione Sociale
                 </th>
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider">
                   Email
                 </th>
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider text-right">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider text-right">
                   Fatturato Totale
                 </th>
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider text-right">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider text-right">
                   Saldo Corrente
                 </th>
               </tr>
@@ -154,19 +154,19 @@ export default function Customers() {
                 // Skeleton rows
                 [1, 2, 3].map((n) => (
                   <tr key={n}>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-surface-container animate-pulse"></div>
                         <div className="h-4 w-32 bg-surface-container rounded animate-pulse"></div>
                       </div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="h-4 w-48 bg-surface-container rounded animate-pulse"></div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="h-4 w-24 bg-surface-container rounded ml-auto animate-pulse"></div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="h-6 w-20 bg-surface-container rounded-full ml-auto animate-pulse"></div>
                     </td>
                   </tr>
@@ -174,7 +174,7 @@ export default function Customers() {
               ) : (
                 filteredCustomers.map((c) => (
                   <tr key={c.id} className="hover:bg-surface-container-high transition-colors">
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">
                           {getInitials(c.name)}
@@ -182,11 +182,11 @@ export default function Customers() {
                         <span className="font-medium text-on-surface">{c.name}</span>
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-on-surface-variant">{c.email || '-'}</td>
-                    <td className="py-4 px-6 text-right font-medium tabular-nums">
+                    <td className="py-sm px-sm text-on-surface-variant">{c.email || '-'}</td>
+                    <td className="py-sm px-sm text-right font-medium tabular-nums">
                       {formatCurrency(c.total_invoiced)}
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-sm px-sm text-right">
                       {c.balance <= 0 ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-container text-on-secondary-container tabular-nums">
                           {formatCurrency(c.balance)}

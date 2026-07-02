@@ -108,22 +108,22 @@ export default function Invoices() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-outline-variant bg-surface-container">
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider">
                   ID Fattura
                 </th>
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider">
                   Cliente
                 </th>
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider">
                   Data Emissione
                 </th>
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider">
                   Scadenza
                 </th>
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider text-right">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider text-right">
                   Importo
                 </th>
-                <th className="font-label-sm text-label-sm text-on-surface-variant py-4 px-6 font-semibold uppercase tracking-wider text-center">
+                <th className="font-label-sm text-label-sm text-on-surface-variant py-sm px-sm font-semibold uppercase tracking-wider text-center">
                   Stato
                 </th>
               </tr>
@@ -132,22 +132,22 @@ export default function Invoices() {
               {loading && invoices.length === 0 ? (
                 [1, 2, 3].map((n) => (
                   <tr key={n}>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="h-4 w-24 bg-surface-container rounded animate-pulse"></div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="h-4 w-32 bg-surface-container rounded animate-pulse"></div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="h-4 w-20 bg-surface-container rounded animate-pulse"></div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="h-4 w-20 bg-surface-container rounded animate-pulse"></div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="h-4 w-16 bg-surface-container rounded ml-auto animate-pulse"></div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-sm px-sm">
                       <div className="h-6 w-16 bg-surface-container rounded-full mx-auto animate-pulse"></div>
                     </td>
                   </tr>
@@ -155,11 +155,11 @@ export default function Invoices() {
               ) : (
                 invoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-surface-container-high transition-colors">
-                    <td className="py-4 px-6 font-medium">{inv.id}</td>
-                    <td className="py-4 px-6">{inv.customer_name}</td>
-                    <td className="py-4 px-6 text-on-surface-variant">{formatDate(inv.issue_date)}</td>
+                    <td className="py-sm px-sm font-medium">{inv.id}</td>
+                    <td className="py-sm px-sm">{inv.customer_name}</td>
+                    <td className="py-sm px-sm text-on-surface-variant">{formatDate(inv.issue_date)}</td>
                     <td
-                      className={`py-4 px-6 ${
+                      className={`py-sm px-sm ${
                         inv.status !== 'paid' && new Date(inv.due_date) < new Date()
                           ? 'text-error font-medium'
                           : 'text-on-surface-variant'
@@ -167,10 +167,10 @@ export default function Invoices() {
                     >
                       {formatDate(inv.due_date)}
                     </td>
-                    <td className="py-4 px-6 text-right font-medium tabular-nums">
+                    <td className="py-sm px-sm text-right font-medium tabular-nums">
                       {formatCurrency(inv.amount)}
                     </td>
-                    <td className="py-4 px-6 text-center">
+                    <td className="py-sm px-sm text-center">
                       {inv.status === 'paid' && (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-container text-on-secondary-container uppercase tracking-wide">
                           Pagata

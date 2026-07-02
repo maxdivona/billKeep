@@ -88,33 +88,33 @@ export default function Payments() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-outline-variant text-on-surface-variant font-label-sm text-label-sm">
-                <th className="py-sm px-xs font-semibold uppercase">Data</th>
-                <th className="py-sm px-xs font-semibold uppercase">Cliente</th>
-                <th className="py-sm px-xs text-right font-semibold uppercase">Importo</th>
-                <th className="py-sm px-xs font-semibold uppercase">Metodo</th>
-                <th className="py-sm px-xs font-semibold uppercase">Fattura Correlata</th>
+                <th className="py-sm px-sm font-semibold uppercase">Data</th>
+                <th className="py-sm px-sm font-semibold uppercase">Cliente</th>
+                <th className="py-sm px-sm text-right font-semibold uppercase">Importo</th>
+                <th className="py-sm px-sm font-semibold uppercase">Metodo</th>
+                <th className="py-sm px-sm font-semibold uppercase">Fattura Correlata</th>
               </tr>
             </thead>
             <tbody className="font-body-md text-body-md divide-y divide-outline-variant">
               {loading && payments.length === 0 ? (
                 [1, 2, 3].map((n) => (
                   <tr key={n}>
-                    <td className="py-4 px-xs"><div className="h-4 w-20 bg-surface-container rounded animate-pulse"></div></td>
-                    <td className="py-4 px-xs"><div className="h-4 w-32 bg-surface-container rounded animate-pulse"></div></td>
-                    <td className="py-4 px-xs text-right"><div className="h-4 w-16 bg-surface-container rounded ml-auto animate-pulse"></div></td>
-                    <td className="py-4 px-xs"><div className="h-4 w-24 bg-surface-container rounded animate-pulse"></div></td>
-                    <td className="py-4 px-xs"><div className="h-4 w-16 bg-surface-container rounded animate-pulse"></div></td>
+                    <td className="py-sm px-sm"><div className="h-4 w-20 bg-surface-container rounded animate-pulse"></div></td>
+                    <td className="py-sm px-sm"><div className="h-4 w-32 bg-surface-container rounded animate-pulse"></div></td>
+                    <td className="py-sm px-sm text-right"><div className="h-4 w-16 bg-surface-container rounded ml-auto animate-pulse"></div></td>
+                    <td className="py-sm px-sm"><div className="h-4 w-24 bg-surface-container rounded animate-pulse"></div></td>
+                    <td className="py-sm px-sm"><div className="h-4 w-16 bg-surface-container rounded animate-pulse"></div></td>
                   </tr>
                 ))
               ) : (
                 payments.map((pay) => (
                   <tr key={pay.id} className="hover:bg-surface-container-low transition-colors">
-                    <td className="py-md px-xs text-on-surface-variant">{formatDate(pay.payment_date)}</td>
-                    <td className="py-md px-xs font-medium">{pay.customer_name}</td>
-                    <td className="py-md px-xs text-right text-secondary font-medium tabular-nums">
+                    <td className="py-sm px-sm text-on-surface-variant">{formatDate(pay.payment_date)}</td>
+                    <td className="py-sm px-sm font-medium">{pay.customer_name}</td>
+                    <td className="py-sm px-sm text-right text-secondary font-medium tabular-nums">
                       + {formatCurrency(pay.amount)}
                     </td>
-                    <td className="py-md px-xs">
+                    <td className="py-sm px-sm">
                       <div className="flex items-center gap-xs text-on-surface-variant">
                         {pay.method === 'Bonifico' && <span className="material-symbols-outlined text-[16px]">account_balance</span>}
                         {pay.method === 'Carta' && <span className="material-symbols-outlined text-[16px]">credit_card</span>}
@@ -125,7 +125,7 @@ export default function Payments() {
                         {pay.method}
                       </div>
                     </td>
-                    <td className="py-md px-xs font-medium text-primary">
+                    <td className="py-sm px-sm font-medium text-primary">
                       #{pay.invoice_id}
                     </td>
                   </tr>
