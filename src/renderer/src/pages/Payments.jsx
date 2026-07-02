@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store/useStore'
+import DataTable from '../components/DataTable'
 
 export default function Payments() {
   const { payments, invoices, loading, fetchPayments, fetchInvoices, addPayment } = useStore()
@@ -7,7 +8,7 @@ export default function Payments() {
   // Form State
   const [selectedInvoiceId, setSelectedInvoiceId] = useState('')
   const [amount, setAmount] = useState('')
-  const [paymentDate, setPaymentDate] = useState('')
+  const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().split('T')[0])
   const [method, setMethod] = useState('Bonifico')
   const [formError, setFormError] = useState('')
   const [formSuccess, setFormSuccess] = useState('')
@@ -15,7 +16,6 @@ export default function Payments() {
   useEffect(() => {
     fetchPayments()
     fetchInvoices()
-    setPaymentDate(new Date().toISOString().split('T')[0])
   }, [])
 
   const formatCurrency = (val) => {
@@ -84,63 +84,49 @@ export default function Payments() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-outline-variant text-on-surface-variant font-label-sm text-label-sm">
-                <th className="py-sm px-sm font-semibold uppercase">Data</th>
-                <th className="py-sm px-sm font-semibold uppercase">Cliente</th>
-                <th className="py-sm px-sm text-right font-semibold uppercase">Importo</th>
-                <th className="py-sm px-sm font-semibold uppercase">Metodo</th>
-                <th className="py-sm px-sm font-semibold uppercase">Fattura Correlata</th>
-              </tr>
-            </thead>
-            <tbody className="font-body-md text-body-md divide-y divide-outline-variant">
-              {loading && payments.length === 0 ? (
-                [1, 2, 3].map((n) => (
-                  <tr key={n}>
-                    <td className="py-sm px-sm"><div className="h-4 w-20 bg-surface-container rounded animate-pulse"></div></td>
-                    <td className="py-sm px-sm"><div className="h-4 w-32 bg-surface-container rounded animate-pulse"></div></td>
-                    <td className="py-sm px-sm text-right"><div className="h-4 w-16 bg-surface-container rounded ml-auto animate-pulse"></div></td>
-                    <td className="py-sm px-sm"><div className="h-4 w-24 bg-surface-container rounded animate-pulse"></div></td>
-                    <td className="py-sm px-sm"><div className="h-4 w-16 bg-surface-container rounded animate-pulse"></div></td>
-                  </tr>
-                ))
-              ) : (
-                payments.map((pay) => (
-                  <tr key={pay.id} className="hover:bg-surface-container-low transition-colors">
-                    <td className="py-sm px-sm text-on-surface-variant">{formatDate(pay.payment_date)}</td>
-                    <td className="py-sm px-sm font-medium">{pay.customer_name}</td>
-                    <td className="py-sm px-sm text-right text-secondary font-medium tabular-nums">
-                      + {formatCurrency(pay.amount)}
-                    </td>
-                    <td className="py-sm px-sm">
-                      <div className="flex items-center gap-xs text-on-surface-variant">
-                        {pay.method === 'Bonifico' && <span className="material-symbols-outlined text-[16px]">account_balance</span>}
-                        {pay.method === 'Carta' && <span className="material-symbols-outlined text-[16px]">credit_card</span>}
-                        {pay.method === 'Contanti' && <span className="material-symbols-outlined text-[16px]">payments</span>}
-                        {!(pay.method === 'Bonifico' || pay.method === 'Carta' || pay.method === 'Contanti') && (
-                          <span className="material-symbols-outlined text-[16px]">more_horiz</span>
-                        )}
-                        {pay.method}
-                      </div>
-                    </td>
-                    <td className="py-sm px-sm font-medium text-primary">
-                      #{pay.invoice_id}
-                    </td>
-                  </tr>
-                ))
-              )}
-              {!loading && payments.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-on-surface-variant">
-                    Nessun pagamento registrato.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          headers={[
+            'Data',
+            'Cliente',
+            { text: 'Importo', align: 'right' },
+            'Metodo',
+            'Fattura Correlata'
+          ]}
+          data={payments}
+          loading={loading}
+          emptyMessage="Nessun pagamento registrato."
+          renderRow={(pay) => (
+            <tr key={pay.id} className="hover:bg-surface-container-low transition-colors">
+              <td className="py-sm px-sm text-on-surface-variant">
+                {formatDate(pay.payment_date)}
+              </td>
+              <td className="py-sm px-sm font-medium">{pay.customer_name}</td>
+              <td className="py-sm px-sm text-right text-secondary font-medium tabular-nums">
+                + {formatCurrency(pay.amount)}
+              </td>
+              <td className="py-sm px-sm">
+                <div className="flex items-center gap-xs text-on-surface-variant">
+                  {pay.method === 'Bonifico' && (
+                    <span className="material-symbols-outlined text-[16px]">account_balance</span>
+                  )}
+                  {pay.method === 'Carta' && (
+                    <span className="material-symbols-outlined text-[16px]">credit_card</span>
+                  )}
+                  {pay.method === 'Contanti' && (
+                    <span className="material-symbols-outlined text-[16px]">payments</span>
+                  )}
+                  {!(
+                    pay.method === 'Bonifico' ||
+                    pay.method === 'Carta' ||
+                    pay.method === 'Contanti'
+                  ) && <span className="material-symbols-outlined text-[16px]">more_horiz</span>}
+                  {pay.method}
+                </div>
+              </td>
+              <td className="py-sm px-sm font-medium text-primary">#{pay.invoice_id}</td>
+            </tr>
+          )}
+        />
       </div>
 
       {/* Right Column: Registration Panel */}
@@ -153,7 +139,9 @@ export default function Payments() {
         <div className="p-lg flex-1">
           <form onSubmit={handleRegister} className="space-y-md">
             {formError && <p className="text-error font-label-md text-label-md">{formError}</p>}
-            {formSuccess && <p className="text-secondary font-label-md text-label-md">{formSuccess}</p>}
+            {formSuccess && (
+              <p className="text-secondary font-label-md text-label-md">{formSuccess}</p>
+            )}
 
             {/* Invoice Selection */}
             <div className="space-y-sm">
@@ -166,7 +154,7 @@ export default function Payments() {
                 onChange={(e) => {
                   setSelectedInvoiceId(e.target.value)
                   // Set payment amount automatically to the remaining amount of the invoice
-                  const inv = invoices.find(i => i.id === e.target.value)
+                  const inv = invoices.find((i) => i.id === e.target.value)
                   if (inv) {
                     setAmount(inv.amount.toString())
                   }
@@ -222,7 +210,9 @@ export default function Payments() {
                   <label
                     key={m}
                     className={`flex items-center gap-sm p-sm border rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors ${
-                      method === m ? 'border-primary bg-primary-container/10' : 'border-outline-variant'
+                      method === m
+                        ? 'border-primary bg-primary-container/10'
+                        : 'border-outline-variant'
                     }`}
                   >
                     <input
@@ -234,10 +224,20 @@ export default function Payments() {
                       onChange={() => setMethod(m)}
                     />
                     <span className="font-body-md text-body-md flex items-center gap-xs">
-                      {m === 'Bonifico' && <span className="material-symbols-outlined text-[18px]">account_balance</span>}
-                      {m === 'Carta' && <span className="material-symbols-outlined text-[18px]">credit_card</span>}
-                      {m === 'Contanti' && <span className="material-symbols-outlined text-[18px]">payments</span>}
-                      {m === 'Altro' && <span className="material-symbols-outlined text-[18px]">more_horiz</span>}
+                      {m === 'Bonifico' && (
+                        <span className="material-symbols-outlined text-[18px]">
+                          account_balance
+                        </span>
+                      )}
+                      {m === 'Carta' && (
+                        <span className="material-symbols-outlined text-[18px]">credit_card</span>
+                      )}
+                      {m === 'Contanti' && (
+                        <span className="material-symbols-outlined text-[18px]">payments</span>
+                      )}
+                      {m === 'Altro' && (
+                        <span className="material-symbols-outlined text-[18px]">more_horiz</span>
+                      )}
                       {m}
                     </span>
                   </label>
@@ -245,26 +245,12 @@ export default function Payments() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-outline-variant flex gap-md">
-              <button
-                type="button"
-                className="flex-1 py-2 px-3 rounded-lg bg-surface-container-low text-on-surface font-label-md text-label-md hover:bg-surface-variant transition-colors border border-outline-variant cursor-pointer"
-                onClick={() => {
-                  setSelectedInvoiceId('')
-                  setAmount('')
-                  setFormError('')
-                  setFormSuccess('')
-                }}
-              >
-                Annulla
-              </button>
-              <button
-                type="submit"
-                className="flex-1 py-2 px-3 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary/95 transition-colors shadow-sm cursor-pointer"
-              >
-                Registra
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="w-full py-3 bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md rounded-lg shadow-sm transition-colors cursor-pointer"
+            >
+              Conferma Pagamento
+            </button>
           </form>
         </div>
       </aside>

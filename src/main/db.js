@@ -67,29 +67,36 @@ export function initDatabase() {
       VALUES (?, ?, ?, ?, ?, ?)
     `)
     // Pagate (€ 38.900,50 totali)
-    insertInvoice.run('INV-001', 'cust-1', '2026-06-01', '2026-07-01', 12500.00, 'paid')
-    insertInvoice.run('INV-002', 'cust-2', '2026-06-02', '2026-07-02', 25100.00, 'paid')
-    insertInvoice.run('INV-003', 'cust-1', '2026-06-15', '2026-07-15', 1250.00, 'paid')
-    insertInvoice.run('INV-004', 'cust-3', '2026-06-20', '2026-07-20', 50.50, 'paid')
+    insertInvoice.run('INV-001', 'cust-1', '2026-06-01', '2026-07-01', 12500.0, 'paid')
+    insertInvoice.run('INV-002', 'cust-2', '2026-06-02', '2026-07-02', 25100.0, 'paid')
+    insertInvoice.run('INV-003', 'cust-1', '2026-06-15', '2026-07-15', 1250.0, 'paid')
+    insertInvoice.run('INV-004', 'cust-3', '2026-06-20', '2026-07-20', 50.5, 'paid')
 
     // Da Incassare (€ 6.329,50 totali)
     // Future (2 in attesa = € 4.449,00)
-    insertInvoice.run('INV-005', 'cust-3', '2026-06-25', '2026-07-22', 3400.00, 'unpaid')
-    insertInvoice.run('INV-006', 'cust-5', '2026-06-28', '2026-07-28', 1049.00, 'unpaid')
+    insertInvoice.run('INV-005', 'cust-3', '2026-06-25', '2026-07-22', 3400.0, 'unpaid')
+    insertInvoice.run('INV-006', 'cust-5', '2026-06-28', '2026-07-28', 1049.0, 'unpaid')
     // Scadute (3 fatture scadute = € 1.880,50)
-    insertInvoice.run('INV-007', 'cust-4', '2026-05-10', '2026-06-10', 850.50, 'unpaid')
-    insertInvoice.run('INV-008', 'cust-4', '2026-05-15', '2026-06-15', 380.00, 'unpaid')
-    insertInvoice.run('INV-009', 'cust-3', '2026-05-20', '2026-06-20', 650.00, 'unpaid')
+    insertInvoice.run('INV-007', 'cust-4', '2026-05-10', '2026-06-10', 850.5, 'unpaid')
+    insertInvoice.run('INV-008', 'cust-4', '2026-05-15', '2026-06-15', 380.0, 'unpaid')
+    insertInvoice.run('INV-009', 'cust-3', '2026-05-20', '2026-06-20', 650.0, 'unpaid')
 
     // Inserimento Pagamenti Ricevuti
     const insertPayment = db.prepare(`
       INSERT INTO payments (id, invoice_id, customer_id, amount, payment_date, method)
       VALUES (?, ?, ?, ?, ?, ?)
     `)
-    insertPayment.run('PAY-001', 'INV-003', 'cust-1', 1250.00, '2026-07-02 10:45:00', 'Bonifico')
-    insertPayment.run('PAY-002', 'INV-002', 'cust-2', 25100.00, '2026-07-01 16:30:00', 'Carta di Credito')
-    insertPayment.run('PAY-003', 'INV-001', 'cust-1', 12500.00, '2026-06-05 09:15:00', 'Bonifico')
-    insertPayment.run('PAY-004', 'INV-004', 'cust-3', 50.50, '2026-06-22 14:00:00', 'Bonifico')
+    insertPayment.run('PAY-001', 'INV-003', 'cust-1', 1250.0, '2026-07-02 10:45:00', 'Bonifico')
+    insertPayment.run(
+      'PAY-002',
+      'INV-002',
+      'cust-2',
+      25100.0,
+      '2026-07-01 16:30:00',
+      'Carta di Credito'
+    )
+    insertPayment.run('PAY-003', 'INV-001', 'cust-1', 12500.0, '2026-06-05 09:15:00', 'Bonifico')
+    insertPayment.run('PAY-004', 'INV-004', 'cust-3', 50.5, '2026-06-22 14:00:00', 'Bonifico')
 
     console.log('[DB] Popolamento dati mock completato con successo.')
   }
@@ -100,7 +107,9 @@ export function initDatabase() {
  */
 export function getDashboardStats() {
   // Totale Fatturato
-  const totalInvoiced = db.prepare('SELECT COALESCE(SUM(amount), 0) as total FROM invoices').get().total
+  const totalInvoiced = db
+    .prepare('SELECT COALESCE(SUM(amount), 0) as total FROM invoices')
+    .get().total
 
   // Totale Incassato
   const totalPaid = db.prepare('SELECT COALESCE(SUM(amount), 0) as total FROM payments').get().total
@@ -110,29 +119,41 @@ export function getDashboardStats() {
 
   // Numero di fatture scadute (unpaid/partial e data di scadenza passata rispetto a oggi)
   const todayStr = new Date().toISOString().split('T')[0]
-  const expiredCount = db.prepare(`
+  const expiredCount = db
+    .prepare(
+      `
     SELECT COUNT(*) as count 
     FROM invoices 
     WHERE status != 'paid' AND due_date < ?
-  `).get(todayStr).count
+  `
+    )
+    .get(todayStr).count
 
   // Ultime 5 fatture con il nome del cliente
-  const recentInvoices = db.prepare(`
+  const recentInvoices = db
+    .prepare(
+      `
     SELECT i.id, i.amount, i.status, i.due_date, c.name as customer_name
     FROM invoices i
     JOIN customers c ON i.customer_id = c.id
     ORDER BY i.issue_date DESC, i.id DESC
     LIMIT 5
-  `).all()
+  `
+    )
+    .all()
 
   // Ultimi 5 pagamenti con il nome del cliente e ID fattura
-  const recentPayments = db.prepare(`
+  const recentPayments = db
+    .prepare(
+      `
     SELECT p.id, p.invoice_id, p.amount, p.payment_date, p.method, c.name as customer_name
     FROM payments p
     JOIN customers c ON p.customer_id = c.id
     ORDER BY p.payment_date DESC, p.id DESC
     LIMIT 5
-  `).all()
+  `
+    )
+    .all()
 
   return {
     totalInvoiced,
@@ -149,7 +170,9 @@ export function getDashboardStats() {
  */
 export function getCustomers() {
   // Ritorna la lista dei clienti con i saldi aggregati come da linee guida
-  return db.prepare(`
+  return db
+    .prepare(
+      `
     SELECT 
         c.id, 
         c.name,
@@ -162,7 +185,9 @@ export function getCustomers() {
     LEFT JOIN payments p ON c.id = p.customer_id
     GROUP BY c.id
     ORDER BY c.name ASC
-  `).all()
+  `
+    )
+    .all()
 }
 
 export function addCustomer(customer) {
@@ -175,24 +200,32 @@ export function addCustomer(customer) {
  * Gestione Pagamenti (Lista Completa)
  */
 export function getPayments() {
-  return db.prepare(`
+  return db
+    .prepare(
+      `
     SELECT p.id, p.invoice_id, p.amount, p.payment_date, p.method, c.name as customer_name
     FROM payments p
     JOIN customers c ON p.customer_id = c.id
     ORDER BY p.payment_date DESC, p.id DESC
-  `).all()
+  `
+    )
+    .all()
 }
 
 /**
  * Gestione Fatture
  */
 export function getInvoices() {
-  return db.prepare(`
+  return db
+    .prepare(
+      `
     SELECT i.id, i.customer_id, i.issue_date, i.due_date, i.amount, i.status, c.name as customer_name
     FROM invoices i
     JOIN customers c ON i.customer_id = c.id
     ORDER BY i.issue_date DESC, i.id DESC
-  `).all()
+  `
+    )
+    .all()
 }
 
 export function addInvoice(invoice) {
@@ -259,7 +292,7 @@ export function addPayment(payment) {
 
       return { success: true }
     } catch (transactionError) {
-      console.error("[TRANSACTION FAILED - ROLLBACK APPLIED]:", transactionError.message)
+      console.error('[TRANSACTION FAILED - ROLLBACK APPLIED]:', transactionError.message)
       throw transactionError
     }
   })

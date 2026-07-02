@@ -28,7 +28,7 @@ Tutte le operazioni sul database avvengono nel **Processo Main**. Il **Processo 
 
 [ React UI (Renderer) ] <--- (IPC Invoke) ---> [ Preload (Context Bridge) ] <--- (IPC Handle) ---> [ Node.js + SQLite (Main) ]
 
-```
+````
 ### Configurazione `src/main/preload.js`
 Nel file di preload, esponiamo solo le funzioni strettamente necessarie tramite canali IPC sicuri e tipizzati:
 
@@ -48,7 +48,7 @@ contextBridge.exposeInMainWorld('api', {
   // Reportistica
   getDashboardStats: () => ipcRenderer.invoke('db:get-stats')
 });
-```
+````
 
 ## 🗄️ 3. Schema del Database (SQLite)
 
@@ -101,7 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
 
 ### Politica dei Blocchi Try-Catch (Processo Main)
 
-La registrazione di un pagamento richiede un'operazione atomica: l'inserimento del pagamento e il contestuale cambio di stato della fattura correlata. Se una delle due operazioni fallisce, la transazione deve fare un *rollback* automatico.
+La registrazione di un pagamento richiede un'operazione atomica: l'inserimento del pagamento e il contestuale cambio di stato della fattura correlata. Se una delle due operazioni fallisce, la transazione deve fare un _rollback_ automatico.
 
 Ecco lo standard di implementazione nel processo Main utilizzando `better-sqlite3`:
 
@@ -147,7 +147,7 @@ ipcMain.handle('db:add-payment', async (event, payment) => {
     } catch (transactionError) {
       // better-sqlite3 intercetta l'errore ed esegue il ROLLBACK in automatico
       console.error("[TRANSACTION FAILED - ROLLBACK APPLIED]:", transactionError.message);
-      throw transactionError; 
+      throw transactionError;
     }
   });
 
@@ -191,8 +191,8 @@ Non calcolare mai il saldo filtrando o iterando gli array di dati nel frontend v
 SQL
 
 ```
-SELECT 
-    c.id, 
+SELECT
+    c.id,
     c.name,
     COALESCE(SUM(DISTINCT i.amount), 0) as total_invoiced,
     COALESCE(SUM(p.amount), 0) as total_paid,
@@ -209,7 +209,7 @@ Tutti i componenti UI generati o sviluppati devono essere atomici e flessibili, 
 
 - `StatCard`: Componente KPI per la dashboard (Visualizza Totali, Saldo Attuale). Varia lo stile cromatico (verde/rosso text) in base al valore del trend.
 
-- `DataTable`: Wrapper per le tabelle dati che integra nativamente gli *Skeleton Loader* (stati di caricamento grigi animati) durante la risoluzione delle promesse IPC.
+- `DataTable`: Wrapper per le tabelle dati che integra nativamente gli _Skeleton Loader_ (stati di caricamento grigi animati) durante la risoluzione delle promesse IPC.
 
 - `Modal` / `Drawer`: Contenitori standard per formati di input (Nuovo Cliente, Inserisci Fattura, Registra Pagamento) dotati di gestione dell'overlay e chiusura tramite tasto `Esc`.
 
@@ -224,4 +224,3 @@ Tutti i componenti UI generati o sviluppati devono essere atomici e flessibili, 
 4. **Ottimizzazione del Layout per Risoluzioni Standard (1600x900):** Per evitare lo scroll verticale non necessario e tagli orizzontali delle tabelle, utilizzare paddings compatti. Nello specifico, il contenitore principale deve utilizzare al massimo `p-md` (24px) anziché `p-xl` (64px), e le tabelle dati devono limitare il padding delle celle a `py-sm px-sm` (12px) per assicurare che tutte le colonne siano visibili senza scorrimento.
 
 5. **Localizzazione della UI:** Tutte le etichette, placeholder, messaggi di errore e diciture mostrate all'utente finale nel Renderer process devono essere rigorosamente scritte in lingua italiana per mantenere la coerenza dell'interfaccia.
-

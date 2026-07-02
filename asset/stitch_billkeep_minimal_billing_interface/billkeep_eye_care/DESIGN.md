@@ -117,7 +117,7 @@ The palette is rooted in an "Eye-Care First" philosophy, strictly avoiding pure 
 
 - **Backgrounds**: A warm, desaturated sage-gray (#EAEAE3) serves as the primary canvas, providing a low-stimulus environment.
 - **Primary Surface**: A slightly lighter tint (#F2F2EE) is used for cards and containers to create gentle depth without high-contrast edges.
-- **Accents**: 
+- **Accents**:
   - **Primary (Slate Blue-Gray)**: Used for core navigation and interactive elements.
   - **Secondary (Muted Sage)**: Used for "success" states and growth indicators.
   - **Tertiary (Terracotta)**: Used sparingly for alerts or critical calls to action to ensure they remain visible but not jarring.
@@ -136,7 +136,7 @@ This design system employs **Atkinson Hyperlegible Next** across all roles. This
 The layout philosophy follows a **Fluid-Fixed Hybrid** model. Content is organized within a 12-column grid on desktop (max-width 1440px) to prevent excessively long line lengths which can cause eye strain.
 
 - **Breathing Room**: The system uses a 1:1.5 spacing ratio. If an element has 16px of internal padding, it should ideally have 24px of external margin to preserve a sense of "calm."
-- **Rhythm**: All spacing is derived from an 8px base unit. 
+- **Rhythm**: All spacing is derived from an 8px base unit.
 - **Responsive Behavior**: On mobile, margins reduce to 16px, and the 12-column grid collapses to a single column, with cards expanding to the full width of the safe area to maximize touch targets and text size.
 
 ## Elevation & Depth
@@ -149,7 +149,7 @@ To maintain the "matte" and restful aesthetic, this design system avoids heavy, 
 
 ## Shapes
 
-The shape language is defined by **Soft Geometricism**. 
+The shape language is defined by **Soft Geometricism**.
 
 Rounded corners are applied universally to eliminate "sharp" visual points that draw unnecessary ocular attention. Standard containers and cards utilize a 16px (`rounded-xl`) radius. Interactive components like buttons use a 12px (`rounded-lg`) radius, providing a tactile, approachable feel that mimics physical office stationery.
 

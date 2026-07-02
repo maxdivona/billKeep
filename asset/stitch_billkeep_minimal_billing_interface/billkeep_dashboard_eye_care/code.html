@@ -1,439 +1,617 @@
-<!DOCTYPE html>
+<!doctype html>
 
-<html lang="it"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>BillKeep - Dashboard</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-  tailwind.config = {
-    darkMode: "class",
-    theme: {
-      extend: {
-        "colors": {
-                "tertiary-fixed": "#ffdbd1",
-                "surface-bright": "#faf9f5",
-                "on-surface": "#1a1c1a",
-                "tertiary": "#76473a",
-                "tertiary-container": "#925f51",
-                "outline-variant": "#c4c6cc",
-                "primary": "#455565",
-                "on-background": "#1a1c1a",
-                "surface-tint": "#506071",
-                "inverse-on-surface": "#f1f1ed",
-                "on-tertiary-container": "#ffe9e4",
-                "on-error": "#ffffff",
-                "surface": "#faf9f5",
-                "primary-fixed": "#d3e4f8",
-                "on-tertiary-fixed-variant": "#673b2e",
-                "on-secondary-fixed-variant": "#374b43",
-                "on-primary-fixed": "#0c1d2b",
-                "inverse-primary": "#b8c8db",
-                "on-secondary-container": "#52675e",
-                "on-secondary": "#ffffff",
-                "on-tertiary": "#ffffff",
-                "on-primary-fixed-variant": "#394858",
-                "secondary": "#4e635a",
-                "surface-variant": "#e2e3df",
-                "on-error-container": "#93000a",
-                "surface-container-high": "#e8e8e4",
-                "secondary-fixed-dim": "#b5ccc1",
-                "surface-container": "#eeeeea",
-                "on-primary-container": "#e2efff",
-                "tertiary-fixed-dim": "#f7b8a6",
-                "background": "#faf9f5",
-                "inverse-surface": "#2f312e",
-                "secondary-fixed": "#d1e8dd",
-                "surface-dim": "#dadad6",
-                "secondary-container": "#cee5da",
-                "surface-container-lowest": "#ffffff",
-                "primary-fixed-dim": "#b8c8db",
-                "on-primary": "#ffffff",
-                "surface-container-highest": "#e2e3df",
-                "primary-container": "#5d6d7e",
-                "error-container": "#ffdad6",
-                "on-tertiary-fixed": "#331107",
-                "surface-container-low": "#f4f4f0",
-                "error": "#ba1a1a",
-                "outline": "#74777c",
-                "on-surface-variant": "#43474c",
-                "on-secondary-fixed": "#0b1f18"
-        },
-        "borderRadius": {
-                "DEFAULT": "0.25rem",
-                "lg": "0.5rem",
-                "xl": "0.75rem",
-                "full": "9999px"
-        },
-        "spacing": {
-                "gutter": "24px",
-                "base": "8px",
-                "lg": "48px",
-                "xl": "64px",
-                "margin-desktop": "40px",
-                "xs": "4px",
-                "md": "24px",
-                "margin-mobile": "16px",
-                "sm": "12px"
-        },
-        "fontFamily": {
-                "headline-md": [
-                        "Atkinson Hyperlegible Next"
-                ],
-                "label-md": [
-                        "Atkinson Hyperlegible Next"
-                ],
-                "headline-lg-mobile": [
-                        "Atkinson Hyperlegible Next"
-                ],
-                "body-lg": [
-                        "Atkinson Hyperlegible Next"
-                ],
-                "label-sm": [
-                        "Atkinson Hyperlegible Next"
-                ],
-                "headline-lg": [
-                        "Atkinson Hyperlegible Next"
-                ],
-                "body-md": [
-                        "Atkinson Hyperlegible Next"
-                ]
-        },
-        "fontSize": {
-                "headline-md": [
-                        "24px",
-                        {
-                                "lineHeight": "32px",
-                                "fontWeight": "600"
-                        }
-                ],
-                "label-md": [
-                        "14px",
-                        {
-                                "lineHeight": "20px",
-                                "letterSpacing": "0.02em",
-                                "fontWeight": "600"
-                        }
-                ],
-                "headline-lg-mobile": [
-                        "26px",
-                        {
-                                "lineHeight": "32px",
-                                "fontWeight": "700"
-                        }
-                ],
-                "body-lg": [
-                        "18px",
-                        {
-                                "lineHeight": "28px",
-                                "fontWeight": "400"
-                        }
-                ],
-                "label-sm": [
-                        "12px",
-                        {
-                                "lineHeight": "16px",
-                                "fontWeight": "500"
-                        }
-                ],
-                "headline-lg": [
-                        "32px",
-                        {
-                                "lineHeight": "40px",
-                                "letterSpacing": "-0.02em",
-                                "fontWeight": "700"
-                        }
-                ],
-                "body-md": [
-                        "16px",
-                        {
-                                "lineHeight": "24px",
-                                "fontWeight": "400"
-                        }
-                ]
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>BillKeep - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'tertiary-fixed': '#ffdbd1',
+              'surface-bright': '#faf9f5',
+              'on-surface': '#1a1c1a',
+              tertiary: '#76473a',
+              'tertiary-container': '#925f51',
+              'outline-variant': '#c4c6cc',
+              primary: '#455565',
+              'on-background': '#1a1c1a',
+              'surface-tint': '#506071',
+              'inverse-on-surface': '#f1f1ed',
+              'on-tertiary-container': '#ffe9e4',
+              'on-error': '#ffffff',
+              surface: '#faf9f5',
+              'primary-fixed': '#d3e4f8',
+              'on-tertiary-fixed-variant': '#673b2e',
+              'on-secondary-fixed-variant': '#374b43',
+              'on-primary-fixed': '#0c1d2b',
+              'inverse-primary': '#b8c8db',
+              'on-secondary-container': '#52675e',
+              'on-secondary': '#ffffff',
+              'on-tertiary': '#ffffff',
+              'on-primary-fixed-variant': '#394858',
+              secondary: '#4e635a',
+              'surface-variant': '#e2e3df',
+              'on-error-container': '#93000a',
+              'surface-container-high': '#e8e8e4',
+              'secondary-fixed-dim': '#b5ccc1',
+              'surface-container': '#eeeeea',
+              'on-primary-container': '#e2efff',
+              'tertiary-fixed-dim': '#f7b8a6',
+              background: '#faf9f5',
+              'inverse-surface': '#2f312e',
+              'secondary-fixed': '#d1e8dd',
+              'surface-dim': '#dadad6',
+              'secondary-container': '#cee5da',
+              'surface-container-lowest': '#ffffff',
+              'primary-fixed-dim': '#b8c8db',
+              'on-primary': '#ffffff',
+              'surface-container-highest': '#e2e3df',
+              'primary-container': '#5d6d7e',
+              'error-container': '#ffdad6',
+              'on-tertiary-fixed': '#331107',
+              'surface-container-low': '#f4f4f0',
+              error: '#ba1a1a',
+              outline: '#74777c',
+              'on-surface-variant': '#43474c',
+              'on-secondary-fixed': '#0b1f18'
+            },
+            borderRadius: {
+              DEFAULT: '0.25rem',
+              lg: '0.5rem',
+              xl: '0.75rem',
+              full: '9999px'
+            },
+            spacing: {
+              gutter: '24px',
+              base: '8px',
+              lg: '48px',
+              xl: '64px',
+              'margin-desktop': '40px',
+              xs: '4px',
+              md: '24px',
+              'margin-mobile': '16px',
+              sm: '12px'
+            },
+            fontFamily: {
+              'headline-md': ['Atkinson Hyperlegible Next'],
+              'label-md': ['Atkinson Hyperlegible Next'],
+              'headline-lg-mobile': ['Atkinson Hyperlegible Next'],
+              'body-lg': ['Atkinson Hyperlegible Next'],
+              'label-sm': ['Atkinson Hyperlegible Next'],
+              'headline-lg': ['Atkinson Hyperlegible Next'],
+              'body-md': ['Atkinson Hyperlegible Next']
+            },
+            fontSize: {
+              'headline-md': [
+                '24px',
+                {
+                  lineHeight: '32px',
+                  fontWeight: '600'
+                }
+              ],
+              'label-md': [
+                '14px',
+                {
+                  lineHeight: '20px',
+                  letterSpacing: '0.02em',
+                  fontWeight: '600'
+                }
+              ],
+              'headline-lg-mobile': [
+                '26px',
+                {
+                  lineHeight: '32px',
+                  fontWeight: '700'
+                }
+              ],
+              'body-lg': [
+                '18px',
+                {
+                  lineHeight: '28px',
+                  fontWeight: '400'
+                }
+              ],
+              'label-sm': [
+                '12px',
+                {
+                  lineHeight: '16px',
+                  fontWeight: '500'
+                }
+              ],
+              'headline-lg': [
+                '32px',
+                {
+                  lineHeight: '40px',
+                  letterSpacing: '-0.02em',
+                  fontWeight: '700'
+                }
+              ],
+              'body-md': [
+                '16px',
+                {
+                  lineHeight: '24px',
+                  fontWeight: '400'
+                }
+              ]
+            }
+          }
         }
-},
-    },
-  }
-</script>
-<style>
-        body {
-            background-color: #faf9f5;
-        }
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .material-symbols-outlined.fill {
-            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #faf9f5;
+      }
+      .material-symbols-outlined {
+        font-variation-settings:
+          'FILL' 0,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24;
+      }
+      .material-symbols-outlined.fill {
+        font-variation-settings:
+          'FILL' 1,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24;
+      }
     </style>
-</head>
-<body class="font-body-md text-on-surface flex min-h-screen bg-background">
-<!-- SideNavBar -->
-<nav class="bg-surface dark:bg-surface text-primary dark:text-inverse-primary font-body-md text-body-md h-screen w-64 fixed left-0 top-0 border-r border-outline-variant dark:border-outline flex flex-col h-full py-md px-lg z-20">
-<div class="mb-xl mt-sm">
-<h1 class="font-headline-lg text-headline-lg font-bold text-primary dark:text-inverse-primary">BillKeep</h1>
-<p class="font-label-sm text-label-sm text-on-surface-variant mt-xs">Financial Management</p>
-</div>
-<ul class="flex flex-col gap-sm flex-grow">
-<!-- Active State for Dashboard -->
-<li>
-<a class="flex items-center gap-md px-md py-sm rounded-lg text-primary dark:text-inverse-primary font-bold border-r-4 border-primary dark:border-inverse-primary transition-colors duration-200 ease-in-out bg-surface-container-low dark:bg-surface-container-highest" href="#">
-<span class="material-symbols-outlined fill" data-icon="dashboard">dashboard</span>
-                    Dashboard
-                </a>
-</li>
-<li>
-<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out" href="#">
-<span class="material-symbols-outlined" data-icon="group">group</span>
-                    Clients
-                </a>
-</li>
-<li>
-<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out" href="#">
-<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
-                    Invoices
-                </a>
-</li>
-<li>
-<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out" href="#">
-<span class="material-symbols-outlined" data-icon="payments">payments</span>
-                    Payments
-                </a>
-</li>
-<li>
-<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out" href="#">
-<span class="material-symbols-outlined" data-icon="settings">settings</span>
-                    Settings
-                </a>
-</li>
-</ul>
-<div class="mt-auto pt-lg border-t border-outline-variant">
-<div class="flex items-center gap-md">
-<img alt="User profile photo" class="w-10 h-10 rounded-full object-cover border border-outline-variant" data-alt="A small circular profile picture of a professional user in a corporate setting. High quality, realistic lighting, neutral background, suitable for a professional SaaS dashboard avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOjLBH5q8KCcnaWXjBMqoqpExB2rIlnS6mo-AVLNyZkVG0kpp8myT8B6Gq-f6cmEf1muLZ2Fh7FHVhe-tzbnECRWGT8Sr0Rqd0Q6a8AcySpee1nVzVcEzC8KQ4oALrMh8x2zN67x51pHqhY49eHLerCRZnXTmN8MKdj9lDUqlWhAQpn-dStGQj09a_-njKEx6XoawYoIalOX03FfrwS9cNYHworbgHXTtFK2aAfsAyvoLS71tPpzHxUA"/>
-<div class="flex flex-col">
-<span class="font-label-md text-label-md">Admin User</span>
-<span class="font-label-sm text-label-sm text-on-surface-variant">admin@billkeep.io</span>
-</div>
-</div>
-</div>
-</nav>
-<!-- Main Content Area -->
-<div class="flex-1 ml-64 flex flex-col min-h-screen">
-<!-- TopNavBar -->
-<header class="bg-surface dark:bg-surface text-primary dark:text-inverse-primary font-label-md text-label-md h-16 fixed top-0 right-0 left-64 border-b border-outline-variant dark:border-outline flex justify-between items-center px-margin-desktop w-[calc(100%-16rem)] z-10 transition-all duration-150">
-<div class="flex items-center bg-surface-container-low rounded-full px-md py-sm border border-outline-variant w-1/3 max-w-md focus-within:border-primary transition-colors">
-<span class="material-symbols-outlined text-on-surface-variant mr-sm" data-icon="search">search</span>
-<input class="bg-transparent border-none outline-none w-full text-body-md text-on-surface placeholder:text-on-surface-variant/70 focus:ring-0 p-0" placeholder="Search..." type="text"/>
-</div>
-<div class="flex items-center gap-md">
-<button class="p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high rounded-full transition-all duration-150 flex items-center justify-center relative">
-<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
-<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
-</button>
-<button class="p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high rounded-full transition-all duration-150 flex items-center justify-center">
-<span class="material-symbols-outlined" data-icon="help">help</span>
-</button>
-<img alt="User profile photo" class="w-8 h-8 rounded-full object-cover ml-sm border border-outline-variant" data-alt="A small circular profile picture of a professional user in a corporate setting. High quality, realistic lighting, neutral background, suitable for a professional SaaS dashboard avatar." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBowNXPEashSXPobvkZ0_I20aI8IUZmCr7RCMgzXXtOkDIPid4fGLoL1ysjND-amRE3JRM2TVTNmHowhvP2XyC-TCoTHOq13YXWaWPw60_0GCA2syAS99zc8sGZigAjWRsRAGZD7vMc7qXKBnaD9pPM30s4RVKVaIKK6_bFrhlfonxI3-Lvw5b-hUtWLI2Yz78m_HWPcTISYrFNe_DEmHVbsF7IU1MHC2moqqOpujDonxn4GnzEmJTRzg"/>
-</div>
-</header>
-<!-- Main Canvas -->
-<main class="flex-1 mt-16 p-xl bg-background">
-<div class="max-w-[1400px] mx-auto">
-<header class="mb-xl">
-<h2 class="font-headline-xl text-headline-xl text-on-surface mb-xs">Dashboard Overview</h2>
-<p class="font-body-md text-body-md text-on-surface-variant">Welcome back. Here is your financial summary for this month.</p>
-</header>
-<!-- KPI Section -->
-<section class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-2xl">
-<!-- KPI 1 -->
-<div class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-lg flex flex-col hover:border-primary/50 transition-colors shadow-sm">
-<div class="flex justify-between items-start mb-md">
-<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Totale Fatturato</span>
-<div class="p-sm bg-primary-container/10 rounded-full">
-<span class="material-symbols-outlined text-primary" data-icon="receipt_long">receipt_long</span>
-</div>
-</div>
-<div class="font-headline-xl text-headline-xl text-on-surface mb-sm">€ 45.230,00</div>
-<div class="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
-<span class="material-symbols-outlined text-[16px]" data-icon="trending_up">trending_up</span>
-<span>+12.5% rispetto al mese scorso</span>
-</div>
-</div>
-<!-- KPI 2 -->
-<div class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-lg flex flex-col hover:border-secondary/50 transition-colors shadow-sm">
-<div class="flex justify-between items-start mb-md">
-<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Totale Incassato</span>
-<div class="p-sm bg-secondary-container/20 rounded-full">
-<span class="material-symbols-outlined text-secondary" data-icon="payments">payments</span>
-</div>
-</div>
-<div class="font-headline-xl text-headline-xl text-on-surface mb-sm">€ 38.900,50</div>
-<div class="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
-<span class="material-symbols-outlined text-[16px]" data-icon="trending_up">trending_up</span>
-<span>+8.2% rispetto al mese scorso</span>
-</div>
-</div>
-<!-- KPI 3 -->
-<div class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-lg flex flex-col hover:border-error/50 transition-colors shadow-sm relative overflow-hidden">
-<div class="absolute top-0 right-0 w-32 h-32 bg-error/5 rounded-bl-full -mr-10 -mt-10"></div>
-<div class="flex justify-between items-start mb-md relative z-10">
-<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Da Incassare</span>
-<div class="p-sm bg-error-container/30 rounded-full">
-<span class="material-symbols-outlined text-error" data-icon="account_balance_wallet">account_balance_wallet</span>
-</div>
-</div>
-<div class="font-headline-xl text-headline-xl text-on-surface mb-sm relative z-10">€ 6.329,50</div>
-<div class="flex items-center gap-xs font-label-sm text-label-sm text-error relative z-10">
-<span class="material-symbols-outlined text-[16px]" data-icon="warning">warning</span>
-<span>3 fatture scadute</span>
-</div>
-</div>
-</section>
-<!-- Data Tables Section -->
-<section class="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
-<!-- Ultime Fatture -->
-<div class="bg-surface-container-lowest border border-outline-variant rounded-[24px] overflow-hidden flex flex-col shadow-sm">
-<div class="p-lg border-b border-outline-variant flex justify-between items-center bg-surface">
-<h3 class="font-headline-md text-headline-md text-on-surface">Ultime Fatture</h3>
-<button class="font-label-md text-label-md text-primary hover:text-primary-container transition-colors">Vedi tutte</button>
-</div>
-<div class="p-0 overflow-x-auto">
-<table class="w-full text-left border-collapse">
-<thead class="bg-surface-container-low font-label-sm text-label-sm text-on-surface-variant uppercase">
-<tr>
-<th class="py-md px-lg font-medium">Cliente</th>
-<th class="py-md px-lg font-medium">Importo</th>
-<th class="py-md px-lg font-medium">Stato</th>
-<th class="py-md px-lg font-medium">Scadenza</th>
-</tr>
-</thead>
-<tbody class="font-body-md text-body-md text-on-surface divide-y divide-outline-variant">
-<tr class="hover:bg-surface-container-lowest/50 transition-colors">
-<td class="py-md px-lg">Acme Corp</td>
-<td class="py-md px-lg font-medium">€ 1.250,00</td>
-<td class="py-md px-lg">
-<span class="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-[11px] uppercase tracking-wide">Pagata</span>
-</td>
-<td class="py-md px-lg text-on-surface-variant">15 Ott 2023</td>
-</tr>
-<tr class="hover:bg-surface-container-lowest/50 transition-colors">
-<td class="py-md px-lg">Globex Inc</td>
-<td class="py-md px-lg font-medium">€ 3.400,00</td>
-<td class="py-md px-lg">
-<span class="inline-flex items-center px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-[11px] uppercase tracking-wide">Attesa</span>
-</td>
-<td class="py-md px-lg text-on-surface-variant">22 Ott 2023</td>
-</tr>
-<tr class="hover:bg-surface-container-lowest/50 transition-colors">
-<td class="py-md px-lg">Initech LLC</td>
-<td class="py-md px-lg font-medium">€ 850,50</td>
-<td class="py-md px-lg">
-<span class="inline-flex items-center px-2 py-1 rounded-full bg-error-container/30 text-error font-label-sm text-[11px] uppercase tracking-wide">Scaduta</span>
-</td>
-<td class="py-md px-lg text-error font-medium">10 Ott 2023</td>
-</tr>
-<tr class="hover:bg-surface-container-lowest/50 transition-colors">
-<td class="py-md px-lg">Soylent Corp</td>
-<td class="py-md px-lg font-medium">€ 5.100,00</td>
-<td class="py-md px-lg">
-<span class="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-[11px] uppercase tracking-wide">Pagata</span>
-</td>
-<td class="py-md px-lg text-on-surface-variant">05 Ott 2023</td>
-</tr>
-<tr class="hover:bg-surface-container-lowest/50 transition-colors">
-<td class="py-md px-lg">Massive Dynamic</td>
-<td class="py-md px-lg font-medium">€ 2.200,00</td>
-<td class="py-md px-lg">
-<span class="inline-flex items-center px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-[11px] uppercase tracking-wide">Attesa</span>
-</td>
-<td class="py-md px-lg text-on-surface-variant">28 Ott 2023</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<!-- Pagamenti Recenti -->
-<div class="bg-surface-container-lowest border border-outline-variant rounded-[24px] overflow-hidden flex flex-col shadow-sm">
-<div class="p-lg border-b border-outline-variant flex justify-between items-center bg-surface">
-<h3 class="font-headline-md text-headline-md text-on-surface">Pagamenti Recenti</h3>
-<button class="p-xs text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center">
-<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
-</button>
-</div>
-<div class="p-lg flex-1">
-<ul class="flex flex-col gap-md">
-<li class="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer">
-<div class="flex items-center gap-md">
-<div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
-<span class="material-symbols-outlined" data-icon="arrow_downward">arrow_downward</span>
-</div>
-<div>
-<p class="font-label-md text-label-md text-on-surface">Bonifico da Acme Corp</p>
-<p class="font-label-sm text-label-sm text-on-surface-variant">Fattura #INV-2023-089</p>
-</div>
-</div>
-<div class="text-right">
-<p class="font-label-md text-label-md text-secondary font-medium">+ € 1.250,00</p>
-<p class="font-label-sm text-label-sm text-on-surface-variant">Oggi, 10:45</p>
-</div>
-</li>
-<li class="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer">
-<div class="flex items-center gap-md">
-<div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
-<span class="material-symbols-outlined" data-icon="arrow_downward">arrow_downward</span>
-</div>
-<div>
-<p class="font-label-md text-label-md text-on-surface">Carta di Credito Soylent Corp</p>
-<p class="font-label-sm text-label-sm text-on-surface-variant">Fattura #INV-2023-085</p>
-</div>
-</div>
-<div class="text-right">
-<p class="font-label-md text-label-md text-secondary font-medium">+ € 5.100,00</p>
-<p class="font-label-sm text-label-sm text-on-surface-variant">Ieri, 16:30</p>
-</div>
-</li>
-<li class="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer">
-<div class="flex items-center gap-md">
-<div class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
-<span class="material-symbols-outlined" data-icon="arrow_downward">arrow_downward</span>
-</div>
-<div>
-<p class="font-label-md text-label-md text-on-surface">PayPal Wayne Ent.</p>
-<p class="font-label-sm text-label-sm text-on-surface-variant">Fattura #INV-2023-082</p>
-</div>
-</div>
-<div class="text-right">
-<p class="font-label-md text-label-md text-secondary font-medium">+ € 890,00</p>
-<p class="font-label-sm text-label-sm text-on-surface-variant">12 Ott, 09:15</p>
-</div>
-</li>
-<li class="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer">
-<div class="flex items-center gap-md">
-<div class="w-10 h-10 rounded-full bg-error-container/20 flex items-center justify-center text-error">
-<span class="material-symbols-outlined" data-icon="arrow_upward">arrow_upward</span>
-</div>
-<div>
-<p class="font-label-md text-label-md text-on-surface">Rimborso Initech LLC</p>
-<p class="font-label-sm text-label-sm text-on-surface-variant">Fattura #INV-2023-078</p>
-</div>
-</div>
-<div class="text-right">
-<p class="font-label-md text-label-md text-error font-medium">- € 250,00</p>
-<p class="font-label-sm text-label-sm text-on-surface-variant">10 Ott, 14:20</p>
-</div>
-</li>
-</ul>
-</div>
-<div class="p-md border-t border-outline-variant bg-surface text-center">
-<button class="font-label-md text-label-md text-primary hover:text-primary-container transition-colors w-full py-sm">Vedi tutti i movimenti</button>
-</div>
-</div>
-</section>
-</div>
-</main>
-</div>
-</body></html>
+  </head>
+  <body class="font-body-md text-on-surface flex min-h-screen bg-background">
+    <!-- SideNavBar -->
+    <nav
+      class="bg-surface dark:bg-surface text-primary dark:text-inverse-primary font-body-md text-body-md h-screen w-64 fixed left-0 top-0 border-r border-outline-variant dark:border-outline flex flex-col h-full py-md px-lg z-20"
+    >
+      <div class="mb-xl mt-sm">
+        <h1
+          class="font-headline-lg text-headline-lg font-bold text-primary dark:text-inverse-primary"
+        >
+          BillKeep
+        </h1>
+        <p class="font-label-sm text-label-sm text-on-surface-variant mt-xs">
+          Financial Management
+        </p>
+      </div>
+      <ul class="flex flex-col gap-sm flex-grow">
+        <!-- Active State for Dashboard -->
+        <li>
+          <a
+            class="flex items-center gap-md px-md py-sm rounded-lg text-primary dark:text-inverse-primary font-bold border-r-4 border-primary dark:border-inverse-primary transition-colors duration-200 ease-in-out bg-surface-container-low dark:bg-surface-container-highest"
+            href="#"
+          >
+            <span class="material-symbols-outlined fill" data-icon="dashboard">dashboard</span>
+            Dashboard
+          </a>
+        </li>
+        <li>
+          <a
+            class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out"
+            href="#"
+          >
+            <span class="material-symbols-outlined" data-icon="group">group</span>
+            Clients
+          </a>
+        </li>
+        <li>
+          <a
+            class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out"
+            href="#"
+          >
+            <span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+            Invoices
+          </a>
+        </li>
+        <li>
+          <a
+            class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out"
+            href="#"
+          >
+            <span class="material-symbols-outlined" data-icon="payments">payments</span>
+            Payments
+          </a>
+        </li>
+        <li>
+          <a
+            class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-inverse-primary hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors duration-200 ease-in-out"
+            href="#"
+          >
+            <span class="material-symbols-outlined" data-icon="settings">settings</span>
+            Settings
+          </a>
+        </li>
+      </ul>
+      <div class="mt-auto pt-lg border-t border-outline-variant">
+        <div class="flex items-center gap-md">
+          <img
+            alt="User profile photo"
+            class="w-10 h-10 rounded-full object-cover border border-outline-variant"
+            data-alt="A small circular profile picture of a professional user in a corporate setting. High quality, realistic lighting, neutral background, suitable for a professional SaaS dashboard avatar."
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOjLBH5q8KCcnaWXjBMqoqpExB2rIlnS6mo-AVLNyZkVG0kpp8myT8B6Gq-f6cmEf1muLZ2Fh7FHVhe-tzbnECRWGT8Sr0Rqd0Q6a8AcySpee1nVzVcEzC8KQ4oALrMh8x2zN67x51pHqhY49eHLerCRZnXTmN8MKdj9lDUqlWhAQpn-dStGQj09a_-njKEx6XoawYoIalOX03FfrwS9cNYHworbgHXTtFK2aAfsAyvoLS71tPpzHxUA"
+          />
+          <div class="flex flex-col">
+            <span class="font-label-md text-label-md">Admin User</span>
+            <span class="font-label-sm text-label-sm text-on-surface-variant"
+              >admin@billkeep.io</span
+            >
+          </div>
+        </div>
+      </div>
+    </nav>
+    <!-- Main Content Area -->
+    <div class="flex-1 ml-64 flex flex-col min-h-screen">
+      <!-- TopNavBar -->
+      <header
+        class="bg-surface dark:bg-surface text-primary dark:text-inverse-primary font-label-md text-label-md h-16 fixed top-0 right-0 left-64 border-b border-outline-variant dark:border-outline flex justify-between items-center px-margin-desktop w-[calc(100%-16rem)] z-10 transition-all duration-150"
+      >
+        <div
+          class="flex items-center bg-surface-container-low rounded-full px-md py-sm border border-outline-variant w-1/3 max-w-md focus-within:border-primary transition-colors"
+        >
+          <span class="material-symbols-outlined text-on-surface-variant mr-sm" data-icon="search"
+            >search</span
+          >
+          <input
+            class="bg-transparent border-none outline-none w-full text-body-md text-on-surface placeholder:text-on-surface-variant/70 focus:ring-0 p-0"
+            placeholder="Search..."
+            type="text"
+          />
+        </div>
+        <div class="flex items-center gap-md">
+          <button
+            class="p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high rounded-full transition-all duration-150 flex items-center justify-center relative"
+          >
+            <span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+            <span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full"></span>
+          </button>
+          <button
+            class="p-sm text-on-surface-variant dark:text-on-surface-variant hover:bg-surface-container dark:hover:bg-surface-container-high rounded-full transition-all duration-150 flex items-center justify-center"
+          >
+            <span class="material-symbols-outlined" data-icon="help">help</span>
+          </button>
+          <img
+            alt="User profile photo"
+            class="w-8 h-8 rounded-full object-cover ml-sm border border-outline-variant"
+            data-alt="A small circular profile picture of a professional user in a corporate setting. High quality, realistic lighting, neutral background, suitable for a professional SaaS dashboard avatar."
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBowNXPEashSXPobvkZ0_I20aI8IUZmCr7RCMgzXXtOkDIPid4fGLoL1ysjND-amRE3JRM2TVTNmHowhvP2XyC-TCoTHOq13YXWaWPw60_0GCA2syAS99zc8sGZigAjWRsRAGZD7vMc7qXKBnaD9pPM30s4RVKVaIKK6_bFrhlfonxI3-Lvw5b-hUtWLI2Yz78m_HWPcTISYrFNe_DEmHVbsF7IU1MHC2moqqOpujDonxn4GnzEmJTRzg"
+          />
+        </div>
+      </header>
+      <!-- Main Canvas -->
+      <main class="flex-1 mt-16 p-xl bg-background">
+        <div class="max-w-[1400px] mx-auto">
+          <header class="mb-xl">
+            <h2 class="font-headline-xl text-headline-xl text-on-surface mb-xs">
+              Dashboard Overview
+            </h2>
+            <p class="font-body-md text-body-md text-on-surface-variant">
+              Welcome back. Here is your financial summary for this month.
+            </p>
+          </header>
+          <!-- KPI Section -->
+          <section class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-2xl">
+            <!-- KPI 1 -->
+            <div
+              class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-lg flex flex-col hover:border-primary/50 transition-colors shadow-sm"
+            >
+              <div class="flex justify-between items-start mb-md">
+                <span
+                  class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider"
+                  >Totale Fatturato</span
+                >
+                <div class="p-sm bg-primary-container/10 rounded-full">
+                  <span class="material-symbols-outlined text-primary" data-icon="receipt_long"
+                    >receipt_long</span
+                  >
+                </div>
+              </div>
+              <div class="font-headline-xl text-headline-xl text-on-surface mb-sm">€ 45.230,00</div>
+              <div class="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
+                <span class="material-symbols-outlined text-[16px]" data-icon="trending_up"
+                  >trending_up</span
+                >
+                <span>+12.5% rispetto al mese scorso</span>
+              </div>
+            </div>
+            <!-- KPI 2 -->
+            <div
+              class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-lg flex flex-col hover:border-secondary/50 transition-colors shadow-sm"
+            >
+              <div class="flex justify-between items-start mb-md">
+                <span
+                  class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider"
+                  >Totale Incassato</span
+                >
+                <div class="p-sm bg-secondary-container/20 rounded-full">
+                  <span class="material-symbols-outlined text-secondary" data-icon="payments"
+                    >payments</span
+                  >
+                </div>
+              </div>
+              <div class="font-headline-xl text-headline-xl text-on-surface mb-sm">€ 38.900,50</div>
+              <div class="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
+                <span class="material-symbols-outlined text-[16px]" data-icon="trending_up"
+                  >trending_up</span
+                >
+                <span>+8.2% rispetto al mese scorso</span>
+              </div>
+            </div>
+            <!-- KPI 3 -->
+            <div
+              class="bg-surface-container-lowest border border-outline-variant rounded-[24px] p-lg flex flex-col hover:border-error/50 transition-colors shadow-sm relative overflow-hidden"
+            >
+              <div
+                class="absolute top-0 right-0 w-32 h-32 bg-error/5 rounded-bl-full -mr-10 -mt-10"
+              ></div>
+              <div class="flex justify-between items-start mb-md relative z-10">
+                <span
+                  class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider"
+                  >Da Incassare</span
+                >
+                <div class="p-sm bg-error-container/30 rounded-full">
+                  <span
+                    class="material-symbols-outlined text-error"
+                    data-icon="account_balance_wallet"
+                    >account_balance_wallet</span
+                  >
+                </div>
+              </div>
+              <div class="font-headline-xl text-headline-xl text-on-surface mb-sm relative z-10">
+                € 6.329,50
+              </div>
+              <div
+                class="flex items-center gap-xs font-label-sm text-label-sm text-error relative z-10"
+              >
+                <span class="material-symbols-outlined text-[16px]" data-icon="warning"
+                  >warning</span
+                >
+                <span>3 fatture scadute</span>
+              </div>
+            </div>
+          </section>
+          <!-- Data Tables Section -->
+          <section class="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
+            <!-- Ultime Fatture -->
+            <div
+              class="bg-surface-container-lowest border border-outline-variant rounded-[24px] overflow-hidden flex flex-col shadow-sm"
+            >
+              <div
+                class="p-lg border-b border-outline-variant flex justify-between items-center bg-surface"
+              >
+                <h3 class="font-headline-md text-headline-md text-on-surface">Ultime Fatture</h3>
+                <button
+                  class="font-label-md text-label-md text-primary hover:text-primary-container transition-colors"
+                >
+                  Vedi tutte
+                </button>
+              </div>
+              <div class="p-0 overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead
+                    class="bg-surface-container-low font-label-sm text-label-sm text-on-surface-variant uppercase"
+                  >
+                    <tr>
+                      <th class="py-md px-lg font-medium">Cliente</th>
+                      <th class="py-md px-lg font-medium">Importo</th>
+                      <th class="py-md px-lg font-medium">Stato</th>
+                      <th class="py-md px-lg font-medium">Scadenza</th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    class="font-body-md text-body-md text-on-surface divide-y divide-outline-variant"
+                  >
+                    <tr class="hover:bg-surface-container-lowest/50 transition-colors">
+                      <td class="py-md px-lg">Acme Corp</td>
+                      <td class="py-md px-lg font-medium">€ 1.250,00</td>
+                      <td class="py-md px-lg">
+                        <span
+                          class="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-[11px] uppercase tracking-wide"
+                          >Pagata</span
+                        >
+                      </td>
+                      <td class="py-md px-lg text-on-surface-variant">15 Ott 2023</td>
+                    </tr>
+                    <tr class="hover:bg-surface-container-lowest/50 transition-colors">
+                      <td class="py-md px-lg">Globex Inc</td>
+                      <td class="py-md px-lg font-medium">€ 3.400,00</td>
+                      <td class="py-md px-lg">
+                        <span
+                          class="inline-flex items-center px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-[11px] uppercase tracking-wide"
+                          >Attesa</span
+                        >
+                      </td>
+                      <td class="py-md px-lg text-on-surface-variant">22 Ott 2023</td>
+                    </tr>
+                    <tr class="hover:bg-surface-container-lowest/50 transition-colors">
+                      <td class="py-md px-lg">Initech LLC</td>
+                      <td class="py-md px-lg font-medium">€ 850,50</td>
+                      <td class="py-md px-lg">
+                        <span
+                          class="inline-flex items-center px-2 py-1 rounded-full bg-error-container/30 text-error font-label-sm text-[11px] uppercase tracking-wide"
+                          >Scaduta</span
+                        >
+                      </td>
+                      <td class="py-md px-lg text-error font-medium">10 Ott 2023</td>
+                    </tr>
+                    <tr class="hover:bg-surface-container-lowest/50 transition-colors">
+                      <td class="py-md px-lg">Soylent Corp</td>
+                      <td class="py-md px-lg font-medium">€ 5.100,00</td>
+                      <td class="py-md px-lg">
+                        <span
+                          class="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-[11px] uppercase tracking-wide"
+                          >Pagata</span
+                        >
+                      </td>
+                      <td class="py-md px-lg text-on-surface-variant">05 Ott 2023</td>
+                    </tr>
+                    <tr class="hover:bg-surface-container-lowest/50 transition-colors">
+                      <td class="py-md px-lg">Massive Dynamic</td>
+                      <td class="py-md px-lg font-medium">€ 2.200,00</td>
+                      <td class="py-md px-lg">
+                        <span
+                          class="inline-flex items-center px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-[11px] uppercase tracking-wide"
+                          >Attesa</span
+                        >
+                      </td>
+                      <td class="py-md px-lg text-on-surface-variant">28 Ott 2023</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <!-- Pagamenti Recenti -->
+            <div
+              class="bg-surface-container-lowest border border-outline-variant rounded-[24px] overflow-hidden flex flex-col shadow-sm"
+            >
+              <div
+                class="p-lg border-b border-outline-variant flex justify-between items-center bg-surface"
+              >
+                <h3 class="font-headline-md text-headline-md text-on-surface">Pagamenti Recenti</h3>
+                <button
+                  class="p-xs text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center"
+                >
+                  <span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+                </button>
+              </div>
+              <div class="p-lg flex-1">
+                <ul class="flex flex-col gap-md">
+                  <li
+                    class="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer"
+                  >
+                    <div class="flex items-center gap-md">
+                      <div
+                        class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary"
+                      >
+                        <span class="material-symbols-outlined" data-icon="arrow_downward"
+                          >arrow_downward</span
+                        >
+                      </div>
+                      <div>
+                        <p class="font-label-md text-label-md text-on-surface">
+                          Bonifico da Acme Corp
+                        </p>
+                        <p class="font-label-sm text-label-sm text-on-surface-variant">
+                          Fattura #INV-2023-089
+                        </p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-label-md text-label-md text-secondary font-medium">
+                        + € 1.250,00
+                      </p>
+                      <p class="font-label-sm text-label-sm text-on-surface-variant">Oggi, 10:45</p>
+                    </div>
+                  </li>
+                  <li
+                    class="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer"
+                  >
+                    <div class="flex items-center gap-md">
+                      <div
+                        class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary"
+                      >
+                        <span class="material-symbols-outlined" data-icon="arrow_downward"
+                          >arrow_downward</span
+                        >
+                      </div>
+                      <div>
+                        <p class="font-label-md text-label-md text-on-surface">
+                          Carta di Credito Soylent Corp
+                        </p>
+                        <p class="font-label-sm text-label-sm text-on-surface-variant">
+                          Fattura #INV-2023-085
+                        </p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-label-md text-label-md text-secondary font-medium">
+                        + € 5.100,00
+                      </p>
+                      <p class="font-label-sm text-label-sm text-on-surface-variant">Ieri, 16:30</p>
+                    </div>
+                  </li>
+                  <li
+                    class="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer"
+                  >
+                    <div class="flex items-center gap-md">
+                      <div
+                        class="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary"
+                      >
+                        <span class="material-symbols-outlined" data-icon="arrow_downward"
+                          >arrow_downward</span
+                        >
+                      </div>
+                      <div>
+                        <p class="font-label-md text-label-md text-on-surface">PayPal Wayne Ent.</p>
+                        <p class="font-label-sm text-label-sm text-on-surface-variant">
+                          Fattura #INV-2023-082
+                        </p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-label-md text-label-md text-secondary font-medium">
+                        + € 890,00
+                      </p>
+                      <p class="font-label-sm text-label-sm text-on-surface-variant">
+                        12 Ott, 09:15
+                      </p>
+                    </div>
+                  </li>
+                  <li
+                    class="flex items-center justify-between p-md rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer"
+                  >
+                    <div class="flex items-center gap-md">
+                      <div
+                        class="w-10 h-10 rounded-full bg-error-container/20 flex items-center justify-center text-error"
+                      >
+                        <span class="material-symbols-outlined" data-icon="arrow_upward"
+                          >arrow_upward</span
+                        >
+                      </div>
+                      <div>
+                        <p class="font-label-md text-label-md text-on-surface">
+                          Rimborso Initech LLC
+                        </p>
+                        <p class="font-label-sm text-label-sm text-on-surface-variant">
+                          Fattura #INV-2023-078
+                        </p>
+                      </div>
+                    </div>
+                    <div class="text-right">
+                      <p class="font-label-md text-label-md text-error font-medium">- € 250,00</p>
+                      <p class="font-label-sm text-label-sm text-on-surface-variant">
+                        10 Ott, 14:20
+                      </p>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <div class="p-md border-t border-outline-variant bg-surface text-center">
+                <button
+                  class="font-label-md text-label-md text-primary hover:text-primary-container transition-colors w-full py-sm"
+                >
+                  Vedi tutti i movimenti
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

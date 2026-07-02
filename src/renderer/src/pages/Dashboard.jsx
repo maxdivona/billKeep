@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { Link } from 'react-router-dom'
+import StatCard from '../components/StatCard'
 
 export default function Dashboard() {
   const { stats, loading, fetchAllData } = useStore()
@@ -38,7 +39,9 @@ export default function Dashboard() {
   return (
     <div>
       <header className="mb-xl">
-        <h2 className="font-headline-xl text-headline-xl text-on-surface mb-xs">Panoramica Dashboard</h2>
+        <h2 className="font-headline-xl text-headline-xl text-on-surface mb-xs">
+          Panoramica Dashboard
+        </h2>
         <p className="font-body-md text-body-md text-on-surface-variant">
           Bentornato. Ecco il riepilogo finanziario di questo mese.
         </p>
@@ -46,63 +49,32 @@ export default function Dashboard() {
 
       {/* KPI Section */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-md">
-        {/* KPI 1 - Totale Fatturato */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col hover:border-primary/50 transition-colors shadow-sm">
-          <div className="flex justify-between items-start mb-sm">
-            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-              Totale Fatturato
-            </span>
-            <div className="p-sm bg-primary-container/10 rounded-full">
-              <span className="material-symbols-outlined text-primary">receipt_long</span>
-            </div>
-          </div>
-          <div className="font-headline-md text-headline-md text-on-surface mb-xs tabular-nums">
-            {formatCurrency(stats.totalInvoiced)}
-          </div>
-          <div className="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
-            <span className="material-symbols-outlined text-[16px]">trending_up</span>
-            <span>+12.5% rispetto al mese scorso</span>
-          </div>
-        </div>
+        <StatCard
+          title="Totale Fatturato"
+          value={formatCurrency(stats.totalInvoiced)}
+          icon="receipt_long"
+          trendText="+12.5% rispetto al mese scorso"
+          variant="primary"
+        />
 
-        {/* KPI 2 - Totale Incassato */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col hover:border-secondary/50 transition-colors shadow-sm">
-          <div className="flex justify-between items-start mb-sm">
-            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-              Totale Incassato
-            </span>
-            <div className="p-sm bg-secondary-container/20 rounded-full">
-              <span className="material-symbols-outlined text-secondary">payments</span>
-            </div>
-          </div>
-          <div className="font-headline-md text-headline-md text-on-surface mb-xs tabular-nums">
-            {formatCurrency(stats.totalPaid)}
-          </div>
-          <div className="flex items-center gap-xs font-label-sm text-label-sm text-secondary">
-            <span className="material-symbols-outlined text-[16px]">trending_up</span>
-            <span>+8.2% rispetto al mese scorso</span>
-          </div>
-        </div>
+        <StatCard
+          title="Totale Incassato"
+          value={formatCurrency(stats.totalPaid)}
+          icon="payments"
+          trendText="+8.2% rispetto al mese scorso"
+          variant="secondary"
+        />
 
-        {/* KPI 3 - Da Incassare */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col hover:border-error/50 transition-colors shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-error/5 rounded-bl-full -mr-10 -mt-10"></div>
-          <div className="flex justify-between items-start mb-sm relative z-10">
-            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-              Da Incassare
-            </span>
-            <div className="p-sm bg-error-container/30 rounded-full">
-              <span className="material-symbols-outlined text-error">account_balance_wallet</span>
-            </div>
-          </div>
-          <div className="font-headline-md text-headline-md text-on-surface mb-xs relative z-10 tabular-nums">
-            {formatCurrency(stats.balance)}
-          </div>
-          <div className="flex items-center gap-xs font-label-sm text-label-sm text-error relative z-10">
-            <span className="material-symbols-outlined text-[16px]">warning</span>
-            <span>{stats.expiredCount} {stats.expiredCount === 1 ? 'fattura scaduta' : 'fatture scadute'}</span>
-          </div>
-        </div>
+        <StatCard
+          title="Da Incassare"
+          value={formatCurrency(stats.balance)}
+          icon="account_balance_wallet"
+          trendText={`${stats.expiredCount} ${
+            stats.expiredCount === 1 ? 'fattura scaduta' : 'fatture scadute'
+          }`}
+          trendIcon="warning"
+          variant="error"
+        />
       </section>
 
       {/* Loading Skeleton Loader wrapper */}
@@ -136,9 +108,14 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="font-body-md text-body-md text-on-surface divide-y divide-outline-variant">
                   {stats.recentInvoices.map((inv) => (
-                    <tr key={inv.id} className="hover:bg-surface-container-lowest/50 transition-colors">
+                    <tr
+                      key={inv.id}
+                      className="hover:bg-surface-container-lowest/50 transition-colors"
+                    >
                       <td className="py-sm px-sm">{inv.customer_name}</td>
-                      <td className="py-sm px-sm font-medium tabular-nums">{formatCurrency(inv.amount)}</td>
+                      <td className="py-sm px-sm font-medium tabular-nums">
+                        {formatCurrency(inv.amount)}
+                      </td>
                       <td className="py-sm px-sm">
                         {inv.status === 'paid' && (
                           <span className="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container/30 text-secondary font-label-sm text-[11px] uppercase tracking-wide">
@@ -150,8 +127,8 @@ export default function Dashboard() {
                             Parziale
                           </span>
                         )}
-                        {inv.status === 'unpaid' && (
-                          new Date(inv.due_date) < new Date() ? (
+                        {inv.status === 'unpaid' &&
+                          (new Date(inv.due_date) < new Date() ? (
                             <span className="inline-flex items-center px-2 py-1 rounded-full bg-error-container/30 text-error font-label-sm text-[11px] uppercase tracking-wide">
                               Scaduta
                             </span>
@@ -159,8 +136,7 @@ export default function Dashboard() {
                             <span className="inline-flex items-center px-2 py-1 rounded-full bg-surface-variant text-on-surface-variant font-label-sm text-[11px] uppercase tracking-wide">
                               Attesa
                             </span>
-                          )
-                        )}
+                          ))}
                       </td>
                       <td
                         className={`py-sm px-sm ${
@@ -188,7 +164,9 @@ export default function Dashboard() {
           {/* Pagamenti Recenti */}
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
             <div className="p-md border-b border-outline-variant flex justify-between items-center bg-surface">
-              <h3 className="font-headline-md text-headline-md text-on-surface">Pagamenti Recenti</h3>
+              <h3 className="font-headline-md text-headline-md text-on-surface">
+                Pagamenti Recenti
+              </h3>
               <Link
                 to="/payments"
                 className="font-label-md text-label-md text-primary hover:text-primary-container transition-colors"
