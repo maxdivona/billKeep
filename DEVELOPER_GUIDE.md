@@ -207,20 +207,27 @@ GROUP BY c.id;
 
 Tutti i componenti UI generati o sviluppati devono essere atomici e flessibili, accettando props per configurare lo stato visivo.
 
-- `StatCard`: Componente KPI per la dashboard (Visualizza Totali, Saldo Attuale). Varia lo stile cromatico (verde/rosso text) in base al valore del trend.
+- **`StatCard`** (`src/renderer/src/components/StatCard.jsx`): Componente KPI per la dashboard (visualizzazione totali, saldi).
+  - **Props:** `title` (string), `value` (string/number), `icon` (string/Material icon), `trendText` (string, opzionale), `trendIcon` (string, opzionale), `variant` (`'primary' | 'secondary' | 'error'`).
+  - **Logica:** Regola la combinazione di colori e gli indicatori visivi in base alla variante (inclusa una decorazione absolute rossa per la variante `error`).
 
-- `DataTable`: Wrapper per le tabelle dati che integra nativamente gli _Skeleton Loader_ (stati di caricamento grigi animati) durante la risoluzione delle promesse IPC.
+- **`DataTable`** (`src/renderer/src/components/DataTable.jsx`): Wrapper per le tabelle dati che integra nativamente gli _Skeleton Loader_ animati (`animate-pulse`) durante il caricamento dei dati da IPC.
+  - **Props:** `headers` (array di stringhe o oggetti `{ text, align, className }`), `data` (array di oggetti), `loading` (boolean), `renderRow` (funzione di render riga), `renderSkeletonRow` (funzione di render scheletro personalizzato, opzionale), `skeletonCount` (number, default `3`), `emptyMessage` (string).
 
-- `Modal` / `Drawer`: Contenitori standard per formati di input (Nuovo Cliente, Inserisci Fattura, Registra Pagamento) dotati di gestione dell'overlay e chiusura tramite tasto `Esc`.
+- **`Modal`** (`src/renderer/src/components/Modal.jsx`): Contenitore modale per form di input.
+  - **Props:** `isOpen` (boolean), `onClose` (funzione), `title` (string), `children` (React node).
+  - **Logica:** Gestisce lo sfondo scuro sfocato (`backdrop-blur`), inibisce lo scorrimento della pagina principale (`overflow: hidden` su `body`), e intercetta il tasto `Esc` per la chiusura automatica. Il backdrop è posizionato come elemento fratello separato rispetto al pannello del form per prevenire errori di propagazione dei click.
 
 ## 🚀 7. Regole d'oro dello Sviluppatore
 
-1. **Immutabilità del Calcolo Contabile:** Il saldo cliente o fattura non viene mai salvato como colonna statica modificabile arbitrariamente. È rigorosamente derivato dalla formula: `Saldo = Totale Emesso - Totale Ricevuto`.
+1. **Immutabilità del Calcolo Contabile:** Il saldo cliente o fattura non viene mai salvato come colonna statica modificabile arbitrariamente. È rigorosamente derivato dalla formula: `Saldo = Totale Emesso - Totale Ricevuto`.
 
-2. **Validazione Preventiva:** Prima di invocare i canali IPC, valida i dati nel frontend (es. impedisci l'invio di importi negativi o ID cliente vuoti). Replica la validazione nel processo Main tramite i vincoli `CHECK` nativi di SQLite.
+2. **Validazione Preventiva e Controllo Duplicati:** Prima di invocare i canali IPC, valida i dati nel frontend (es. impedisci l'invio di importi negativi o ID cliente vuoti). Controlla preventivamente la presenza di nomi di clienti duplicati sia sul frontend (per feedback istantaneo) sia nel processo Main di backend (`db.js`) con query _case-insensitive_ per garantire l'integrità dei dati.
 
-3. **Disaccoppiamento della Logica:** Le viste di React devono occuparsi solo della presentazione. La logica di fetch dei dati deve essere isolata all'interno di Custom Hooks (es. `useFetchCustomers`) o azioni dedicate nello store Zustand.
+3. **Disaccoppiamento della Logica:** Le viste di React devono occuparsi solo della presentazione. La logica di fetch dei dati deve essere isolata all'interno di Custom Hooks o azioni dedicate nello store Zustand.
 
 4. **Ottimizzazione del Layout per Risoluzioni Standard (1600x900):** Per evitare lo scroll verticale non necessario e tagli orizzontali delle tabelle, utilizzare paddings compatti. Nello specifico, il contenitore principale deve utilizzare al massimo `p-md` (24px) anziché `p-xl` (64px), e le tabelle dati devono limitare il padding delle celle a `py-sm px-sm` (12px) per assicurare che tutte le colonne siano visibili senza scorrimento.
 
 5. **Localizzazione della UI:** Tutte le etichette, placeholder, messaggi di errore e diciture mostrate all'utente finale nel Renderer process devono essere rigorosamente scritte in lingua italiana per mantenere la coerenza dell'interfaccia.
+
+6. **Gestione del Layout e Dimensionamento con Tailwind CSS v4:** A causa degli override definiti sul tema (es. `--spacing-lg: 48px`, `--spacing-md: 24px`), evitare l'uso delle classi di larghezza massima predefinite come `max-w-md` o `max-w-lg` per elementi di layout generali (quali dialoghi o barre di ricerca), poiché Tailwind v4 le mappa direttamente sulle variabili di spacing riducendo le dimensioni a pochi pixel. Utilizzare invece valori arbitrari espliciti, ad esempio `max-w-[500px]` o `max-w-[400px]`.
