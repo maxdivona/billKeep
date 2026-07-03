@@ -249,6 +249,7 @@ ORDER BY c.name ASC;
 - **`StatCard`** (`src/renderer/src/components/StatCard.jsx`): Componente KPI per visualizzazione totali e saldi.
 - **`DataTable`** (`src/renderer/src/components/DataTable.jsx`): Wrapper per tabelle dati che integra nativamente gli _Skeleton Loader_ animati (`animate-pulse`).
 - **`Modal`** (`src/renderer/src/components/Modal.jsx`): Contenitore modale per form di input. Gestisce lo sfondo scuro sfocato (`backdrop-blur`) e intercetta il tasto `Esc` per la chiusura automatica.
+- **`Settings`** (`src/renderer/src/pages/Settings.jsx`): Pagina delle impostazioni con il pannello informativo dell'applicazione (sviluppatore, diritti d'autore, versione e tech stack).
 
 ---
 
@@ -273,3 +274,4 @@ Ogni evento amministrativo dell'applicazione scrive automaticamente sul giornale
 4. **Ottimizzazione del Layout per Risoluzioni Standard (1600x900):** Per evitare lo scroll verticale non necessario e tagli orizzontali delle tabelle, utilizzare paddings compatti. Nello specifico, il contenitore principale deve utilizzare al massimo `p-md` (24px) anziché `p-xl` (64px), e le tabelle dati devono limitare il padding delle celle a `py-sm px-sm` (12px) per assicurare che tutte le colonne siano visibili senza scorrimento.
 5. **Localizzazione della UI:** Tutte le etichette, placeholder, messaggi di errore e diciture mostrate all'utente finale nel Renderer process devono essere rigorosamente scritte in lingua italiana.
 6. **Gestione del Layout e Dimensionamento con Tailwind CSS v4:** A causa degli override definiti sul tema, evitare l'uso delle classi di larghezza massima predefinite come `max-w-md` o `max-w-lg` per elementi di layout generali. Utilizzare invece valori arbitrari espliciti, ad esempio `max-w-[500px]` o `max-w-[400px]`.
+7. **Struttura delle Tabelle e Allineamento con Fragment:** Per evitare problemi di allineamento delle tabelle con i relativi header, non avvolgere mai righe `<tr>` multiple all'interno di tag non standard come `<caption>` all'interno di `<tbody>`. Utilizzare sempre `<Fragment key={...}>` come contenitore logico.

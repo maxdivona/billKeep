@@ -48,20 +48,21 @@ export default function Sidebar() {
             Prima Nota
           </NavLink>
         </li>
+        <li>
+          <NavLink to="/settings" className={linkClass}>
+            <span className="material-symbols-outlined">settings</span>
+            Impostazioni
+          </NavLink>
+        </li>
       </ul>
 
       <div className="mt-auto pt-md border-t border-outline-variant">
         <div className="flex items-center gap-md">
-          <img
-            alt="User profile photo"
-            className="w-10 h-10 rounded-full object-cover border border-outline-variant"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOjLBH5q8KCcnaWXjBMqoqpExB2rIlnS6mo-AVLNyZkVG0kpp8myT8B6Gq-f6cmEf1muLZ2Fh7FHVhe-tzbnECRWGT8Sr0Rqd0Q6a8AcySpee1nVzVcEzC8KQ4oALrMh8x2zN67x51pHqhY49eHLerCRZnXTmN8MKdj9lDUqlWhAQpn-dStGQj09a_-njKEx6XoawYoIalOX03FfrwS9cNYHworbgHXTtFK2aAfsAyvoLS71tPpzHxUA"
-          />
+          <span className="material-symbols-outlined text-[36px] text-on-surface-variant">
+            account_circle
+          </span>
           <div className="flex flex-col">
             <span className="font-label-md text-label-md text-on-surface">Amministratore</span>
-            <span className="font-label-sm text-label-sm text-on-surface-variant">
-              admin@billkeep.io
-            </span>
           </div>
         </div>
       </div>

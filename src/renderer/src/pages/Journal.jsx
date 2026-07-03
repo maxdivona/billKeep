@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { useStore } from '../store/useStore'
 
 export default function Journal() {
@@ -182,7 +182,7 @@ export default function Journal() {
                 const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01
 
                 return (
-                  <caption key={entry.id} className="w-full display-table-row-group text-left">
+                  <Fragment key={entry.id}>
                     {/* Entry Main Row */}
                     <tr
                       className={`hover:bg-surface-container-high transition-colors cursor-pointer border-b border-outline-variant/60 ${isExpanded ? 'bg-surface-container-low' : ''}`}
@@ -289,7 +289,7 @@ export default function Journal() {
                         </td>
                       </tr>
                     )}
-                  </caption>
+                  </Fragment>
                 )
               })}
             </tbody>

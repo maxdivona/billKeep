@@ -20,11 +20,9 @@ export default function Header() {
         <button className="p-sm text-on-surface-variant hover:bg-surface-container rounded-full transition-all duration-150 flex items-center justify-center">
           <span className="material-symbols-outlined">help</span>
         </button>
-        <img
-          alt="User profile photo"
-          className="w-8 h-8 rounded-full object-cover ml-sm border border-outline-variant"
-          src="https://lh3.googleusercontent.com/aida-public/AB6AXuBowNXPEashSXPobvkZ0_I20aI8IUZmCr7RCMgzXXtOkDIPid4fGLoL1ysjND-amRE3JRM2TVTNmHowhvP2XyC-TCoTHOq13YXWaWPw60_0GCA2syAS99zc8sGZigAjWRsRAGZD7vMc7qXKBnaD9pPM30s4RVKVaIKK6_bFrhlfonxI3-Lvw5b-hUtWLI2Yz78m_HWPcTISYrFNe_DEmHVbsF7IU1MHC2moqqOpujDonxn4GnzEmJTRzg"
-        />
+        <span className="material-symbols-outlined text-[32px] text-on-surface-variant ml-sm">
+          account_circle
+        </span>
       </div>
     </header>
   )

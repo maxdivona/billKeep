@@ -8,6 +8,7 @@ const Customers = React.lazy(() => import('./pages/Customers'))
 const Invoices = React.lazy(() => import('./pages/Invoices'))
 const Payments = React.lazy(() => import('./pages/Payments'))
 const Journal = React.lazy(() => import('./pages/Journal'))
+const Settings = React.lazy(() => import('./pages/Settings'))
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="/invoices" element={<Invoices />} />
             <Route path="/payments" element={<Payments />} />
             <Route path="/journal" element={<Journal />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </Suspense>
       </Layout>

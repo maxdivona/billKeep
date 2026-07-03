@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
@@ -732,7 +732,7 @@ export default function Customers() {
                     const isBalanced = Math.abs(totalAmount - totalCredit) < 0.01
 
                     return (
-                      <caption key={entry.id} className="w-full display-table-row-group text-left">
+                      <Fragment key={entry.id}>
                         <tr
                           className="hover:bg-surface-container-high transition-colors cursor-pointer border-b border-outline-variant/60"
                           onClick={() =>
@@ -814,7 +814,7 @@ export default function Customers() {
                             </td>
                           </tr>
                         )}
-                      </caption>
+                      </Fragment>
                     )
                   })}
                 </tbody>
