@@ -107,131 +107,6 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_journal_entries_customer ON journal_entries(customer_id);
     CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
   `)
-
-  // 3. Popolamento Dati Mock se il DB è vuoto
-  const customerCount = db.prepare('SELECT COUNT(*) as count FROM customers').get().count
-  if (customerCount === 0) {
-    console.log('[DB] Database vuoto. Inserimento dati mock in corso...')
-
-    // Inserimento Clienti
-    const insertCustomer = db.prepare('INSERT INTO customers (id, name, email) VALUES (?, ?, ?)')
-    insertCustomer.run('cust-1', 'Acme Corp', 'billing@acme.com')
-    insertCustomer.run('cust-2', 'Soylent Corp', 'finance@soylent.com')
-    insertCustomer.run('cust-3', 'Globex Inc', 'accounts@globex.com')
-    insertCustomer.run('cust-4', 'Initech LLC', 'invoices@initech.com')
-    insertCustomer.run('cust-5', 'Massive Dynamic', 'pay@massivedynamic.com')
-
-    // Inserimento Fatture (Fatturato Totale = € 45.230,00)
-    const insertInvoice = db.prepare(`
-      INSERT INTO invoices (id, customer_id, issue_date, due_date, amount, status)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `)
-    // Pagate (€ 38.900,50 totali)
-    insertInvoice.run('INV-001', 'cust-1', '2026-06-01', '2026-07-01', 12500.0, 'paid')
-    insertInvoice.run('INV-002', 'cust-2', '2026-06-02', '2026-07-02', 25100.0, 'paid')
-    insertInvoice.run('INV-003', 'cust-1', '2026-06-15', '2026-07-15', 1250.0, 'paid')
-    insertInvoice.run('INV-004', 'cust-3', '2026-06-20', '2026-07-20', 50.5, 'paid')
-
-    // Da Incassare (€ 6.329,50 totali)
-    // Future (2 in attesa = € 4.449,00)
-    insertInvoice.run('INV-005', 'cust-3', '2026-06-25', '2026-07-22', 3400.0, 'unpaid')
-    insertInvoice.run('INV-006', 'cust-5', '2026-06-28', '2026-07-28', 1049.0, 'unpaid')
-    // Scadute (3 fatture scadute = € 1.880,50)
-    insertInvoice.run('INV-007', 'cust-4', '2026-05-10', '2026-06-10', 850.5, 'unpaid')
-    insertInvoice.run('INV-008', 'cust-4', '2026-05-15', '2026-06-15', 380.0, 'unpaid')
-    insertInvoice.run('INV-009', 'cust-3', '2026-05-20', '2026-06-20', 650.0, 'unpaid')
-
-    // Inserimento Pagamenti Ricevuti
-    const insertPayment = db.prepare(`
-      INSERT INTO payments (id, invoice_id, customer_id, amount, payment_date, method)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `)
-    insertPayment.run('PAY-001', 'INV-003', 'cust-1', 1250.0, '2026-07-02 10:45:00', 'Bonifico')
-    insertPayment.run(
-      'PAY-002',
-      'INV-002',
-      'cust-2',
-      25100.0,
-      '2026-07-01 16:30:00',
-      'Carta di Credito'
-    )
-    insertPayment.run('PAY-003', 'INV-001', 'cust-1', 12500.0, '2026-06-05 09:15:00', 'Bonifico')
-    insertPayment.run('PAY-004', 'INV-004', 'cust-3', 50.5, '2026-06-22 14:00:00', 'Bonifico')
-
-    console.log('[DB] Popolamento dati mock completato con successo.')
-  }
-
-  // 4. Generazione Retroattiva Prima Nota per allineare i dati storici esistenti
-  const journalCount = db.prepare('SELECT COUNT(*) as count FROM journal_entries').get().count
-  if (journalCount === 0) {
-    console.log('[DB] Generazione retroattiva Prima Nota...')
-    db.transaction(() => {
-      // Get all invoices
-      const invoices = db.prepare('SELECT * FROM invoices').all()
-      const insertEntry = db.prepare(`
-        INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `)
-      const insertLine = db.prepare(`
-        INSERT INTO journal_lines (id, entry_id, account_name, type, amount)
-        VALUES (?, ?, ?, ?, ?)
-      `)
-
-      for (const inv of invoices) {
-        const entryId = `entry-${inv.id}`
-        const entryDate = inv.issue_date + ' 08:00:00'
-        insertEntry.run(
-          entryId,
-          entryDate,
-          `Emissione fattura ${inv.id}`,
-          'invoice',
-          inv.id,
-          inv.customer_id
-        )
-
-        // Debit: Crediti v/Clienti
-        insertLine.run(`line-${inv.id}-1`, entryId, 'Crediti v/Clienti', 'debit', inv.amount)
-        // Credit: Ricavi per Vendite
-        insertLine.run(`line-${inv.id}-2`, entryId, 'Ricavi per Vendite', 'credit', inv.amount)
-      }
-
-      // Get all payments
-      const payments = db.prepare('SELECT * FROM payments').all()
-      for (const pay of payments) {
-        const entryId = `entry-${pay.id}`
-        const entryDate = pay.payment_date
-
-        if (pay.invoice_id) {
-          insertEntry.run(
-            entryId,
-            entryDate,
-            `Incasso fattura ${pay.invoice_id}`,
-            'payment',
-            pay.id,
-            pay.customer_id
-          )
-          // Debit: Cassa/Banca
-          insertLine.run(`line-${pay.id}-1`, entryId, 'Cassa/Banca', 'debit', pay.amount)
-          // Credit: Crediti v/Clienti
-          insertLine.run(`line-${pay.id}-2`, entryId, 'Crediti v/Clienti', 'credit', pay.amount)
-        } else {
-          insertEntry.run(
-            entryId,
-            entryDate,
-            `Incasso acconto cliente`,
-            'payment',
-            pay.id,
-            pay.customer_id
-          )
-          // Debit: Cassa/Banca
-          insertLine.run(`line-${pay.id}-1`, entryId, 'Cassa/Banca', 'debit', pay.amount)
-          // Credit: Acconti da Clienti
-          insertLine.run(`line-${pay.id}-2`, entryId, 'Acconti da Clienti', 'credit', pay.amount)
-        }
-      }
-    })()
-    console.log('[DB] Generazione retroattiva Prima Nota completata.')
-  }
 }
 
 /**
@@ -862,6 +737,135 @@ export function restoreDatabase(sourcePath) {
       )
     }
 
+    return { success: false, error: err.message }
+  }
+}
+
+export function clearDatabase() {
+  try {
+    db.transaction(() => {
+      db.prepare('DELETE FROM journal_lines').run()
+      db.prepare('DELETE FROM journal_entries').run()
+      db.prepare('DELETE FROM payments').run()
+      db.prepare('DELETE FROM invoices').run()
+      db.prepare('DELETE FROM customers').run()
+    })()
+    writeLog(
+      'info',
+      'system',
+      'Database completamente ripulito da tutti i dati per un nuovo inizio.'
+    )
+    return { success: true }
+  } catch (err) {
+    console.error('[DB CLEAR FAILED]:', err.message)
+    writeLog('error', 'system', `Fallimento pulizia database: ${err.message}`)
+    return { success: false, error: err.message }
+  }
+}
+
+export function seedDatabase() {
+  try {
+    db.transaction(() => {
+      // Inserimento Clienti
+      const insertCustomer = db.prepare('INSERT INTO customers (id, name, email) VALUES (?, ?, ?)')
+      insertCustomer.run('cust-1', 'Acme Corp', 'billing@acme.com')
+      insertCustomer.run('cust-2', 'Soylent Corp', 'finance@soylent.com')
+      insertCustomer.run('cust-3', 'Globex Inc', 'accounts@globex.com')
+      insertCustomer.run('cust-4', 'Initech LLC', 'invoices@initech.com')
+      insertCustomer.run('cust-5', 'Massive Dynamic', 'pay@massivedynamic.com')
+
+      // Inserimento Fatture
+      const insertInvoice = db.prepare(`
+        INSERT INTO invoices (id, customer_id, issue_date, due_date, amount, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `)
+      insertInvoice.run('INV-001', 'cust-1', '2026-06-01', '2026-07-01', 12500.0, 'paid')
+      insertInvoice.run('INV-002', 'cust-2', '2026-06-02', '2026-07-02', 25100.0, 'paid')
+      insertInvoice.run('INV-003', 'cust-1', '2026-06-15', '2026-07-15', 1250.0, 'paid')
+      insertInvoice.run('INV-004', 'cust-3', '2026-06-20', '2026-07-20', 50.5, 'paid')
+      insertInvoice.run('INV-005', 'cust-3', '2026-06-25', '2026-07-22', 3400.0, 'unpaid')
+      insertInvoice.run('INV-006', 'cust-5', '2026-06-28', '2026-07-28', 1049.0, 'unpaid')
+      insertInvoice.run('INV-007', 'cust-4', '2026-05-10', '2026-06-10', 850.5, 'unpaid')
+      insertInvoice.run('INV-008', 'cust-4', '2026-05-15', '2026-06-15', 380.0, 'unpaid')
+      insertInvoice.run('INV-009', 'cust-3', '2026-05-20', '2026-06-20', 650.0, 'unpaid')
+
+      // Inserimento Pagamenti Ricevuti
+      const insertPayment = db.prepare(`
+        INSERT INTO payments (id, invoice_id, customer_id, amount, payment_date, method)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `)
+      insertPayment.run('PAY-001', 'INV-003', 'cust-1', 1250.0, '2026-07-02 10:45:00', 'Bonifico')
+      insertPayment.run(
+        'PAY-002',
+        'INV-002',
+        'cust-2',
+        25100.0,
+        '2026-07-01 16:30:00',
+        'Carta di Credito'
+      )
+      insertPayment.run('PAY-003', 'INV-001', 'cust-1', 12500.0, '2026-06-05 09:15:00', 'Bonifico')
+      insertPayment.run('PAY-004', 'INV-004', 'cust-3', 50.5, '2026-06-22 14:00:00', 'Bonifico')
+
+      // Generazione retroattiva Prima Nota
+      const invoices = db.prepare('SELECT * FROM invoices').all()
+      const insertEntry = db.prepare(`
+        INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `)
+      const insertLine = db.prepare(`
+        INSERT INTO journal_lines (id, entry_id, account_name, type, amount)
+        VALUES (?, ?, ?, ?, ?)
+      `)
+
+      for (const inv of invoices) {
+        const entryId = `entry-${inv.id}`
+        const entryDate = inv.issue_date + ' 08:00:00'
+        insertEntry.run(
+          entryId,
+          entryDate,
+          `Emissione fattura ${inv.id}`,
+          'invoice',
+          inv.id,
+          inv.customer_id
+        )
+        insertLine.run(`line-${inv.id}-1`, entryId, 'Crediti v/Clienti', 'debit', inv.amount)
+        insertLine.run(`line-${inv.id}-2`, entryId, 'Ricavi per Vendite', 'credit', inv.amount)
+      }
+
+      const payments = db.prepare('SELECT * FROM payments').all()
+      for (const pay of payments) {
+        const entryId = `entry-${pay.id}`
+        const entryDate = pay.payment_date
+        if (pay.invoice_id) {
+          insertEntry.run(
+            entryId,
+            entryDate,
+            `Incasso fattura ${pay.invoice_id}`,
+            'payment',
+            pay.id,
+            pay.customer_id
+          )
+          insertLine.run(`line-${pay.id}-1`, entryId, 'Cassa/Banca', 'debit', pay.amount)
+          insertLine.run(`line-${pay.id}-2`, entryId, 'Crediti v/Clienti', 'credit', pay.amount)
+        } else {
+          insertEntry.run(
+            entryId,
+            entryDate,
+            `Incasso acconto cliente`,
+            'payment',
+            pay.id,
+            pay.customer_id
+          )
+          insertLine.run(`line-${pay.id}-1`, entryId, 'Cassa/Banca', 'debit', pay.amount)
+          insertLine.run(`line-${pay.id}-2`, entryId, 'Acconti da Clienti', 'credit', pay.amount)
+        }
+      }
+    })()
+    writeLog('info', 'system', 'Dati demo caricati con successo nel database.')
+    return { success: true }
+  } catch (err) {
+    console.error('[DB SEED FAILED]:', err.message)
+    writeLog('error', 'system', `Impossibile caricare i dati demo: ${err.message}`)
     return { success: false, error: err.message }
   }
 }

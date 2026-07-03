@@ -18,7 +18,9 @@ import {
   allocateAcconto,
   getJournalEntries,
   backupDatabase,
-  restoreDatabase
+  restoreDatabase,
+  clearDatabase,
+  seedDatabase
 } from './db'
 
 function createWindow() {
@@ -117,6 +119,8 @@ app.whenReady().then(() => {
   })
 
   ipcMain.handle('logs:get', () => getLogs())
+  ipcMain.handle('db:clear', () => clearDatabase())
+  ipcMain.handle('db:seed', () => seedDatabase())
 
   createWindow()
 

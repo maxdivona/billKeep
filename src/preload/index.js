@@ -25,7 +25,9 @@ const api = {
   // Backup, Ripristino e Logs
   backupDatabase: () => ipcRenderer.invoke('db:backup'),
   restoreDatabase: () => ipcRenderer.invoke('db:restore'),
-  getLogs: () => ipcRenderer.invoke('logs:get')
+  getLogs: () => ipcRenderer.invoke('logs:get'),
+  clearDatabase: () => ipcRenderer.invoke('db:clear'),
+  seedDatabase: () => ipcRenderer.invoke('db:seed')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

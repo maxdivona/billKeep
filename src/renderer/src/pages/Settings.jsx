@@ -7,6 +7,9 @@ export default function Settings() {
   const [actionLoading, setActionLoading] = useState(false)
   const [statusMessage, setStatusMessage] = useState(null)
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
+  const [clearConfirmText, setClearConfirmText] = useState('')
+  const [showSeedConfirm, setShowSeedConfirm] = useState(false)
 
   const fetchLogs = async () => {
     try {
@@ -50,6 +53,56 @@ export default function Settings() {
         }, 1500)
       } else {
         setStatusMessage({ type: 'error', text: `Ripristino fallito: ${result.error}` })
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `Errore: ${err.message}` })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleClear = async () => {
+    if (clearConfirmText !== 'CANCELLA') return
+    setShowClearConfirm(false)
+    setClearConfirmText('')
+    setActionLoading(true)
+    setStatusMessage(null)
+    try {
+      const result = await window.api.clearDatabase()
+      if (result.success) {
+        setStatusMessage({
+          type: 'success',
+          text: 'Tutti i dati sono stati cancellati con successo! Riavvio in corso...'
+        })
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+      } else {
+        setStatusMessage({ type: 'error', text: `Cancellazione fallita: ${result.error}` })
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `Errore: ${err.message}` })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleSeed = async () => {
+    setShowSeedConfirm(false)
+    setActionLoading(true)
+    setStatusMessage(null)
+    try {
+      const result = await window.api.seedDatabase()
+      if (result.success) {
+        setStatusMessage({
+          type: 'success',
+          text: 'Dati demo caricati con successo! Riavvio in corso...'
+        })
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+      } else {
+        setStatusMessage({ type: 'error', text: `Caricamento fallito: ${result.error}` })
       }
     } catch (err) {
       setStatusMessage({ type: 'error', text: `Errore: ${err.message}` })
@@ -290,7 +343,8 @@ export default function Settings() {
                   Gestione Dati & Backup
                 </h3>
                 <p className="text-body-md text-on-surface-variant mt-xs">
-                  Crea e gestisci copie di sicurezza del database locale di BillKeep.
+                  Gestisci copie di sicurezza o esegui il ripristino e la pulizia totale dei dati di
+                  BillKeep.
                 </p>
               </div>
 
@@ -339,7 +393,7 @@ export default function Settings() {
                   </button>
                 </div>
 
-                {/* Import Card */}
+                {/* Import/Restore Card */}
                 <div className="bg-surface-container border border-outline-variant/60 rounded-xl p-md flex flex-col justify-between">
                   <div className="space-y-sm mb-lg">
                     <div className="flex items-center gap-md text-error">
@@ -366,6 +420,62 @@ export default function Settings() {
                     Ripristina Database
                   </button>
                 </div>
+
+                {/* Clear Database Card */}
+                <div className="bg-surface-container border border-outline-variant/60 rounded-xl p-md flex flex-col justify-between">
+                  <div className="space-y-sm mb-lg">
+                    <div className="flex items-center gap-md text-error">
+                      <span className="material-symbols-outlined text-[32px]">delete_sweep</span>
+                      <h4 className="font-label-lg text-label-lg font-bold text-on-surface">
+                        Ripulisci Database
+                      </h4>
+                    </div>
+                    <p className="text-body-md text-on-surface-variant">
+                      Elimina definitivamente tutti i dati (clienti, fatture, pagamenti e prima
+                      nota) per ricominciare da zero. Richiede doppia conferma di sicurezza.
+                    </p>
+                  </div>
+                  <button
+                    disabled={actionLoading}
+                    onClick={() => setShowClearConfirm(true)}
+                    className="w-full bg-error hover:bg-error/90 disabled:opacity-50 text-on-error font-label-md text-label-md px-6 py-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {actionLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-error"></div>
+                    ) : (
+                      <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                    )}
+                    Ripulisci Tutti i Dati
+                  </button>
+                </div>
+
+                {/* Seed Demo Data Card */}
+                <div className="bg-surface-container border border-outline-variant/60 rounded-xl p-md flex flex-col justify-between">
+                  <div className="space-y-sm mb-lg">
+                    <div className="flex items-center gap-md text-primary">
+                      <span className="material-symbols-outlined text-[32px]">extension</span>
+                      <h4 className="font-label-lg text-label-lg font-bold text-on-surface">
+                        Carica Dati Demo
+                      </h4>
+                    </div>
+                    <p className="text-body-md text-on-surface-variant">
+                      Popola l&apos;applicazione con dati fittizi (clienti, fatture, incassi e prima
+                      nota) per scopi di test e dimostrazione.
+                    </p>
+                  </div>
+                  <button
+                    disabled={actionLoading}
+                    onClick={() => setShowSeedConfirm(true)}
+                    className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {actionLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-primary"></div>
+                    ) : (
+                      <span className="material-symbols-outlined text-[20px]">science</span>
+                    )}
+                    Carica Dati Demo
+                  </button>
+                </div>
               </div>
 
               {/* Warning Alert */}
@@ -373,12 +483,12 @@ export default function Settings() {
                 <span className="material-symbols-outlined text-error shrink-0">warning</span>
                 <div className="space-y-xs">
                   <h5 className="font-label-md text-label-md font-bold text-error">
-                    Attenzione sulla sicurezza dei dati
+                    Sicurezza e Protezione Dati
                   </h5>
                   <p className="text-body-sm text-on-surface-variant">
-                    L&apos;operazione di ripristino sovrascrive completamente il database attuale.
-                    Verrà eseguito un controllo automatico di validità prima di applicare il file
-                    per evitare corruzioni.
+                    Le operazioni di ripristino e pulizia database sono irreversibili. Il
+                    caricamento dei dati demo aggiungerà record fittizi ma manterrà quelli esistenti
+                    se non si ripulisce prima.
                   </p>
                 </div>
               </div>
@@ -493,6 +603,94 @@ export default function Settings() {
               className="bg-error hover:bg-error/90 text-on-error font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
             >
               Conferma e Ripristina
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* CONFIRM CLEAR MODAL (DOUBLE SECURITY) */}
+      <Modal
+        isOpen={showClearConfirm}
+        onClose={() => {
+          setShowClearConfirm(false)
+          setClearConfirmText('')
+        }}
+        title="Ripulitura Completa Database"
+      >
+        <div className="space-y-4">
+          <p className="text-body-md text-on-surface">
+            Questa operazione eliminerà permanentemente tutti i dati. Per procedere, digita la
+            parola <strong className="text-error">CANCELLA</strong> nel campo sottostante per
+            sbloccare la conferma.
+          </p>
+
+          <input
+            type="text"
+            className="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm font-mono text-body-md text-on-surface focus:outline-none focus:ring-1 focus:ring-error"
+            placeholder="Scrivi CANCELLA"
+            value={clearConfirmText}
+            onChange={(e) => setClearConfirmText(e.target.value)}
+          />
+
+          <div className="p-md bg-error-container text-on-error-container rounded-lg border border-error/20 flex gap-sm">
+            <span className="material-symbols-outlined shrink-0 text-[20px]">warning</span>
+            <p className="text-body-sm">
+              Non sarà possibile recuperare i dati una volta cancellati, a meno che tu non abbia un
+              file di backup salvato in precedenza.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-sm pt-sm border-t border-outline-variant">
+            <button
+              onClick={() => {
+                setShowClearConfirm(false)
+                setClearConfirmText('')
+              }}
+              className="bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+            >
+              Annulla
+            </button>
+            <button
+              disabled={clearConfirmText !== 'CANCELLA'}
+              onClick={handleClear}
+              className="bg-error hover:bg-error/90 disabled:opacity-50 text-on-error font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer transition-opacity"
+            >
+              Elimina Tutti i Dati
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* CONFIRM SEED MODAL */}
+      <Modal
+        isOpen={showSeedConfirm}
+        onClose={() => setShowSeedConfirm(false)}
+        title="Carica Dati Demo"
+      >
+        <div className="space-y-4">
+          <p className="text-body-md text-on-surface">
+            Sei sicuro di voler caricare i dati demo di prova?
+          </p>
+          <div className="p-md bg-secondary-container text-on-secondary-container rounded-lg border border-secondary/20 flex gap-sm">
+            <span className="material-symbols-outlined shrink-0 text-[20px]">info</span>
+            <p className="text-body-sm">
+              Questa azione aggiungerà clienti, fatture e pagamenti fittizi per consentirti di
+              esplorare le funzionalità dell&apos;applicazione. Si consiglia di eseguire questa
+              operazione su un database vuoto.
+            </p>
+          </div>
+          <div className="flex justify-end gap-sm pt-sm border-t border-outline-variant">
+            <button
+              onClick={() => setShowSeedConfirm(false)}
+              className="bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleSeed}
+              className="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+            >
+              Conferma e Carica
             </button>
           </div>
         </div>
