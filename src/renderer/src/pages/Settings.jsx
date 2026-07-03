@@ -1,7 +1,68 @@
 import { useState } from 'react'
+import Modal from '../components/Modal'
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('info')
+  const [logs, setLogs] = useState([])
+  const [actionLoading, setActionLoading] = useState(false)
+  const [statusMessage, setStatusMessage] = useState(null)
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(false)
+
+  const fetchLogs = async () => {
+    try {
+      const systemLogs = await window.api.getLogs()
+      setLogs(systemLogs.reverse()) // Show newest first
+    } catch (err) {
+      console.error('Errore durante il caricamento dei log:', err)
+    }
+  }
+
+  const handleBackup = async () => {
+    setActionLoading(true)
+    setStatusMessage(null)
+    try {
+      const result = await window.api.backupDatabase()
+      if (result.success) {
+        setStatusMessage({ type: 'success', text: 'Backup del database esportato con successo!' })
+      } else {
+        setStatusMessage({ type: 'error', text: `Esportazione fallita: ${result.error}` })
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `Errore: ${err.message}` })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleRestore = async () => {
+    setShowRestoreConfirm(false)
+    setActionLoading(true)
+    setStatusMessage(null)
+    try {
+      const result = await window.api.restoreDatabase()
+      if (result.success) {
+        setStatusMessage({
+          type: 'success',
+          text: "Database ripristinato con successo! Riavvio dell'applicazione in corso..."
+        })
+        setTimeout(() => {
+          window.location.reload()
+        }, 1500)
+      } else {
+        setStatusMessage({ type: 'error', text: `Ripristino fallito: ${result.error}` })
+      }
+    } catch (err) {
+      setStatusMessage({ type: 'error', text: `Errore: ${err.message}` })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const formatDate = (dateStr) => {
+    const d = new Date(dateStr)
+    if (isNaN(d)) return dateStr
+    return d.toLocaleString('it-IT')
+  }
 
   return (
     <div>
@@ -9,7 +70,7 @@ export default function Settings() {
       <div className="mb-6">
         <h2 className="font-headline-xl text-headline-xl text-on-surface mb-xs">Impostazioni</h2>
         <p className="text-on-surface-variant font-body-md text-body-md">
-          Gestisci le preferenze dell&apos;applicazione e visualizza i dettagli di sistema.
+          Gestisci le preferenze dell&apos;applicazione, i backup e visualizza i log di sistema.
         </p>
       </div>
 
@@ -29,24 +90,44 @@ export default function Settings() {
           </button>
 
           <button
-            disabled
-            className="flex items-center gap-md px-sm py-sm rounded-lg text-left text-on-surface-variant/45 cursor-not-allowed font-label-md text-label-md"
+            onClick={() => setActiveTab('backup')}
+            className={`flex items-center gap-md px-sm py-sm rounded-lg text-left transition-all duration-150 cursor-pointer font-label-md text-label-md ${
+              activeTab === 'backup'
+                ? 'bg-primary text-on-primary font-semibold shadow-sm'
+                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+            }`}
           >
-            <span className="material-symbols-outlined">tune</span>
-            Preferenze Generali
+            <span className="material-symbols-outlined">database</span>
+            Database & Backup
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveTab('logs')
+              fetchLogs()
+            }}
+            className={`flex items-center gap-md px-sm py-sm rounded-lg text-left transition-all duration-150 cursor-pointer font-label-md text-label-md ${
+              activeTab === 'logs'
+                ? 'bg-primary text-on-primary font-semibold shadow-sm'
+                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined">description</span>
+            Log di Sistema
           </button>
 
           <button
             disabled
             className="flex items-center gap-md px-sm py-sm rounded-lg text-left text-on-surface-variant/45 cursor-not-allowed font-label-md text-label-md"
           >
-            <span className="material-symbols-outlined">database</span>
-            Database & Backup
+            <span className="material-symbols-outlined">tune</span>
+            Preferenze Generali
           </button>
         </div>
 
         {/* Right Content Panel */}
         <div className="flex-1 bg-surface-container-low border border-outline-variant rounded-xl p-lg shadow-sm">
+          {/* TAB: INFO */}
           {activeTab === 'info' && (
             <div className="space-y-6">
               {/* App Identity Card */}
@@ -199,8 +280,223 @@ export default function Settings() {
               </div>
             </div>
           )}
+
+          {/* TAB: BACKUP */}
+          {activeTab === 'backup' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-headline-md text-headline-md text-on-surface font-semibold flex items-center gap-2">
+                  <span className="material-symbols-outlined">database</span>
+                  Gestione Dati & Backup
+                </h3>
+                <p className="text-body-md text-on-surface-variant mt-xs">
+                  Crea e gestisci copie di sicurezza del database locale di BillKeep.
+                </p>
+              </div>
+
+              {/* Status Banner */}
+              {statusMessage && (
+                <div
+                  className={`p-md rounded-lg flex items-center gap-md border ${
+                    statusMessage.type === 'success'
+                      ? 'bg-secondary-container text-on-secondary-container border-secondary/20'
+                      : 'bg-error-container text-on-error-container border-error/20'
+                  }`}
+                >
+                  <span className="material-symbols-outlined">
+                    {statusMessage.type === 'success' ? 'check_circle' : 'error'}
+                  </span>
+                  <span className="font-body-md text-body-md">{statusMessage.text}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-surface-container border border-outline-variant/60 rounded-xl p-md flex flex-col justify-between">
+                  <div className="space-y-sm mb-lg">
+                    <div className="flex items-center gap-md text-primary">
+                      <span className="material-symbols-outlined text-[32px]">upload</span>
+                      <h4 className="font-label-lg text-label-lg font-bold text-on-surface">
+                        Esporta Backup
+                      </h4>
+                    </div>
+                    <p className="text-body-md text-on-surface-variant">
+                      Salva una copia completa del database SQLite sul tuo computer.
+                      L&apos;esportazione è sicura e coerente in qualsiasi momento.
+                    </p>
+                  </div>
+                  <button
+                    disabled={actionLoading}
+                    onClick={handleBackup}
+                    className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {actionLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-primary"></div>
+                    ) : (
+                      <span className="material-symbols-outlined text-[20px]">save</span>
+                    )}
+                    Salva Backup Database
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-surface-container border border-outline-variant/60 rounded-xl p-md flex flex-col justify-between">
+                  <div className="space-y-sm mb-lg">
+                    <div className="flex items-center gap-md text-error">
+                      <span className="material-symbols-outlined text-[32px]">download</span>
+                      <h4 className="font-label-lg text-label-lg font-bold text-on-surface">
+                        Ripristina Backup
+                      </h4>
+                    </div>
+                    <p className="text-body-md text-on-surface-variant">
+                      Seleziona un file `.db` salvato in precedenza per ripristinare lo stato dei
+                      dati. Il database verrà allineato e migrato automaticamente.
+                    </p>
+                  </div>
+                  <button
+                    disabled={actionLoading}
+                    onClick={() => setShowRestoreConfirm(true)}
+                    className="w-full bg-error hover:bg-error/90 disabled:opacity-50 text-on-error font-label-md text-label-md px-6 py-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {actionLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-error"></div>
+                    ) : (
+                      <span className="material-symbols-outlined text-[20px]">restore</span>
+                    )}
+                    Ripristina Database
+                  </button>
+                </div>
+              </div>
+
+              {/* Warning Alert */}
+              <div className="p-md bg-error-container/30 border border-error/20 rounded-xl flex items-start gap-md text-on-error-container">
+                <span className="material-symbols-outlined text-error shrink-0">warning</span>
+                <div className="space-y-xs">
+                  <h5 className="font-label-md text-label-md font-bold text-error">
+                    Attenzione sulla sicurezza dei dati
+                  </h5>
+                  <p className="text-body-sm text-on-surface-variant">
+                    L&apos;operazione di ripristino sovrascrive completamente il database attuale.
+                    Verrà eseguito un controllo automatico di validità prima di applicare il file
+                    per evitare corruzioni.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: LOGS */}
+          {activeTab === 'logs' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold flex items-center gap-2">
+                    <span className="material-symbols-outlined">description</span>
+                    Log ed Errori di Sistema
+                  </h3>
+                  <p className="text-body-md text-on-surface-variant mt-xs">
+                    Visualizza il log cronologico degli eventi e gli errori relativi a backup e
+                    ripristini.
+                  </p>
+                </div>
+                <button
+                  onClick={fetchLogs}
+                  className="bg-surface hover:bg-surface-container-high border border-outline-variant font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-[18px]">refresh</span>
+                  Aggiorna
+                </button>
+              </div>
+
+              {/* Log Viewer Container */}
+              <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-inner flex flex-col h-[500px]">
+                <div className="bg-surface px-md py-sm border-b border-outline-variant flex items-center justify-between text-label-sm font-semibold text-on-surface-variant">
+                  <span>Registro Eventi</span>
+                  <span>{logs.length} record trovati</span>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-md space-y-sm font-mono text-xs">
+                  {logs.length === 0 ? (
+                    <div className="text-center py-12 text-on-surface-variant/60 font-sans text-body-md">
+                      Nessun log registrato nel sistema.
+                    </div>
+                  ) : (
+                    logs.map((log, idx) => (
+                      <div
+                        key={idx}
+                        className="p-sm bg-surface border border-outline-variant/40 rounded-lg hover:border-outline transition-colors flex flex-col md:flex-row items-start md:items-center gap-md"
+                      >
+                        {/* Timestamp */}
+                        <span className="text-on-surface-variant shrink-0 select-none">
+                          [{formatDate(log.timestamp)}]
+                        </span>
+
+                        {/* Level badge */}
+                        <span
+                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${
+                            log.level === 'error'
+                              ? 'bg-error-container text-on-error-container'
+                              : log.level === 'warning'
+                                ? 'bg-error/10 text-error'
+                                : 'bg-secondary-container text-on-secondary-container'
+                          }`}
+                        >
+                          {log.level}
+                        </span>
+
+                        {/* Context badge */}
+                        <span className="px-2 py-0.5 rounded bg-surface-container border border-outline-variant/60 text-[10px] font-semibold uppercase text-primary shrink-0 select-none">
+                          {log.context}
+                        </span>
+
+                        {/* Message */}
+                        <span className="text-on-surface font-sans text-body-md break-all">
+                          {log.message}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* CONFIRM RESTORE MODAL */}
+      <Modal
+        isOpen={showRestoreConfirm}
+        onClose={() => setShowRestoreConfirm(false)}
+        title="Ripristina Database"
+      >
+        <div className="space-y-4">
+          <p className="text-body-md text-on-surface">
+            Sei sicuro di voler ripristinare il database?
+          </p>
+          <div className="p-md bg-error-container text-on-error-container rounded-lg border border-error/20 flex gap-sm">
+            <span className="material-symbols-outlined shrink-0 text-[20px]">warning</span>
+            <p className="text-body-sm">
+              Questa azione sovrascriverà in modo irreversibile tutti i dati correnti con quelli del
+              backup selezionato. L&apos;applicazione si riavvierà automaticamente al termine
+              dell&apos;operazione.
+            </p>
+          </div>
+          <div className="flex justify-end gap-sm pt-sm border-t border-outline-variant">
+            <button
+              onClick={() => setShowRestoreConfirm(false)}
+              className="bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+            >
+              Annulla
+            </button>
+            <button
+              onClick={handleRestore}
+              className="bg-error hover:bg-error/90 text-on-error font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+            >
+              Conferma e Ripristina
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

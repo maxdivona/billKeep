@@ -20,7 +20,12 @@ const api = {
 
   // Reportistica
   getDashboardStats: () => ipcRenderer.invoke('db:get-stats'),
-  getJournalEntries: (filters) => ipcRenderer.invoke('db:get-journal-entries', filters)
+  getJournalEntries: (filters) => ipcRenderer.invoke('db:get-journal-entries', filters),
+
+  // Backup, Ripristino e Logs
+  backupDatabase: () => ipcRenderer.invoke('db:backup'),
+  restoreDatabase: () => ipcRenderer.invoke('db:restore'),
+  getLogs: () => ipcRenderer.invoke('logs:get')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

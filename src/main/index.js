@@ -1,7 +1,8 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { getLogs } from './logs'
 import {
   initDatabase,
   getCustomers,
@@ -15,7 +16,9 @@ import {
   getCustomerPayments,
   addMultiPayment,
   allocateAcconto,
-  getJournalEntries
+  getJournalEntries,
+  backupDatabase,
+  restoreDatabase
 } from './db'
 
 function createWindow() {
@@ -85,6 +88,35 @@ app.whenReady().then(() => {
   ipcMain.handle('db:add-multi-payment', (event, paymentData) => addMultiPayment(paymentData))
   ipcMain.handle('db:allocate-acconto', (event, data) => allocateAcconto(data))
   ipcMain.handle('db:get-journal-entries', (event, filters) => getJournalEntries(filters))
+
+  // Canali per Backup, Ripristino e Logs
+  ipcMain.handle('db:backup', async () => {
+    const focusedWindow = BrowserWindow.getFocusedWindow()
+    const result = await dialog.showSaveDialog(focusedWindow, {
+      title: 'Esporta Backup Database',
+      defaultPath: `billkeep_backup_${new Date().toISOString().split('T')[0]}.db`,
+      filters: [{ name: 'SQLite Database', extensions: ['db'] }]
+    })
+    if (result.canceled || !result.filePath) {
+      return { success: false, error: 'Operazione annullata' }
+    }
+    return await backupDatabase(result.filePath)
+  })
+
+  ipcMain.handle('db:restore', async () => {
+    const focusedWindow = BrowserWindow.getFocusedWindow()
+    const result = await dialog.showOpenDialog(focusedWindow, {
+      title: 'Seleziona Database di Ripristino',
+      properties: ['openFile'],
+      filters: [{ name: 'SQLite Database', extensions: ['db'] }]
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: 'Operazione annullata' }
+    }
+    return restoreDatabase(result.filePaths[0])
+  })
+
+  ipcMain.handle('logs:get', () => getLogs())
 
   createWindow()
 

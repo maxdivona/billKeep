@@ -1,10 +1,12 @@
 import path from 'path'
+import fs from 'fs'
 import { app } from 'electron'
 import Database from 'better-sqlite3'
+import { writeLog } from './logs'
 
 // Posizionamento sicuro del database nella cartella config dell'utente
 const dbPath = path.join(app.getPath('userData'), 'billkeep.db')
-const db = new Database(dbPath)
+let db = new Database(dbPath)
 
 // Abilita il supporto alle chiavi esterne ad ogni connessione
 db.pragma('foreign_keys = ON')
@@ -803,4 +805,63 @@ export function getJournalEntries(filters = {}) {
     entry.lines = getLines.all(entry.id)
     return entry
   })
+}
+
+export async function backupDatabase(destinationPath) {
+  try {
+    await db.backup(destinationPath)
+    writeLog('info', 'backup', `Backup creato con successo in: ${destinationPath}`)
+    return { success: true }
+  } catch (err) {
+    console.error('[DB BACKUP FAILED]:', err.message)
+    writeLog('error', 'backup', `Errore durante il backup: ${err.message}`)
+    return { success: false, error: err.message }
+  }
+}
+
+export function restoreDatabase(sourcePath) {
+  try {
+    // Validazione preventiva: controllo intestazione SQLite
+    const buffer = Buffer.alloc(16)
+    const fd = fs.openSync(sourcePath, 'r')
+    fs.readSync(fd, buffer, 0, 16, 0)
+    fs.closeSync(fd)
+    if (buffer.toString() !== 'SQLite format 3\0') {
+      throw new Error('Il file selezionato non è un database SQLite valido.')
+    }
+
+    // Chiude il database corrente
+    db.close()
+
+    // Sovrascrive il file del database
+    fs.copyFileSync(sourcePath, dbPath)
+
+    // Riapre il database
+    db = new Database(dbPath)
+    db.pragma('foreign_keys = ON')
+
+    // PRECAUZIONE IMPORTANTE: Inizializza il database per migrare/allineare lo schema alla versione corrente dell'app
+    initDatabase()
+
+    writeLog('info', 'restore', `Database ripristinato con successo da: ${sourcePath}`)
+    return { success: true }
+  } catch (err) {
+    console.error('[DB RESTORE FAILED]:', err.message)
+    writeLog('error', 'restore', `Errore durante il ripristino: ${err.message}`)
+
+    // Tenta di riaprire la connessione originale in caso di fallimento
+    try {
+      db = new Database(dbPath)
+      db.pragma('foreign_keys = ON')
+    } catch (reopenErr) {
+      console.error('[DB REOPEN FAILED]:', reopenErr.message)
+      writeLog(
+        'error',
+        'system',
+        `Impossibile riaprire il database originale dopo fallimento: ${reopenErr.message}`
+      )
+    }
+
+    return { success: false, error: err.message }
+  }
 }
