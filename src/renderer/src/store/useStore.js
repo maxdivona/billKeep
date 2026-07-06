@@ -1,7 +1,16 @@
 import { create } from 'zustand'
 
+// Inizializza il tema al caricamento per evitare flash luminosi all'avvio
+const initialTheme = localStorage.getItem('theme') || 'light'
+if (initialTheme === 'dark') {
+  document.documentElement.classList.add('dark')
+} else {
+  document.documentElement.classList.remove('dark')
+}
+
 export const useStore = create((set, get) => ({
   // State
+  theme: initialTheme,
   stats: {
     totalInvoiced: 0,
     totalPaid: 0,
@@ -315,5 +324,15 @@ export const useStore = create((set, get) => ({
       return { success: false, error: err.message }
     }
     return { success: true }
+  },
+
+  setTheme: (theme) => {
+    localStorage.setItem('theme', theme)
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+    set({ theme })
   }
 }))

@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import Modal from '../components/Modal'
+import { useStore } from '../store/useStore'
 
 export default function Settings() {
+  const theme = useStore((state) => state.theme)
+  const setTheme = useStore((state) => state.setTheme)
   const [activeTab, setActiveTab] = useState('info')
   const [logs, setLogs] = useState([])
   const [actionLoading, setActionLoading] = useState(false)
@@ -170,8 +173,12 @@ export default function Settings() {
           </button>
 
           <button
-            disabled
-            className="flex items-center gap-md px-sm py-sm rounded-lg text-left text-on-surface-variant/45 cursor-not-allowed font-label-md text-label-md"
+            onClick={() => setActiveTab('preferences')}
+            className={`flex items-center gap-md px-sm py-sm rounded-lg text-left transition-all duration-150 cursor-pointer font-label-md text-label-md ${
+              activeTab === 'preferences'
+                ? 'bg-primary text-on-primary font-semibold shadow-sm'
+                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
+            }`}
           >
             <span className="material-symbols-outlined">tune</span>
             Preferenze Generali
@@ -566,6 +573,77 @@ export default function Settings() {
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: PREFERENCES */}
+          {activeTab === 'preferences' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="font-headline-md text-headline-md text-on-surface font-semibold flex items-center gap-2">
+                  <span className="material-symbols-outlined">tune</span>
+                  Preferenze Generali
+                </h3>
+                <p className="text-body-md text-on-surface-variant mt-xs">
+                  Personalizza il comportamento e l&apos;aspetto visivo dell&apos;applicazione.
+                </p>
+              </div>
+
+              {/* Theme Settings Card */}
+              <div className="bg-surface border border-outline-variant rounded-xl p-md space-y-md">
+                <div className="flex items-center gap-md">
+                  <span className="material-symbols-outlined text-[32px] text-primary">
+                    palette
+                  </span>
+                  <div>
+                    <h4 className="font-label-md text-label-md font-bold text-on-surface">
+                      Tema dell&apos;Applicazione
+                    </h4>
+                    <p className="text-body-sm text-on-surface-variant">
+                      Seleziona la modalità di visualizzazione tra tema chiaro e tema scuro (Eye
+                      Care).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-sm">
+                  {/* Light Theme Button */}
+                  <button
+                    onClick={() => setTheme('light')}
+                    className={`flex items-center gap-md p-md rounded-xl border text-left cursor-pointer transition-all duration-200 ${
+                      theme === 'light'
+                        ? 'border-primary bg-primary/5 text-primary font-bold shadow-sm'
+                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[24px]">light_mode</span>
+                    <div>
+                      <div className="font-label-md text-label-md">Tema Chiaro</div>
+                      <div className="text-[12px] font-normal text-on-surface-variant/80">
+                        Tonalità calde riposanti per ambienti illuminati
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Dark Theme Button */}
+                  <button
+                    onClick={() => setTheme('dark')}
+                    className={`flex items-center gap-md p-md rounded-xl border text-left cursor-pointer transition-all duration-200 ${
+                      theme === 'dark'
+                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-sm'
+                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[24px]">dark_mode</span>
+                    <div>
+                      <div className="font-label-md text-label-md">Tema Oscuro</div>
+                      <div className="text-[12px] font-normal text-on-surface-variant/80">
+                        Contrasto ottimizzato per affaticare meno la vista
+                      </div>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
