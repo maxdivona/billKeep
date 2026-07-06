@@ -869,3 +869,304 @@ export function seedDatabase() {
     return { success: false, error: err.message }
   }
 }
+
+/**
+ * Aggiorna i dati anagrafici di un cliente
+ */
+export function updateCustomer(id, data) {
+  const existing = db
+    .prepare('SELECT id FROM customers WHERE LOWER(name) = LOWER(?) AND id != ?')
+    .get(data.name, id)
+  if (existing) {
+    return { success: false, error: 'Un cliente con questo nome esiste già.' }
+  }
+
+  try {
+    db.prepare('UPDATE customers SET name = ?, email = ? WHERE id = ?').run(
+      data.name,
+      data.email,
+      id
+    )
+    writeLog(
+      'info',
+      'system',
+      `Cliente ${id} aggiornato: nome="${data.name}", email="${data.email}"`
+    )
+    return { success: true }
+  } catch (err) {
+    console.error('[UPDATE CUSTOMER FAILED]:', err.message)
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Elimina un cliente se non ha fatture o pagamenti associati
+ */
+export function deleteCustomer(id) {
+  try {
+    db.prepare('DELETE FROM customers WHERE id = ?').run(id)
+    writeLog('info', 'system', `Cliente ${id} eliminato con successo.`)
+    return { success: true }
+  } catch (err) {
+    console.error('[DELETE CUSTOMER FAILED]:', err.message)
+    if (err.message.includes('FOREIGN KEY')) {
+      return {
+        success: false,
+        error: 'Impossibile eliminare il cliente: ha fatture o pagamenti associati.'
+      }
+    }
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Aggiorna i dati di una fattura, allineando prima nota, stato e pagamenti associati
+ */
+export function updateInvoice(id, data) {
+  const updateInv = db.prepare(`
+    UPDATE invoices 
+    SET customer_id = ?, issue_date = ?, due_date = ?, amount = ?
+    WHERE id = ?
+  `)
+  const getPaymentsSum = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE invoice_id = ?
+  `)
+  const updateInvStatus = db.prepare(`
+    UPDATE invoices SET status = ? WHERE id = ?
+  `)
+  const updateEntry = db.prepare(`
+    UPDATE journal_entries 
+    SET entry_date = ?, customer_id = ?, description = ?
+    WHERE id = ?
+  `)
+  const updateLine = db.prepare(`
+    UPDATE journal_lines SET amount = ? WHERE id = ?
+  `)
+  const updatePaymentsCustomer = db.prepare(`
+    UPDATE payments SET customer_id = ? WHERE invoice_id = ?
+  `)
+  const updatePaymentsJournalCustomer = db.prepare(`
+    UPDATE journal_entries 
+    SET customer_id = ? 
+    WHERE reference_type IN ('payment', 'allocation') 
+      AND reference_id IN (SELECT id FROM payments WHERE invoice_id = ?)
+  `)
+
+  const executeTx = db.transaction(() => {
+    // 1. Aggiorna la fattura
+    updateInv.run(data.customer_id, data.issue_date, data.due_date, data.amount, id)
+
+    // 2. Ricalcola lo stato della fattura in base ai pagamenti
+    const paymentsSum = getPaymentsSum.get(id).total
+    const newStatus = paymentsSum >= data.amount ? 'paid' : paymentsSum > 0 ? 'partial' : 'unpaid'
+    updateInvStatus.run(newStatus, id)
+
+    // 3. Aggiorna la prima nota e le righe Dare/Avere associate
+    const entryId = `entry-${id}`
+    const entryDate = data.issue_date + ' 08:00:00'
+    updateEntry.run(entryDate, data.customer_id, `Emissione fattura ${id}`, entryId)
+    updateLine.run(data.amount, `line-${id}-1`)
+    updateLine.run(data.amount, `line-${id}-2`)
+
+    // 4. Aggiorna il cliente su tutti i pagamenti e le relative registrazioni contabili di questa fattura
+    updatePaymentsCustomer.run(data.customer_id, id)
+    updatePaymentsJournalCustomer.run(data.customer_id, id)
+
+    return { success: true }
+  })
+
+  try {
+    const res = executeTx()
+    writeLog(
+      'info',
+      'system',
+      `Fattura ${id} modificata con successo: cliente=${data.customer_id}, importo=${data.amount}`
+    )
+    return res
+  } catch (err) {
+    console.error('[UPDATE INVOICE TRANSACTION FAILED]:', err.message)
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Elimina una fattura, cancellando a cascata pagamenti e prima nota associata
+ */
+export function deleteInvoice(id) {
+  const getPayments = db.prepare('SELECT id FROM payments WHERE invoice_id = ?')
+  const deleteJournalEntry = db.prepare('DELETE FROM journal_entries WHERE id = ?')
+  const deleteInvoiceJournal = db.prepare(
+    "DELETE FROM journal_entries WHERE reference_type = 'invoice' AND reference_id = ?"
+  )
+  const deleteInv = db.prepare('DELETE FROM invoices WHERE id = ?')
+
+  const executeTx = db.transaction(() => {
+    // 1. Ottieni tutti i pagamenti della fattura
+    const payments = getPayments.all(id)
+
+    // 2. Elimina le registrazioni di prima nota per tutti questi pagamenti
+    for (const pay of payments) {
+      deleteJournalEntry.run(`entry-${pay.id}`)
+    }
+
+    // 3. Elimina la registrazione di prima nota per la fattura stessa
+    deleteInvoiceJournal.run(id)
+
+    // 4. Elimina la fattura (questo cancella anche i record fisici di pagamento in payments per via di ON DELETE CASCADE)
+    deleteInv.run(id)
+
+    return { success: true }
+  })
+
+  try {
+    const res = executeTx()
+    writeLog(
+      'info',
+      'system',
+      `Fattura ${id} e relativi pagamenti/scritture contabili eliminati con successo.`
+    )
+    return res
+  } catch (err) {
+    console.error('[DELETE INVOICE TRANSACTION FAILED]:', err.message)
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Aggiorna i dettagli di un pagamento (importo, data, metodo), allineando prima nota e stato della fattura
+ */
+export function updatePayment(id, data) {
+  const getPay = db.prepare('SELECT invoice_id, customer_id FROM payments WHERE id = ?')
+  const updatePay = db.prepare(`
+    UPDATE payments 
+    SET amount = ?, payment_date = ?, method = ?
+    WHERE id = ?
+  `)
+  const updateEntry = db.prepare(`
+    UPDATE journal_entries 
+    SET entry_date = ?, description = ?
+    WHERE id = ?
+  `)
+  const updateLine = db.prepare(`
+    UPDATE journal_lines SET amount = ? WHERE id = ?
+  `)
+  const getPaymentsSum = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE invoice_id = ?
+  `)
+  const getInvoiceAmount = db.prepare(`
+    SELECT amount FROM invoices WHERE id = ?
+  `)
+  const updateInvStatus = db.prepare(`
+    UPDATE invoices SET status = ? WHERE id = ?
+  `)
+
+  const executeTx = db.transaction(() => {
+    const current = getPay.get(id)
+    if (!current) {
+      throw new Error(`Pagamento ${id} non trovato`)
+    }
+
+    // 1. Aggiorna i dati in tabella payments
+    updatePay.run(data.amount, data.payment_date, data.method, id)
+
+    // 2. Aggiorna la prima nota e le righe Dare/Avere associate
+    const entryId = `entry-${id}`
+    const desc = current.invoice_id
+      ? `Incasso fattura ${current.invoice_id}`
+      : `Incasso acconto cliente`
+    updateEntry.run(data.payment_date, desc, entryId)
+    updateLine.run(data.amount, `line-${id}-1`)
+    updateLine.run(data.amount, `line-${id}-2`)
+
+    // 3. Ricalcola lo stato della fattura se applicabile
+    if (current.invoice_id) {
+      const paymentsSum = getPaymentsSum.get(current.invoice_id).total
+      const invAmount = getInvoiceAmount.get(current.invoice_id).amount
+      const newStatus = paymentsSum >= invAmount ? 'paid' : paymentsSum > 0 ? 'partial' : 'unpaid'
+      updateInvStatus.run(newStatus, current.invoice_id)
+    }
+
+    return { success: true }
+  })
+
+  try {
+    const res = executeTx()
+    writeLog(
+      'info',
+      'system',
+      `Pagamento ${id} modificato con successo: importo=${data.amount}, metodo=${data.method}`
+    )
+    return res
+  } catch (err) {
+    console.error('[UPDATE PAYMENT TRANSACTION FAILED]:', err.message)
+    return { success: false, error: err.message }
+  }
+}
+
+/**
+ * Elimina un pagamento e la sua registrazione contabile, ripristinando l'acconto se era un'allocazione
+ */
+export function deletePayment(id) {
+  const getPay = db.prepare(
+    'SELECT invoice_id, customer_id, amount, method, payment_date FROM payments WHERE id = ?'
+  )
+  const deletePay = db.prepare('DELETE FROM payments WHERE id = ?')
+  const deleteJournalEntry = db.prepare('DELETE FROM journal_entries WHERE id = ?')
+  const getPaymentsSum = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE invoice_id = ?
+  `)
+  const getInvoiceAmount = db.prepare(`
+    SELECT amount FROM invoices WHERE id = ?
+  `)
+  const updateInvStatus = db.prepare(`
+    UPDATE invoices SET status = ? WHERE id = ?
+  `)
+  const insertPayment = db.prepare(`
+    INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date)
+    VALUES (?, NULL, ?, ?, ?, ?)
+  `)
+
+  const executeTx = db.transaction(() => {
+    const current = getPay.get(id)
+    if (!current) {
+      throw new Error(`Pagamento ${id} non trovato`)
+    }
+
+    // 1. Elimina il record del pagamento
+    deletePay.run(id)
+
+    // 2. Elimina la registrazione in prima nota
+    deleteJournalEntry.run(`entry-${id}`)
+
+    // 3. Ricalcola lo stato della fattura correlata se applicabile
+    if (current.invoice_id) {
+      const paymentsSum = getPaymentsSum.get(current.invoice_id).total
+      const invAmount = getInvoiceAmount.get(current.invoice_id).amount
+      const newStatus = paymentsSum >= invAmount ? 'paid' : paymentsSum > 0 ? 'partial' : 'unpaid'
+      updateInvStatus.run(newStatus, current.invoice_id)
+    }
+
+    // 4. Ripristina l'acconto libero se si trattava di un'allocazione (Uso Credito)
+    if (current.method === 'Uso Credito') {
+      const restoredId = `PAY-ACC-REST-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`
+      insertPayment.run(
+        restoredId,
+        current.customer_id,
+        current.amount,
+        'Ripristino Acconto',
+        current.payment_date
+      )
+    }
+
+    return { success: true }
+  })
+
+  try {
+    const res = executeTx()
+    writeLog('info', 'system', `Pagamento ${id} eliminato con successo.`)
+    return res
+  } catch (err) {
+    console.error('[DELETE PAYMENT TRANSACTION FAILED]:', err.message)
+    return { success: false, error: err.message }
+  }
+}

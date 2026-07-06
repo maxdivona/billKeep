@@ -185,5 +185,135 @@ export const useStore = create((set, get) => ({
       return { success: false, error: err.message }
     }
     return { success: true }
+  },
+
+  updateCustomer: async (id, customerData) => {
+    set({ loading: true, error: null })
+    try {
+      const result = await window.api.updateCustomer(id, customerData)
+      if (result.success) {
+        await Promise.all([
+          get().fetchCustomers(),
+          get().fetchStats(),
+          get().fetchInvoices(),
+          get().fetchJournalEntries()
+        ])
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      set({ error: err.message, loading: false })
+      return { success: false, error: err.message }
+    }
+    return { success: true }
+  },
+
+  deleteCustomer: async (id) => {
+    set({ loading: true, error: null })
+    try {
+      const result = await window.api.deleteCustomer(id)
+      if (result.success) {
+        await Promise.all([
+          get().fetchCustomers(),
+          get().fetchStats(),
+          get().fetchInvoices(),
+          get().fetchJournalEntries()
+        ])
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      set({ error: err.message, loading: false })
+      return { success: false, error: err.message }
+    }
+    return { success: true }
+  },
+
+  updateInvoice: async (id, invoiceData) => {
+    set({ loading: true, error: null })
+    try {
+      const result = await window.api.updateInvoice(id, invoiceData)
+      if (result.success) {
+        await Promise.all([
+          get().fetchInvoices(),
+          get().fetchStats(),
+          get().fetchCustomers(),
+          get().fetchPayments(),
+          get().fetchJournalEntries()
+        ])
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      set({ error: err.message, loading: false })
+      return { success: false, error: err.message }
+    }
+    return { success: true }
+  },
+
+  deleteInvoice: async (id) => {
+    set({ loading: true, error: null })
+    try {
+      const result = await window.api.deleteInvoice(id)
+      if (result.success) {
+        await Promise.all([
+          get().fetchInvoices(),
+          get().fetchStats(),
+          get().fetchCustomers(),
+          get().fetchPayments(),
+          get().fetchJournalEntries()
+        ])
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      set({ error: err.message, loading: false })
+      return { success: false, error: err.message }
+    }
+    return { success: true }
+  },
+
+  updatePayment: async (id, paymentData) => {
+    set({ loading: true, error: null })
+    try {
+      const result = await window.api.updatePayment(id, paymentData)
+      if (result.success) {
+        await Promise.all([
+          get().fetchInvoices(),
+          get().fetchStats(),
+          get().fetchCustomers(),
+          get().fetchPayments(),
+          get().fetchJournalEntries()
+        ])
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      set({ error: err.message, loading: false })
+      return { success: false, error: err.message }
+    }
+    return { success: true }
+  },
+
+  deletePayment: async (id) => {
+    set({ loading: true, error: null })
+    try {
+      const result = await window.api.deletePayment(id)
+      if (result.success) {
+        await Promise.all([
+          get().fetchInvoices(),
+          get().fetchStats(),
+          get().fetchCustomers(),
+          get().fetchPayments(),
+          get().fetchJournalEntries()
+        ])
+      } else {
+        throw new Error(result.error)
+      }
+    } catch (err) {
+      set({ error: err.message, loading: false })
+      return { success: false, error: err.message }
+    }
+    return { success: true }
   }
 }))

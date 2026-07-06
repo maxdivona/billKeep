@@ -7,9 +7,15 @@ import {
   initDatabase,
   getCustomers,
   addCustomer,
+  updateCustomer,
+  deleteCustomer,
   getInvoices,
   addInvoice,
+  updateInvoice,
+  deleteInvoice,
   addPayment,
+  updatePayment,
+  deletePayment,
   getPayments,
   getDashboardStats,
   getCustomerUnpaidInvoices,
@@ -78,10 +84,16 @@ app.whenReady().then(() => {
   // Registrazione canali IPC per SQLite
   ipcMain.handle('db:get-customers', () => getCustomers())
   ipcMain.handle('db:add-customer', (event, customer) => addCustomer(customer))
+  ipcMain.handle('db:update-customer', (event, id, data) => updateCustomer(id, data))
+  ipcMain.handle('db:delete-customer', (event, id) => deleteCustomer(id))
   ipcMain.handle('db:get-invoices', () => getInvoices())
   ipcMain.handle('db:add-invoice', (event, invoice) => addInvoice(invoice))
+  ipcMain.handle('db:update-invoice', (event, id, data) => updateInvoice(id, data))
+  ipcMain.handle('db:delete-invoice', (event, id) => deleteInvoice(id))
   ipcMain.handle('db:get-payments', () => getPayments())
   ipcMain.handle('db:add-payment', (event, payment) => addPayment(payment))
+  ipcMain.handle('db:update-payment', (event, id, data) => updatePayment(id, data))
+  ipcMain.handle('db:delete-payment', (event, id) => deletePayment(id))
   ipcMain.handle('db:get-stats', () => getDashboardStats())
   ipcMain.handle('db:get-customer-unpaid-invoices', (event, customerId) =>
     getCustomerUnpaidInvoices(customerId)

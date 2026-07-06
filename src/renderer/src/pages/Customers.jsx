@@ -4,8 +4,16 @@ import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 
 export default function Customers() {
-  const { customers, loading, fetchCustomers, addCustomer, addMultiPayment, allocateAcconto } =
-    useStore()
+  const {
+    customers,
+    loading,
+    fetchCustomers,
+    addCustomer,
+    updateCustomer,
+    deleteCustomer,
+    addMultiPayment,
+    allocateAcconto
+  } = useStore()
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState(null)
@@ -14,6 +22,16 @@ export default function Customers() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [formError, setFormError] = useState('')
+
+  // Form State for Edit Customer
+  const [editCustomerModalOpen, setEditCustomerModalOpen] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editFormError, setEditFormError] = useState('')
+
+  // Delete Customer State
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   // Selected Customer Details States
   const [unpaidInvoices, setUnpaidInvoices] = useState([])
@@ -120,6 +138,49 @@ export default function Customers() {
       setModalOpen(false)
     } else {
       setFormError(`Errore durante il salvataggio: ${res.error}`)
+    }
+  }
+
+  const handleEditCustomerSubmit = async (e) => {
+    e.preventDefault()
+    setEditFormError('')
+    if (!editName.trim()) {
+      setEditFormError('Il nome o ragione sociale è richiesto.')
+      return
+    }
+
+    const duplicate = customers.find(
+      (c) => c.name.toLowerCase() === editName.trim().toLowerCase() && c.id !== selectedCustomer.id
+    )
+    if (duplicate) {
+      setEditFormError('Un cliente con questo nome esiste già.')
+      return
+    }
+
+    const res = await updateCustomer(selectedCustomer.id, {
+      name: editName.trim(),
+      email: editEmail.trim() || null
+    })
+
+    if (res.success) {
+      setEditCustomerModalOpen(false)
+      const updated = useStore.getState().customers.find((c) => c.id === selectedCustomer.id)
+      if (updated) {
+        setSelectedCustomer(updated)
+      }
+    } else {
+      setEditFormError(`Errore durante il salvataggio: ${res.error}`)
+    }
+  }
+
+  const handleDeleteCustomer = async () => {
+    setDeleteError('')
+    const res = await deleteCustomer(selectedCustomer.id)
+    if (res.success) {
+      setDeleteConfirmOpen(false)
+      setSelectedCustomer(null)
+    } else {
+      setDeleteError(res.error)
     }
   }
 
@@ -523,7 +584,7 @@ export default function Customers() {
         </div>
 
         {/* Action Panel Buttons */}
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <button
             className="flex-1 sm:flex-initial bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
             onClick={() => setReceiptModalOpen(true)}
@@ -542,6 +603,28 @@ export default function Customers() {
           >
             <span className="material-symbols-outlined text-[20px]">swap_horiz</span>
             Alloca Acconto
+          </button>
+          <button
+            className="flex-1 sm:flex-initial bg-surface-container-low border border-outline hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            onClick={() => {
+              setEditName(selectedCustomer.name)
+              setEditEmail(selectedCustomer.email || '')
+              setEditFormError('')
+              setEditCustomerModalOpen(true)
+            }}
+          >
+            <span className="material-symbols-outlined text-[20px]">edit</span>
+            Modifica
+          </button>
+          <button
+            className="flex-1 sm:flex-initial bg-surface-container-low border border-error hover:bg-error-container/10 text-error font-label-md text-label-md px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            onClick={() => {
+              setDeleteError('')
+              setDeleteConfirmOpen(true)
+            }}
+          >
+            <span className="material-symbols-outlined text-[20px]">delete</span>
+            Elimina
           </button>
         </div>
       </div>
@@ -1065,6 +1148,91 @@ export default function Customers() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* MODAL: MODIFICA CLIENTE */}
+      <Modal
+        isOpen={editCustomerModalOpen}
+        onClose={() => setEditCustomerModalOpen(false)}
+        title="Modifica Cliente"
+      >
+        <form onSubmit={handleEditCustomerSubmit} className="flex flex-col gap-5">
+          {editFormError && (
+            <p className="text-error font-label-md text-label-md">{editFormError}</p>
+          )}
+
+          <div>
+            <label className="block font-label-md text-label-md text-on-surface mb-1">
+              Ragione Sociale / Nome <span className="text-error">*</span>
+            </label>
+            <input
+              className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block font-label-md text-label-md text-on-surface mb-1">
+              Indirizzo Email Principale
+            </label>
+            <input
+              className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+              type="email"
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+            />
+          </div>
+
+          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-outline-variant">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+              onClick={() => setEditCustomerModalOpen(false)}
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-md font-label-md text-label-md bg-primary hover:bg-primary/90 text-on-primary transition-colors shadow-sm cursor-pointer"
+            >
+              Salva Modifiche
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL: CONFERMA ELIMINAZIONE CLIENTE */}
+      <Modal
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        title="Elimina Cliente"
+      >
+        <div className="flex flex-col gap-4">
+          {deleteError && <p className="text-error font-label-md text-label-md">{deleteError}</p>}
+          <p className="text-body-md text-on-surface">
+            Sei sicuro di voler eliminare il cliente <strong>{selectedCustomer?.name}</strong>?
+            Questa operazione è irreversibile.
+          </p>
+          <div className="mt-4 flex justify-end gap-3 pt-3 border-t border-outline-variant">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+              onClick={() => setDeleteConfirmOpen(false)}
+            >
+              Annulla
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-md font-label-md text-label-md bg-error hover:bg-error/90 text-on-error transition-colors shadow-sm cursor-pointer"
+              onClick={handleDeleteCustomer}
+            >
+              Conferma Eliminazione
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

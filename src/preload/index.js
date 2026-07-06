@@ -6,6 +6,8 @@ const api = {
   // Clienti
   getCustomers: () => ipcRenderer.invoke('db:get-customers'),
   addCustomer: (customer) => ipcRenderer.invoke('db:add-customer', customer),
+  updateCustomer: (id, data) => ipcRenderer.invoke('db:update-customer', id, data),
+  deleteCustomer: (id) => ipcRenderer.invoke('db:delete-customer', id),
   getCustomerUnpaidInvoices: (customerId) =>
     ipcRenderer.invoke('db:get-customer-unpaid-invoices', customerId),
   getCustomerPayments: (customerId) => ipcRenderer.invoke('db:get-customer-payments', customerId),
@@ -13,8 +15,12 @@ const api = {
   // Fatture e Pagamenti
   getInvoices: () => ipcRenderer.invoke('db:get-invoices'),
   addInvoice: (invoice) => ipcRenderer.invoke('db:add-invoice', invoice),
+  updateInvoice: (id, data) => ipcRenderer.invoke('db:update-invoice', id, data),
+  deleteInvoice: (id) => ipcRenderer.invoke('db:delete-invoice', id),
   getPayments: () => ipcRenderer.invoke('db:get-payments'),
   addPayment: (payment) => ipcRenderer.invoke('db:add-payment', payment),
+  updatePayment: (id, data) => ipcRenderer.invoke('db:update-payment', id, data),
+  deletePayment: (id) => ipcRenderer.invoke('db:delete-payment', id),
   addMultiPayment: (paymentData) => ipcRenderer.invoke('db:add-multi-payment', paymentData),
   allocateAcconto: (data) => ipcRenderer.invoke('db:allocate-acconto', data),
 
