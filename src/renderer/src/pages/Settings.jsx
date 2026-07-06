@@ -207,7 +207,7 @@ export default function Settings() {
                   </p>
                   <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                      Versione 0.2.0
+                      Versione 0.3.0
                     </span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container">
                       Stato: Beta
