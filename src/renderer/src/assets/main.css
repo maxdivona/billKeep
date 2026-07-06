@@ -3,18 +3,22 @@
 @theme {
   /* Eye-Care Color Palette */
   --color-primary: #455565;
+  --color-on-primary: #ffffff;
   --color-primary-container: #5d6d7e;
   --color-on-primary-container: #e2efff;
 
   --color-secondary: #4e635a;
+  --color-on-secondary: #ffffff;
   --color-secondary-container: #cee5da;
   --color-on-secondary-container: #52675e;
 
   --color-tertiary: #76473a;
+  --color-on-tertiary: #ffffff;
   --color-tertiary-container: #925f51;
   --color-on-tertiary-container: #ffe9e4;
 
   --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
   --color-error-container: #ffdad6;
   --color-on-error-container: #93000a;
 
