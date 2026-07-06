@@ -1,35 +1,105 @@
-import React, { Suspense } from 'react'
-import { HashRouter, Routes, Route } from 'react-router-dom'
+import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import Layout from './components/Layout'
 
-// Lazy loaded page components
-const Dashboard = React.lazy(() => import('./pages/Dashboard'))
-const Customers = React.lazy(() => import('./pages/Customers'))
-const Invoices = React.lazy(() => import('./pages/Invoices'))
-const Payments = React.lazy(() => import('./pages/Payments'))
-const Journal = React.lazy(() => import('./pages/Journal'))
-const Settings = React.lazy(() => import('./pages/Settings'))
+// Static imports for instant page changes
+import Dashboard from './pages/Dashboard'
+import Customers from './pages/Customers'
+import Invoices from './pages/Invoices'
+import Payments from './pages/Payments'
+import Journal from './pages/Journal'
+import Settings from './pages/Settings'
+
+const pageVariants = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 }
+}
+
+const pageTransition = {
+  ease: 'easeInOut',
+  duration: 0.15
+}
+
+function PageWrapper({ children }) {
+  return (
+    <motion.div
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+      transition={pageTransition}
+      className="w-full"
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+function AnimatedRoutes() {
+  const location = useLocation()
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route
+          path="/"
+          element={
+            <PageWrapper>
+              <Dashboard />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/clients"
+          element={
+            <PageWrapper>
+              <Customers />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/invoices"
+          element={
+            <PageWrapper>
+              <Invoices />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/payments"
+          element={
+            <PageWrapper>
+              <Payments />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/journal"
+          element={
+            <PageWrapper>
+              <Journal />
+            </PageWrapper>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <PageWrapper>
+              <Settings />
+            </PageWrapper>
+          }
+        />
+      </Routes>
+    </AnimatePresence>
+  )
+}
 
 function App() {
   return (
     <HashRouter>
       <Layout>
-        <Suspense
-          fallback={
-            <div className="flex h-64 items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          }
-        >
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/clients" element={<Customers />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/journal" element={<Journal />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </Suspense>
+        <AnimatedRoutes />
       </Layout>
     </HashRouter>
   )
