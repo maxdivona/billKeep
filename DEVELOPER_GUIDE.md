@@ -278,3 +278,21 @@ Ogni evento amministrativo dell'applicazione scrive automaticamente sul giornale
 8. **Sicurezza e Versionabilità del Database (Backup/Ripristino):** Durante le operazioni di ripristino di un database da un file esterno, applicare sempre due livelli di protezione:
    - **Verifica dell'Integrità:** Validare preventivamente la firma del file (i primi 16 byte devono corrispondere a `SQLite format 3\0`) prima di procedere alla sovrascrittura.
    - **Versionabilità e Allineamento Schema:** Subito dopo il ripristino del file fisico, eseguire immediatamente la procedura di inizializzazione dello schema (`initDatabase()`). Questo assicura che eventuali tabelle mancanti vengano create e che le migrazioni pendenti (es. vincoli di colonna o nuove tabelle) siano applicate in modo che i dati siano sempre compatibili con l'ultima versione dell'applicazione.
+
+---
+
+## ✏️ 9. Gestione CRUD Completa e Allineamento Contabile (Nuovo in v0.2.0)
+
+Tutte le modifiche (UPDATE) e le cancellazioni (DELETE) su clienti, fatture e pagamenti devono rispettare rigorosamente le transazioni contabili e l'integrità del database per evitare disallineamenti di saldi o scritture orfane:
+
+1. **Clienti (Customers)**:
+   - **Modifica**: Consentito l'aggiornamento di nome ed email con validazione case-insensitive di univocità del nome.
+   - **Cancellazione**: Bloccata dal vincolo database `ON DELETE RESTRICT` se esistono fatture o pagamenti associati.
+
+2. **Fatture (Invoices)**:
+   - **Modifica**: La modifica dell'importo richiede il ricalcolo automatico dello stato della fattura (`paid`, `partial`, `unpaid`) in base ai pagamenti esistenti e l'aggiornamento dell'importo sulle righe di prima nota associate (`Crediti v/Clienti` e `Ricavi per Vendite`). Lo spostamento di cliente aggiorna automaticamente tutti i relativi pagamenti e scritture di prima nota del cliente per preservare la coerenza logica.
+   - **Cancellazione**: Elimina a cascata i pagamenti associati ed elimina le scritture di prima nota sia della fattura che dei pagamenti.
+
+3. **Pagamenti (Payments)**:
+   - **Modifica**: L'aggiornamento di importo, data o metodo ricalcola lo stato della fattura collegata e aggiorna la prima nota. Le righe generate tramite compensazione (metodo `Uso Credito`) non possono essere modificate direttamente.
+   - **Cancellazione**: Cancella il pagamento e la prima nota correlata, ricalcola lo stato della fattura e, se si tratta di un'allocazione (metodo `Uso Credito`), ripristina automaticamente l'acconto di origine come credito libero per il cliente.
