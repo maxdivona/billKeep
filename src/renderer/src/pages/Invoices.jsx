@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
+import SearchableSelect from '../components/SearchableSelect'
 
 export default function Invoices() {
   const {
@@ -285,19 +286,13 @@ export default function Invoices() {
               <label className="block font-label-md text-label-md text-on-surface mb-1">
                 Cliente <span className="text-error">*</span>
               </label>
-              <select
-                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md"
+              <SearchableSelect
+                options={customers}
                 value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
+                onChange={setCustomerId}
+                placeholder="Seleziona o cerca cliente..."
                 required
-              >
-                <option value="">Seleziona...</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 
@@ -388,19 +383,13 @@ export default function Invoices() {
               <label className="block font-label-md text-label-md text-on-surface mb-1">
                 Cliente <span className="text-error">*</span>
               </label>
-              <select
-                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+              <SearchableSelect
+                options={customers}
                 value={editCustomerId}
-                onChange={(e) => setEditCustomerId(e.target.value)}
+                onChange={setEditCustomerId}
+                placeholder="Seleziona o cerca cliente..."
                 required
-              >
-                <option value="">Seleziona...</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 
