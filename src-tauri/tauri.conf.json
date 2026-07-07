@@ -26,6 +26,11 @@
   "bundle": {
     "active": true,
     "targets": ["deb"],
+    "publisher": "Massimo Di Vona",
+    "copyright": "© 2026 Massimo Di Vona. Tutti i diritti riservati.",
+    "licenseFile": "../LICENSE",
+    "shortDescription": "Gestione fatture, pagamenti e contabilità in partita doppia.",
+    "longDescription": "BillKeep è un'applicazione desktop locale per la gestione di fatture, pagamenti e contabilità in partita doppia (Prima Nota). Sviluppata per Massimo Di Vona. Tutti i diritti sono riservati all'autore del software.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
