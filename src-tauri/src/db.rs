@@ -27,6 +27,8 @@ pub struct Invoice {
     pub amount: f64,
     pub status: String, // "paid" | "partial" | "unpaid"
     pub customer_name: Option<String>,
+    pub total_paid: Option<f64>,
+    pub remaining_amount: Option<f64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -379,6 +381,8 @@ pub fn get_invoices(state: tauri::State<AppState>) -> Result<Vec<Invoice>, Strin
                 amount: row.get(4)?,
                 status: row.get(5)?,
                 customer_name: Some(row.get(6)?),
+                total_paid: None,
+                remaining_amount: None,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -821,17 +825,16 @@ pub fn get_customer_unpaid_invoices(state: tauri::State<AppState>, customer_id: 
     ").map_err(|e| e.to_string())?;
 
     let rows = stmt.query_map([customer_id], |row| {
-        // Ci interessa mappare amount come remaining_amount nel nostro struct temporaneo, 
-        // dato che sul frontend viene letto il campo amount come importo dovuto o remaining_amount.
-        // Vediamo in db.js che rimanda remaining_amount. Lo mappiamo su amount per comodità del frontend.
         Ok(Invoice {
             id: row.get(0)?,
             customer_id: "".to_string(), // non strettamente richiesto nel frontend
             issue_date: row.get(1)?,
             due_date: row.get(2)?,
-            amount: row.get(6)?, // remaining_amount
+            amount: row.get(3)?, // original amount
             status: row.get(4)?,
             customer_name: None,
+            total_paid: Some(row.get(5)?),
+            remaining_amount: Some(row.get(6)?),
         })
     }).map_err(|e| e.to_string())?;
 
@@ -1179,6 +1182,8 @@ pub fn get_dashboard_stats(state: tauri::State<AppState>) -> Result<DashboardSta
             amount: row.get(4)?,
             status: row.get(5)?,
             customer_name: Some(row.get(6)?),
+            total_paid: None,
+            remaining_amount: None,
         })
     }).map_err(|e| e.to_string())?;
     
