@@ -1363,11 +1363,10 @@ pub fn get_logs_command(state: tauri::State<AppState>) -> Result<Vec<crate::logs
 
 // --- Backup & Restore ---
 
-#[tauri::command]
-pub fn backup_database(state: tauri::State<AppState>, destination_path: String) -> Result<ActionResult, String> {
+fn execute_backup(state: &AppState, destination_path: &str) -> Result<ActionResult, String> {
     let conn = state.db_conn.lock().unwrap();
 
-    let mut dest_conn = Connection::open(&destination_path).map_err(|e| e.to_string())?;
+    let mut dest_conn = Connection::open(destination_path).map_err(|e| e.to_string())?;
     
     let backup = rusqlite::backup::Backup::new(&conn, &mut dest_conn).map_err(|e| e.to_string())?;
     backup.run_to_completion(-1, std::time::Duration::from_millis(250), None).map_err(|e| e.to_string())?;
@@ -1381,9 +1380,13 @@ pub fn backup_database(state: tauri::State<AppState>, destination_path: String) 
 }
 
 #[tauri::command]
-pub fn restore_database(state: tauri::State<AppState>, source_path: String) -> Result<ActionResult, String> {
+pub fn backup_database(state: tauri::State<AppState>, destination_path: String) -> Result<ActionResult, String> {
+    execute_backup(&state, &destination_path)
+}
+
+fn execute_restore(state: &AppState, source_path: &str) -> Result<ActionResult, String> {
     // 1. Validazione preventiva SQLite
-    let buffer = match fs::read(&source_path) {
+    let buffer = match fs::read(source_path) {
         Ok(bytes) => bytes,
         Err(e) => return Ok(ActionResult { success: false, error: Some(format!("Impossibile leggere il file: {}", e)) }),
     };
@@ -1404,7 +1407,7 @@ pub fn restore_database(state: tauri::State<AppState>, source_path: String) -> R
     drop(old_conn); // chiude effettivamente la connessione al file originale
 
     // 3. Copia file
-    if let Err(e) = fs::copy(&source_path, &state.db_path) {
+    if let Err(e) = fs::copy(source_path, &state.db_path) {
         // Ripristiniamo la connessione precedente in caso di errore
         if let Ok(restored_conn) = Connection::open(&state.db_path) {
             let _ = std::mem::replace(&mut *conn, restored_conn);
@@ -1445,18 +1448,29 @@ pub fn restore_database(state: tauri::State<AppState>, source_path: String) -> R
 }
 
 #[tauri::command]
-pub fn backup_database_dialog(app: tauri::AppHandle, state: tauri::State<AppState>) -> Result<ActionResult, String> {
+pub fn restore_database(state: tauri::State<AppState>, source_path: String) -> Result<ActionResult, String> {
+    execute_restore(&state, &source_path)
+}
+
+#[tauri::command]
+pub async fn backup_database_dialog(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<ActionResult, String> {
     use tauri_plugin_dialog::DialogExt;
-    let file_path = app.dialog()
+    let (tx, rx) = tokio::sync::oneshot::channel();
+
+    app.dialog()
         .file()
         .set_title("Esporta Backup Database")
         .add_filter("SQLite Database", &["db"])
-        .blocking_save_file();
+        .save_file(move |file_path| {
+            let _ = tx.send(file_path);
+        });
+
+    let file_path = rx.await.map_err(|e| e.to_string())?;
 
     if let Some(path) = file_path {
         let path_buf = path.into_path().map_err(|e| e.to_string())?;
         let path_str = path_buf.to_string_lossy().to_string();
-        backup_database(state, path_str)
+        execute_backup(&state, &path_str)
     } else {
         Ok(ActionResult {
             success: false,
@@ -1466,18 +1480,24 @@ pub fn backup_database_dialog(app: tauri::AppHandle, state: tauri::State<AppStat
 }
 
 #[tauri::command]
-pub fn restore_database_dialog(app: tauri::AppHandle, state: tauri::State<AppState>) -> Result<ActionResult, String> {
+pub async fn restore_database_dialog(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<ActionResult, String> {
     use tauri_plugin_dialog::DialogExt;
-    let file_path = app.dialog()
+    let (tx, rx) = tokio::sync::oneshot::channel();
+
+    app.dialog()
         .file()
         .set_title("Seleziona Database di Ripristino")
         .add_filter("SQLite Database", &["db"])
-        .blocking_pick_file();
+        .pick_file(move |file_path| {
+            let _ = tx.send(file_path);
+        });
+
+    let file_path = rx.await.map_err(|e| e.to_string())?;
 
     if let Some(path) = file_path {
         let path_buf = path.into_path().map_err(|e| e.to_string())?;
         let path_str = path_buf.to_string_lossy().to_string();
-        restore_database(state, path_str)
+        execute_restore(&state, &path_str)
     } else {
         Ok(ActionResult {
             success: false,
