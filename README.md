@@ -1,4 +1,4 @@
-# BillKeep (v1.0.0)
+# BillKeep (v1.1.0)
 
 Applicazione desktop locale per la gestione di fatture, pagamenti e contabilità in partita doppia (Prima Nota).
 
