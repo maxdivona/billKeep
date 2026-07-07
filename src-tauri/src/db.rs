@@ -1369,7 +1369,7 @@ fn execute_backup(state: &AppState, destination_path: &str) -> Result<ActionResu
     let mut dest_conn = Connection::open(destination_path).map_err(|e| e.to_string())?;
     
     let backup = rusqlite::backup::Backup::new(&conn, &mut dest_conn).map_err(|e| e.to_string())?;
-    backup.run_to_completion(-1, std::time::Duration::from_millis(250), None).map_err(|e| e.to_string())?;
+    backup.run_to_completion(100, std::time::Duration::from_millis(250), None).map_err(|e| e.to_string())?;
 
     write_log(&state.logs_path, "info", "backup", &format!("Backup creato con successo in: {}", destination_path));
 
@@ -1503,5 +1503,45 @@ pub async fn restore_database_dialog(app: tauri::AppHandle, state: tauri::State<
             success: false,
             error: Some("Operazione annullata".to_string()),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rusqlite::Connection;
+
+    #[test]
+    fn test_backup() {
+        let conn = Connection::open_in_memory().unwrap();
+        // Create schema
+        init_database(&conn).unwrap();
+        // Insert some data
+        conn.execute("INSERT INTO customers (id, name, email) VALUES ('1', 'Test', 'test@test.com')", []).unwrap();
+        
+        let state = AppState {
+            db_conn: Mutex::new(conn),
+            db_path: PathBuf::from("test.db"),
+            logs_path: PathBuf::from("test_logs.json"),
+        };
+        
+        let temp_dir = std::env::temp_dir();
+        let backup_path = temp_dir.join("test_backup.db");
+        if backup_path.exists() {
+            let _ = std::fs::remove_file(&backup_path);
+        }
+        
+        let backup_path_str = backup_path.to_string_lossy().to_string();
+        let result = execute_backup(&state, &backup_path_str).unwrap();
+        assert!(result.success);
+        
+        // check if file exists and has sqlite header
+        assert!(backup_path.exists());
+        let bytes = std::fs::read(&backup_path).unwrap();
+        assert!(bytes.len() >= 16);
+        assert_eq!(&bytes[0..15], b"SQLite format 3");
+        
+        let _ = std::fs::remove_file(backup_path);
+        let _ = std::fs::remove_file("test_logs.json");
     }
 }
