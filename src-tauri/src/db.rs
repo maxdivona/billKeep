@@ -1456,10 +1456,12 @@ pub fn restore_database(state: tauri::State<AppState>, source_path: String) -> R
 pub async fn backup_database_dialog(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> Result<ActionResult, String> {
     use tauri_plugin_dialog::DialogExt;
     let (tx, rx) = tokio::sync::oneshot::channel();
+    let default_filename = format!("billkeep_backup_{}.db", chrono::Local::now().format("%Y-%m-%d"));
 
     app.dialog()
         .file()
         .set_title("Esporta Backup Database")
+        .set_file_name(&default_filename)
         .add_filter("SQLite Database", &["db"])
         .save_file(move |file_path| {
             let _ = tx.send(file_path);
