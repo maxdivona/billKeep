@@ -1,34 +1,37 @@
-# BillKeep
+# BillKeep (v1.0.0)
 
-An Electron application with React
+Applicazione desktop locale per la gestione di fatture, pagamenti e contabilità in partita doppia (Prima Nota).
 
-## Recommended IDE Setup
+Sviluppata utilizzando **Tauri (Rust)** per il backend e la gestione del database SQLite nativo, e **React + Vite + Tailwind CSS** per la UI frontend.
 
-- [VSCode](https://code.visualstudio.com/) + [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) + [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+## Setup del Progetto
 
-## Project Setup
+### Prerequisiti
 
-### Install
+Assicurati di avere installato le dipendenze di sistema richieste da Tauri per Linux (Gtk, Webkit2Gtk, Rust, ecc.). Vedi la [Guida Ufficiale di Tauri](https://tauri.app/v2/start/prerequisites/) per i dettagli.
 
-```bash
-$ npm install
-```
-
-### Development
+### Installazione delle Dipendenze
 
 ```bash
-$ npm run dev
+npm install
 ```
 
-### Build
+### Avvio in Sviluppo (Hot-reload)
 
 ```bash
-# For windows
-$ npm run build:win
-
-# For macOS
-$ npm run build:mac
-
-# For Linux
-$ npm run build:linux
+npm run dev
 ```
+
+### Compilazione di Produzione (Release)
+
+Questo comando compila l'applicazione Rust con ottimizzazioni complete e genera il pacchetto di distribuzione nativo (es. `.deb`, `.appimage` su Linux):
+
+```bash
+npm run build
+```
+
+## Struttura del Progetto
+
+- `src/renderer/`: Frontend in React + Vite + Tailwind CSS.
+- `src-tauri/`: Backend in Rust (gestione del ciclo di vita del desktop, database SQLite nativo con `rusqlite`, logiche di partita doppia e dialoghi nativi).
+- `DEVELOPER_GUIDE.md`: Manuale tecnico e linee guida di sviluppo dell'applicazione.

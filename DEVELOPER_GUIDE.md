@@ -1,4 +1,4 @@
-# 📘 Manuale Tecnico e Linee Guida di Sviluppo: BillKeep
+# 📘 Manuale Tecnico e Linee Guida di Sviluppo: BillKeep (v1.0.0)
 
 Questo documento stabilisce l'architettura tecnica, le best practices e gli standard di codifica per lo sviluppo dell'applicazione desktop locale di gestione fatture, pagamenti e contabilità in partita doppia (Prima Nota).
 
@@ -6,23 +6,23 @@ Questo documento stabilisce l'architettura tecnica, le best practices e gli stan
 
 ## 🛠️ 1. Stack Tecnico di Riferimento
 
-- **Shell/Runtime:** Electron (gestione del ciclo di vita desktop su Linux/Cross-platform).
+- **Shell/Runtime:** Tauri (gestione del ciclo di vita desktop cross-platform, con backend in Rust).
 - **Frontend:** React + Vite + Tailwind CSS.
-- **Database:** SQLite tramite la libreria `better-sqlite3` (scelta per stabilità, performance sincrone sul processo Main e pieno supporto alle transazioni).
+- **Database:** SQLite tramite la libreria `rusqlite` in Rust (scelta per stabilità, performance native sincrone e supporto completo alle transazioni a livello backend).
 - **Stato Globale Frontend:** Zustand (leggero, reattivo e disaccoppiato dal ciclo di render di React).
 
 ---
 
-## 🏗️ 2. Architettura e Sicurezza (IPC & Context Isolation)
+## 🏗️ 2. Architettura e Sicurezza (IPC & Rust Commands)
 
-L'applicazione deve rispettare rigorosamente il principio di separazione dei privilegi di Electron. Il processo di Rendering (la UI) non ha accesso diretto a Node.js o al File System.
+L'applicazione rispetta rigorosamente il modello di sicurezza di Tauri. Il frontend (Renderer) non ha accesso diretto al File System o al sistema operativo se non tramite i comandi sicuri definiti nel backend Rust.
 
 ### Flusso dei Dati
 
-Tutte le operazioni sul database avvengono nel **Processo Main**. Il **Processo Renderer** invoca i metodi esposti dal file `preload.js` via IPC.
+Tutte le operazioni sul database avvengono nel **Processo Core Rust**. Il **Processo Renderer** invoca i metodi esposti dal backend utilizzando le chiamate IPC di Tauri (`invoke`) mappate su un bridge `window.api`.
 
 ```
-[ React UI (Renderer) ] <--- (IPC Invoke) ---> [ Preload (Context Bridge) ] <--- (IPC Handle) ---> [ Node.js + SQLite (Main) ]
+[ React UI (Renderer) ] <--- (Tauri IPC Invoke) ---> [ Tauri Core API (Rust) ] <--- (rusqlite) ---> [ SQLite Database ]
 ```
 
 ---
@@ -100,98 +100,93 @@ CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
 
 ## 🛡️ 4. Gestione Errori & Transazioni Atomiche
 
-### Politica dei Blocchi Try-Catch e Transazioni Contabili (Processo Main)
+### Politica delle Transazioni Contabili (Processo Rust)
 
 La registrazione di un pagamento o l'allocazione di un acconto richiede un'operazione atomica: l'inserimento o modifica dei record dei pagamenti, l'aggiornamento dello stato delle fatture e l'inserimento delle relative righe contabili in partita doppia. Se una sola operazione fallisce, la transazione deve eseguire il _rollback_ automatico.
 
-Ecco lo standard di implementazione nel processo Main utilizzando `better-sqlite3`:
+Ecco lo standard di implementazione nel backend Rust utilizzando `rusqlite`:
 
-```javascript
-const path = require('path')
-const Database = require('better-sqlite3')
+```rust
+pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPaymentData) -> Result<ActionResult, String> {
+    let mut conn = state.db_conn.lock().unwrap();
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
 
-const dbPath = path.join(app.getPath('userData'), 'billkeep.db')
-const db = new Database(dbPath)
-db.pragma('foreign_keys = ON')
+    let now_str = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    let payment_date = match payment_data.date {
+        Some(ref d) if !d.is_empty() => d,
+        _ => &now_str,
+    };
 
-// Esempio di transazione per registrazione di incasso multiplo e scrittura in prima nota
-export function addMultiPayment(paymentData) {
-  const insertPayment = db.prepare(`
-    INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `)
-  const updateInvoiceStatus = db.prepare(`
-    UPDATE invoices SET status = ? WHERE id = ?
-  `)
-  const checkInvoiceBalance = db.prepare(`
-    SELECT amount,
-    (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?) as total_paid
-    FROM invoices WHERE id = ?
-  `)
-  const insertEntry = db.prepare(`
-    INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `)
-  const insertLine = db.prepare(`
-    INSERT INTO journal_lines (id, entry_id, account_name, type, amount)
-    VALUES (?, ?, ?, ?, ?)
-  `)
+    // 1. Registra le allocazioni sulle fatture specificate
+    for (idx, alloc) in payment_data.allocations.iter().enumerate() {
+        let pay_id = format!("PAY-{}-{}", chrono::Utc::now().timestamp_millis(), idx);
+        
+        tx.execute(
+            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, ?, ?, ?, ?, ?)",
+            params![pay_id, alloc.invoiceId, payment_data.customerId, alloc.amount, payment_data.method, payment_date],
+        ).map_err(|e| e.to_string())?;
 
-  const customerId = paymentData.customerId
-  const method = paymentData.method
-  const paymentDate = paymentData.date
+        // Ricalcola stato fattura
+        let (inv_amount, total_paid): (f64, f64) = tx.query_row(
+            "SELECT amount, (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?) FROM invoices WHERE id = ?",
+            params![alloc.invoiceId, alloc.invoiceId],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        ).map_err(|e| e.to_string())?;
 
-  const executeTx = db.transaction(() => {
-    // 1. Alloca quote su singole fatture
-    for (const alloc of paymentData.allocations) {
-      const payId = `PAY-${Date.now()}`
-      insertPayment.run(payId, alloc.invoiceId, customerId, alloc.amount, method, paymentDate)
+        let new_status = if total_paid >= inv_amount {
+            "paid"
+        } else {
+            "partial"
+        };
 
-      // Aggiorna stato fattura
-      const invoiceData = checkInvoiceBalance.get(alloc.invoiceId, alloc.invoiceId)
-      let newStatus = invoiceData.total_paid >= invoiceData.amount ? 'paid' : 'partial'
-      updateInvoiceStatus.run(newStatus, alloc.invoiceId)
+        tx.execute("UPDATE invoices SET status = ? WHERE id = ?", params![new_status, alloc.invoiceId]).map_err(|e| e.to_string())?;
 
-      // Scrittura in Partita Doppia (Dare Cassa/Banca, Avere Crediti v/Clienti)
-      const entryId = `entry-${payId}`
-      insertEntry.run(
-        entryId,
-        paymentDate,
-        `Incasso fattura ${alloc.invoiceId}`,
-        'payment',
-        payId,
-        customerId
-      )
-      insertLine.run(`line-${payId}-1`, entryId, 'Cassa/Banca', 'debit', alloc.amount)
-      insertLine.run(`line-${payId}-2`, entryId, 'Crediti v/Clienti', 'credit', alloc.amount)
+        // Scrittura Prima Nota (Dare Cassa/Banca, Avere Crediti)
+        let entry_id = format!("entry-{}", pay_id);
+        tx.execute(
+            "INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id) VALUES (?, ?, ?, ?, ?, ?)",
+            params![entry_id, payment_date, format!("Incasso fattura {}", alloc.invoiceId), "payment", pay_id, payment_data.customerId],
+        ).map_err(|e| e.to_string())?;
+
+        tx.execute(
+            "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
+            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", alloc.amount],
+        ).map_err(|e| e.to_string())?;
+
+        tx.execute(
+            "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
+            params![format!("line-{}-2", pay_id), entry_id, "Crediti v/Clienti", "credit", alloc.amount],
+        ).map_err(|e| e.to_string())?;
     }
 
-    // 2. Alloca surplus come acconto libero
-    if (paymentData.accontoAmount > 0) {
-      const payId = `PAY-ACC-${Date.now()}`
-      insertPayment.run(payId, null, customerId, paymentData.accontoAmount, method, paymentDate)
+    // 2. Registra eventuale acconto residuo
+    if payment_data.accontoAmount > 0.0 {
+        let pay_id = format!("PAY-ACC-{}-99", chrono::Utc::now().timestamp_millis());
+        tx.execute(
+            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, NULL, ?, ?, ?, ?)",
+            params![pay_id, payment_data.customerId, payment_data.accontoAmount, payment_data.method, payment_date],
+        ).map_err(|e| e.to_string())?;
 
-      // Scrittura in Partita Doppia (Dare Cassa/Banca, Avere Acconti da Clienti)
-      const entryId = `entry-${payId}`
-      insertEntry.run(entryId, paymentDate, `Incasso acconto cliente`, 'payment', payId, customerId)
-      insertLine.run(`line-${payId}-1`, entryId, 'Cassa/Banca', 'debit', paymentData.accontoAmount)
-      insertLine.run(
-        `line-${payId}-2`,
-        entryId,
-        'Acconti da Clienti',
-        'credit',
-        paymentData.accontoAmount
-      )
+        // Scrittura Prima Nota (Dare Cassa/Banca, Avere Acconti da Clienti)
+        let entry_id = format!("entry-{}", pay_id);
+        tx.execute(
+            "INSERT INTO journal_entries (id, entry_date, description, reference_type, reference_id, customer_id) VALUES (?, ?, ?, ?, ?, ?)",
+            params![entry_id, payment_date, "Incasso acconto cliente", "payment", pay_id, payment_data.customerId],
+        ).map_err(|e| e.to_string())?;
+
+        tx.execute(
+            "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
+            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", payment_data.accontoAmount],
+        ).map_err(|e| e.to_string())?;
+
+        tx.execute(
+            "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
+            params![format!("line-{}-2", pay_id), entry_id, "Acconti da Clienti", "credit", payment_data.accontoAmount],
+        ).map_err(|e| e.to_string())?;
     }
-    return { success: true }
-  })
 
-  try {
-    return executeTx()
-  } catch (err) {
-    console.error('[MULTI-PAYMENT TX FAILED]:', err.message)
-    return { success: false, error: err.message }
-  }
+    tx.commit().map_err(|e| e.to_string())?;
+    Ok(ActionResult { success: true, error: None })
 }
 ```
 
@@ -269,7 +264,7 @@ Ogni evento amministrativo dell'applicazione scrive automaticamente sul giornale
 ## 🚀 8. Regole d'oro dello Sviluppatore
 
 1. **Immutabilità del Calcolo Contabile:** Il saldo cliente o fattura non viene mai salvato come colonna statica modificabile arbitrariamente. È rigorosamente derivato dalla formula: `Saldo = Totale Emesso - Totale Ricevuto`.
-2. **Validazione Preventiva e Controllo Duplicati:** Prima di invocare i canali IPC, valida i dati nel frontend. Controlla preventivamente la presenza di nomi di clienti duplicati sia sul frontend sia nel processo Main con query _case-insensitive_.
+2. **Validazione Preventiva e Controllo Duplicati:** Prima di invocare i canali IPC di Tauri, valida i dati nel frontend. Controlla preventivamente la presenza di nomi di clienti duplicati sia sul frontend sia nel backend Rust con query _case-insensitive_.
 3. **Disaccoppiamento della Logica:** Le viste di React devono occuparsi solo della presentazione. La logica di fetch dei dati deve essere isolata all'interno di Custom Hooks o azioni dedicate nello store Zustand.
 4. **Ottimizzazione del Layout per Risoluzioni Standard (1600x900):** Per evitare lo scroll verticale non necessario e tagli orizzontali delle tabelle, utilizzare paddings compatti. Nello specifico, il contenitore principale deve utilizzare al massimo `p-md` (24px) anziché `p-xl` (64px), e le tabelle dati devono limitare il padding delle celle a `py-sm px-sm` (12px) per assicurare che tutte le colonne siano visibili senza scorrimento.
 5. **Localizzazione della UI:** Tutte le etichette, placeholder, messaggi di errore e diciture mostrate all'utente finale nel Renderer process devono essere rigorosamente scritte in lingua italiana.
@@ -277,11 +272,11 @@ Ogni evento amministrativo dell'applicazione scrive automaticamente sul giornale
 7. **Struttura delle Tabelle e Allineamento con Fragment:** Per evitare problemi di allineamento delle tabelle con i relativi header, non avvolgere mai righe `<tr>` multiple all'interno di tag non standard come `<caption>` all'interno di `<tbody>`. Utilizzare sempre `<Fragment key={...}>` come contenitore logico.
 8. **Sicurezza e Versionabilità del Database (Backup/Ripristino):** Durante le operazioni di ripristino di un database da un file esterno, applicare sempre due livelli di protezione:
    - **Verifica dell'Integrità:** Validare preventivamente la firma del file (i primi 16 byte devono corrispondere a `SQLite format 3\0`) prima di procedere alla sovrascrittura.
-   - **Versionabilità e Allineamento Schema:** Subito dopo il ripristino del file fisico, eseguire immediatamente la procedura di inizializzazione dello schema (`initDatabase()`). Questo assicura che eventuali tabelle mancanti vengano create e che le migrazioni pendenti (es. vincoli di colonna o nuove tabelle) siano applicate in modo che i dati siano sempre compatibili con l'ultima versione dell'applicazione.
+   - **Versionabilità e Allineamento Schema:** Subito dopo il ripristino del file fisico, eseguire immediatamente la procedura di inizializzazione dello schema (`init_database()`). Questo assicura che eventuali tabelle mancanti vengano create e che le migrazioni pendenti (es. vincoli di colonna o nuove tabelle) siano applicate in modo che i dati siano sempre compatibili con l'ultima versione dell'applicazione.
 
 ---
 
-## ✏️ 9. Gestione CRUD Completa e Allineamento Contabile (Nuovo in v0.2.0)
+## ✏️ 9. Gestione CRUD Completa e Allineamento Contabile
 
 Tutte le modifiche (UPDATE) e le cancellazioni (DELETE) su clienti, fatture e pagamenti devono rispettare rigorosamente le transazioni contabili e l'integrità del database per evitare disallineamenti di saldi o scritture orfane:
 

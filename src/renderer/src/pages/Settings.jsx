@@ -207,10 +207,10 @@ export default function Settings() {
                   </p>
                   <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                      Versione 0.3.0
+                      Versione 1.0.0
                     </span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container">
-                      Stato: Beta
+                      Stato: Stabile
                     </span>
                   </div>
                 </div>
@@ -262,7 +262,7 @@ export default function Settings() {
                         Runtime
                       </div>
                       <div className="font-body-md text-body-md font-semibold text-on-surface">
-                        Electron
+                        Tauri + Rust
                       </div>
                     </div>
                   </div>
@@ -290,7 +290,7 @@ export default function Settings() {
                         Database Engine
                       </div>
                       <div className="font-body-md text-body-md font-semibold text-on-surface">
-                        SQLite (better-sqlite3)
+                        SQLite (rusqlite)
                       </div>
                     </div>
                   </div>
