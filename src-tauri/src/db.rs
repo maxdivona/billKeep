@@ -64,6 +64,7 @@ pub struct JournalEntry {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct DashboardStats {
     pub total_invoiced: f64,
     pub total_paid: f64,
@@ -552,7 +553,7 @@ pub fn get_payments(state: tauri::State<AppState>) -> Result<Vec<Payment>, Strin
     let conn = state.db_conn.lock().unwrap();
     let mut stmt = conn
         .prepare("
-            SELECT p.id, p.invoice_id, p.amount, p.payment_date, p.method, c.name as customer_name
+            SELECT p.id, p.invoice_id, p.customer_id, p.amount, p.payment_date, p.method, c.name as customer_name
             FROM payments p
             JOIN customers c ON p.customer_id = c.id
             ORDER BY p.payment_date DESC, p.id DESC
@@ -1396,7 +1397,7 @@ fn execute_restore(state: &AppState, source_path: &str) -> Result<ActionResult, 
         Err(e) => return Ok(ActionResult { success: false, error: Some(format!("Impossibile leggere il file: {}", e)) }),
     };
 
-    if buffer.len() < 16 || &buffer[0..15] != b"SQLite format 3" {
+    if buffer.len() < 16 || &buffer[0..16] != b"SQLite format 3\0" {
         return Ok(ActionResult {
             success: false,
             error: Some("Il file selezionato non è un database SQLite valido.".to_string()),
@@ -1546,7 +1547,7 @@ mod tests {
         assert!(backup_path.exists());
         let bytes = std::fs::read(&backup_path).unwrap();
         assert!(bytes.len() >= 16);
-        assert_eq!(&bytes[0..15], b"SQLite format 3");
+        assert_eq!(&bytes[0..16], b"SQLite format 3\0");
         
         let _ = std::fs::remove_file(backup_path);
         let _ = std::fs::remove_file("test_logs.json");
