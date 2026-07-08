@@ -53,7 +53,6 @@ export default function Dashboard() {
           title="Totale Fatturato"
           value={formatCurrency(stats.totalInvoiced)}
           icon="receipt_long"
-          trendText="+12.5% rispetto al mese scorso"
           variant="primary"
         />
 
@@ -61,7 +60,6 @@ export default function Dashboard() {
           title="Totale Incassato"
           value={formatCurrency(stats.totalPaid)}
           icon="payments"
-          trendText="+8.2% rispetto al mese scorso"
           variant="secondary"
         />
 
@@ -69,10 +67,6 @@ export default function Dashboard() {
           title="Da Incassare"
           value={formatCurrency(stats.balance)}
           icon="account_balance_wallet"
-          trendText={`${stats.expiredCount} ${
-            stats.expiredCount === 1 ? 'fattura scaduta' : 'fatture scadute'
-          }`}
-          trendIcon="warning"
           variant="error"
         />
       </section>

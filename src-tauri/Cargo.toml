@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "1.1.0"
+version = "1.1.1"
 description = "Applicazione desktop locale per la gestione di fatture, pagamenti e contabilità in partita doppia (Prima Nota)."
 authors = ["Massimo Di Vona"]
 license-file = "../LICENSE"

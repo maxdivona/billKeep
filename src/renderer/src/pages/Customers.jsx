@@ -483,7 +483,7 @@ export default function Customers() {
           </div>
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
-              <span className="material-symbols-outlined text-error">warning</span>
+              <span className="material-symbols-outlined text-error">payments</span>
               <h3 className="font-label-md text-label-md text-on-surface-variant">
                 Saldo da Ricevere
               </h3>
