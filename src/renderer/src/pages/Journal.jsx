@@ -10,7 +10,7 @@ export default function Journal() {
   useEffect(() => {
     fetchJournalEntries()
     fetchCustomers()
-  }, [])
+  }, [fetchJournalEntries, fetchCustomers])
 
   const handleFilter = () => {
     const filters = {}

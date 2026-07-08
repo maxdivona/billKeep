@@ -8,7 +8,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchAllData()
-  }, [])
+  }, [fetchAllData])
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val)

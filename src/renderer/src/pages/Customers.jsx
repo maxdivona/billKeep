@@ -60,7 +60,7 @@ export default function Customers() {
 
   useEffect(() => {
     fetchCustomers()
-  }, [])
+  }, [fetchCustomers])
 
   // If a customer is selected, load their specific details
   const loadCustomerDetail = async (customerId) => {
@@ -1034,7 +1034,7 @@ export default function Customers() {
                 <div>
                   <p className="font-semibold text-on-surface">Nessuna fattura scoperta da saldare</p>
                   <p className="text-on-surface-variant mt-0.5">
-                    Tutte le fatture di questo cliente risultano pagate. L'intero importo dell'incasso verrà registrato come acconto (credito disponibile).
+                    {"Tutte le fatture di questo cliente risultano pagate. L'intero importo dell'incasso verrà registrato come acconto (credito disponibile)."}
                   </p>
                 </div>
               </div>

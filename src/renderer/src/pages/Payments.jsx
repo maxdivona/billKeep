@@ -39,7 +39,7 @@ export default function Payments() {
   useEffect(() => {
     fetchPayments()
     fetchInvoices()
-  }, [])
+  }, [fetchPayments, fetchInvoices])
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val)
