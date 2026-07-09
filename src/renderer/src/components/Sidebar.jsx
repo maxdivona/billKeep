@@ -24,14 +24,14 @@ export default function Sidebar() {
         <li>
           <button
             onClick={() => setSpotlightOpen(true)}
-            className="flex items-center justify-between gap-md px-sm py-sm rounded-lg transition-colors duration-200 ease-in-out text-on-surface-variant hover:text-primary hover:bg-surface-container-low cursor-pointer w-full text-left font-body-md text-body-md"
+            className="flex items-center justify-between gap-md px-sm py-[7px] rounded-lg border border-outline-variant/50 hover:border-outline-variant/80 transition-all duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low cursor-pointer w-full text-left font-body-md text-body-md"
             title="Cerca globalmente o digita comandi (Alt+S)"
           >
             <div className="flex items-center gap-md">
               <span className="material-symbols-outlined">search</span>
-              <span>Cerca</span>
+              <span className="text-on-surface-variant/70">Cerca...</span>
             </div>
-            <span className="text-[9px] font-bold text-on-surface-variant/60 bg-surface-container-highest px-1.5 py-0.5 rounded border border-outline-variant/45">
+            <span className="text-[10px] font-medium text-on-surface-variant/50 tracking-wider">
               Alt+S
             </span>
           </button>
