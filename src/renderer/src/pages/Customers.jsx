@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
+import SearchableSelect from '../components/SearchableSelect'
 
 export default function Customers() {
   const {
@@ -13,7 +14,8 @@ export default function Customers() {
     updateCustomer,
     deleteCustomer,
     addMultiPayment,
-    allocateAcconto
+    allocateAcconto,
+    updateInvoice
   } = useStore()
   const location = useLocation()
   const navigate = useNavigate()
@@ -61,6 +63,15 @@ export default function Customers() {
   // Expand state for customer journal double entry
   const [expandedJournal, setExpandedJournal] = useState({})
 
+  // Invoice Edit Modal States
+  const [invoiceEditModalOpen, setInvoiceEditModalOpen] = useState(false)
+  const [selectedInvoiceToEdit, setSelectedInvoiceToEdit] = useState(null)
+  const [invoiceEditCustomerId, setInvoiceEditCustomerId] = useState('')
+  const [invoiceEditIssueDate, setInvoiceEditIssueDate] = useState('')
+  const [invoiceEditDueDate, setInvoiceEditDueDate] = useState('')
+  const [invoiceEditAmount, setInvoiceEditAmount] = useState('')
+  const [invoiceEditError, setInvoiceEditError] = useState('')
+
   // If a customer is selected, load their specific details
   const loadCustomerDetail = async (customerId) => {
     setDetailLoading(true)
@@ -106,6 +117,57 @@ export default function Customers() {
       }
     }
   }, [location.state, customers, navigate, location.pathname])
+
+  const handleOpenInvoiceEdit = (inv) => {
+    setSelectedInvoiceToEdit(inv)
+    setInvoiceEditCustomerId(selectedCustomer.id)
+    setInvoiceEditIssueDate(inv.issue_date ? inv.issue_date.split(' ')[0] : '')
+    setInvoiceEditDueDate(inv.due_date ? inv.due_date.split(' ')[0] : '')
+    setInvoiceEditAmount(inv.amount.toString())
+    setInvoiceEditError('')
+    setInvoiceEditModalOpen(true)
+  }
+
+  const handleUpdateInvoice = async (e) => {
+    e.preventDefault()
+    setInvoiceEditError('')
+
+    if (!invoiceEditCustomerId) {
+      setInvoiceEditError('Seleziona un cliente.')
+      return
+    }
+
+    const numAmount = parseFloat(invoiceEditAmount)
+    if (isNaN(numAmount) || numAmount <= 0) {
+      setInvoiceEditError("L'importo deve essere maggiore di zero.")
+      return
+    }
+
+    if (!invoiceEditIssueDate || !invoiceEditDueDate) {
+      setInvoiceEditError('Date di emissione e scadenza sono richieste.')
+      return
+    }
+
+    const updatedData = {
+      customer_id: invoiceEditCustomerId,
+      issue_date: invoiceEditIssueDate,
+      due_date: invoiceEditDueDate,
+      amount: numAmount
+    }
+
+    const res = await updateInvoice(selectedInvoiceToEdit.id, updatedData)
+    if (res.success) {
+      setInvoiceEditModalOpen(false)
+      // Ricarica i dettagli del cliente per riflettere le modifiche
+      loadCustomerDetail(selectedCustomer.id)
+      const updatedCust = useStore.getState().customers.find((c) => c.id === selectedCustomer.id)
+      if (updatedCust) {
+        setSelectedCustomer(updatedCust)
+      }
+    } else {
+      setInvoiceEditError(`Errore durante il salvataggio: ${res.error}`)
+    }
+  }
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val)
@@ -807,7 +869,15 @@ export default function Customers() {
             emptyMessage="Nessuna fattura scoperta trovata per questo cliente."
             renderRow={(inv) => (
               <tr key={inv.id} className="hover:bg-surface-container-high transition-colors">
-                <td className="py-xs px-sm font-medium">#{inv.id}</td>
+                <td className="py-xs px-sm font-medium">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenInvoiceEdit(inv)}
+                    className="text-primary hover:underline cursor-pointer font-semibold text-left focus:outline-none"
+                  >
+                    #{inv.id}
+                  </button>
+                </td>
                 <td className="py-xs px-sm text-on-surface-variant">
                   {formatDate(inv.issue_date)}
                 </td>
@@ -822,12 +892,21 @@ export default function Customers() {
                   {formatCurrency(inv.remaining_amount)}
                 </td>
                 <td className="py-xs px-sm text-center">
-                  <button
-                    className="bg-primary-container text-on-primary-container hover:bg-primary-container/80 font-label-sm text-label-sm px-3 py-1.5 rounded transition-colors cursor-pointer"
-                    onClick={() => handleQuickPay(inv)}
-                  >
-                    Salda
-                  </button>
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      className="bg-primary-container text-on-primary-container hover:bg-primary-container/80 font-label-sm text-label-sm px-3 py-1.5 rounded transition-colors cursor-pointer"
+                      onClick={() => handleQuickPay(inv)}
+                    >
+                      Salda
+                    </button>
+                    <button
+                      className="p-1 hover:text-primary transition-colors cursor-pointer flex items-center"
+                      onClick={() => handleOpenInvoiceEdit(inv)}
+                      title="Dettaglio e Modifica"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             )}
@@ -1387,6 +1466,120 @@ export default function Customers() {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* MODAL: DETTAGLIO E MODIFICA FATTURA */}
+      <Modal
+        isOpen={invoiceEditModalOpen}
+        onClose={() => setInvoiceEditModalOpen(false)}
+        title={`Dettaglio e Modifica Fattura ${selectedInvoiceToEdit?.id}`}
+      >
+        <form onSubmit={handleUpdateInvoice} className="flex flex-col gap-5">
+          {invoiceEditError && (
+            <p className="text-error font-label-md text-label-md">{invoiceEditError}</p>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-label-md text-label-md text-on-surface mb-1">
+                ID Fattura (Immutabile)
+              </label>
+              <input
+                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface-container-low text-on-surface-variant font-body-md opacity-75 cursor-not-allowed"
+                type="text"
+                value={selectedInvoiceToEdit?.id || ''}
+                disabled
+              />
+            </div>
+            <div>
+              <label className="block font-label-md text-label-md text-on-surface mb-1">
+                Cliente <span className="text-error">*</span>
+              </label>
+              <SearchableSelect
+                options={customers}
+                value={invoiceEditCustomerId}
+                onChange={setInvoiceEditCustomerId}
+                placeholder="Seleziona o cerca cliente..."
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-label-md text-label-md text-on-surface mb-1">
+                Data Emissione <span className="text-error">*</span>
+              </label>
+              <input
+                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+                type="date"
+                value={invoiceEditIssueDate}
+                onChange={(e) => setInvoiceEditIssueDate(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="block font-label-md text-label-md text-on-surface mb-1">
+                Scadenza <span className="text-error">*</span>
+              </label>
+              <input
+                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+                type="date"
+                value={invoiceEditDueDate}
+                onChange={(e) => setInvoiceEditDueDate(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-label-md text-label-md text-on-surface mb-1">
+              Importo (€) <span className="text-error">*</span>
+            </label>
+            <input
+              className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+              placeholder="0.00"
+              type="number"
+              step="0.01"
+              value={invoiceEditAmount}
+              onChange={(e) => setInvoiceEditAmount(e.target.value)}
+              required
+            />
+          </div>
+
+          {selectedInvoiceToEdit && (
+            <div className="bg-surface-container-low border border-outline-variant/60 rounded p-3 text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-on-surface-variant font-medium">Totale Incassato:</span>
+                <span className="font-semibold text-secondary tabular-nums">
+                  {formatCurrency(selectedInvoiceToEdit.total_paid || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between border-t border-outline-variant/30 pt-1">
+                <span className="text-on-surface-variant font-medium">Saldo Residuo:</span>
+                <span className="font-semibold text-error tabular-nums">
+                  {formatCurrency(selectedInvoiceToEdit.remaining_amount || 0)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-outline-variant">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+              onClick={() => setInvoiceEditModalOpen(false)}
+            >
+              Annulla
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-md font-label-md text-label-md bg-primary hover:bg-primary/90 text-on-primary transition-colors shadow-sm cursor-pointer"
+            >
+              Salva Modifiche
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   )
