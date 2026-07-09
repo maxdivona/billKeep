@@ -9,7 +9,7 @@
     "format": "prettier --write .",
     "lint": "eslint --cache .",
     "dev": "tauri dev",
-    "build": "tauri build",
+    "build": "tauri build && node scripts/post-build.js",
     "vite-dev": "vite",
     "vite-build": "vite build"
   },
