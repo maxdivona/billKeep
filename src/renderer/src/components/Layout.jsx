@@ -1,5 +1,6 @@
 import Sidebar from './Sidebar'
 import Header from './Header'
+import Spotlight from './Spotlight'
 
 export default function Layout({ children }) {
   return (
@@ -11,6 +12,7 @@ export default function Layout({ children }) {
           <div className="max-w-[1400px] mx-auto">{children}</div>
         </main>
       </div>
+      <Spotlight />
     </div>
   )
 }

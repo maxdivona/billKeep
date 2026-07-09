@@ -89,6 +89,17 @@ pub struct JournalEntryPage {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct GlobalSearchResult {
+    pub category: String, // "customer" | "invoice" | "payment" | "action"
+    pub id: String,
+    pub title: String,
+    pub subtitle: String,
+    pub route: String,
+    pub action_key: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct DashboardStats {
     pub total_invoiced: f64,
     pub total_paid: f64,
@@ -1810,6 +1821,98 @@ pub fn get_journal_entries_paginated(
         total_count,
         has_more: offset + limit < total_count,
     })
+}
+
+#[tauri::command]
+pub fn global_search(state: tauri::State<AppState>, query: String) -> Result<Vec<GlobalSearchResult>, String> {
+    let conn = state.db_conn.lock().unwrap();
+    let q = format!("%{}%", query.trim());
+    let mut results = Vec::new();
+
+    if query.trim().is_empty() {
+        return Ok(results);
+    }
+
+    // 1. Cerca nei Clienti (limite 5)
+    let mut stmt = conn
+        .prepare("SELECT id, name, email FROM customers WHERE name LIKE ? LIMIT 5")
+        .map_err(|e| e.to_string())?;
+    let c_rows = stmt
+        .query_map([&q], |r| {
+            let name: String = r.get(1)?;
+            let email: Option<String> = r.get(2)?;
+            Ok(GlobalSearchResult {
+                category: "customer".to_string(),
+                id: r.get(0)?,
+                title: name,
+                subtitle: email.unwrap_or_default(),
+                route: "/clients".to_string(),
+                action_key: None,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    for r in c_rows {
+        results.push(r.map_err(|e| e.to_string())?);
+    }
+
+    // 2. Cerca nelle Fatture (limite 5)
+    let mut stmt = conn
+        .prepare("
+            SELECT i.id, c.name, i.amount, i.customer_id 
+            FROM invoices i 
+            JOIN customers c ON i.customer_id = c.id 
+            WHERE i.id LIKE ? OR c.name LIKE ? LIMIT 5
+        ")
+        .map_err(|e| e.to_string())?;
+    let i_rows = stmt
+        .query_map([&q, &q], |r| {
+            let inv_id: String = r.get(0)?;
+            let cust_name: String = r.get(1)?;
+            let amount: f64 = r.get(2)?;
+            let cust_id: String = r.get(3)?;
+            Ok(GlobalSearchResult {
+                category: "invoice".to_string(),
+                id: inv_id.clone(),
+                title: format!("Fattura #{}", inv_id),
+                subtitle: format!("Cliente: {} | Importo: € {:.2}", cust_name, amount),
+                route: "/clients".to_string(),
+                action_key: Some(format!("invoice_edit:{}:{}", inv_id, cust_id)),
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    for r in i_rows {
+        results.push(r.map_err(|e| e.to_string())?);
+    }
+
+    // 3. Cerca nei Pagamenti (limite 5)
+    let mut stmt = conn
+        .prepare("
+            SELECT p.id, c.name, p.amount 
+            FROM payments p 
+            JOIN customers c ON p.customer_id = c.id 
+            WHERE c.name LIKE ? OR p.invoice_id LIKE ? LIMIT 5
+        ")
+        .map_err(|e| e.to_string())?;
+    let p_rows = stmt
+        .query_map([&q, &q], |r| {
+            let pay_id: String = r.get(0)?;
+            let cust_name: String = r.get(1)?;
+            let amount: f64 = r.get(2)?;
+            Ok(GlobalSearchResult {
+                category: "payment".to_string(),
+                id: pay_id,
+                title: format!("Pagamento € {:.2}", amount),
+                subtitle: format!("Cliente: {}", cust_name),
+                route: "/payments".to_string(),
+                action_key: None,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+    for r in p_rows {
+        results.push(r.map_err(|e| e.to_string())?);
+    }
+
+    Ok(results)
 }
 
 #[cfg(test)]

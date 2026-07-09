@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import SearchableSelect from '../components/SearchableSelect'
 
 export default function Payments() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const {
     paginatedPayments,
     paymentsPagination,
@@ -45,6 +48,18 @@ export default function Payments() {
   const [deleteError, setDeleteError] = useState('')
 
   const [searchTerm, setSearchTerm] = useState(paymentsPagination.search)
+
+  useEffect(() => {
+    if (location.state?.focusPaymentForm) {
+      setTimeout(() => {
+        const inputEl = document.getElementById('payment-amount-input')
+        if (inputEl) {
+          inputEl.focus()
+        }
+      }, 100)
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [location.state, navigate, location.pathname])
 
   // Sincronizza filtri e ricarica i dati su modifica
   useEffect(() => {
@@ -444,6 +459,7 @@ export default function Payments() {
                 Importo Ricevuto (€) <span className="text-error">*</span>
               </label>
               <input
+                id="payment-amount-input"
                 className="w-full px-md py-sm bg-surface border border-outline-variant rounded-lg font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                 placeholder="0,00"
                 type="number"

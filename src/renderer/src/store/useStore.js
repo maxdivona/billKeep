@@ -36,7 +36,10 @@ export const useStore = create((set, get) => ({
   paginatedJournalEntries: [],
   journalPagination: { limit: 50, offset: 0, totalCount: 0, hasMore: false, search: '', customerId: '' },
 
+  spotlightOpen: false,
+
   // Actions
+  setSpotlightOpen: (spotlightOpen) => set({ spotlightOpen }),
   fetchStats: async () => {
     set({ loading: true, error: null })
     try {

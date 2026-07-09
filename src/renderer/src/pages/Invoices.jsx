@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
@@ -7,6 +7,7 @@ import SearchableSelect from '../components/SearchableSelect'
 
 export default function Invoices() {
   const navigate = useNavigate()
+  const location = useLocation()
   const {
     paginatedInvoices,
     invoicesPagination,
@@ -49,6 +50,19 @@ export default function Invoices() {
 
   const [searchTerm, setSearchTerm] = useState(invoicesPagination.search)
   const [statusFilter, setStatusFilter] = useState(invoicesPagination.status)
+
+  useEffect(() => {
+    if (location.state?.openNewInvoiceModal) {
+      setTimeout(() => {
+        setInvoiceId(`INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`)
+        setCustomerId('')
+        setAmount('')
+        setFormError('')
+        setModalOpen(true)
+      }, 50)
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [location.state, navigate, location.pathname])
 
   // Sincronizza filtri e ricarica i dati su modifica
   useEffect(() => {

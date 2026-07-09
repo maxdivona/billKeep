@@ -29,6 +29,7 @@ window.api = {
     search: filters.search || null,
     status: filters.status || null
   }),
+  globalSearch: (query) => invoke('global_search', { query }),
   addInvoice: (invoice) => invoke('add_invoice', { invoice }),
   updateInvoice: (id, data) => invoke('update_invoice', { id, data }),
   deleteInvoice: (id) => invoke('delete_invoice', { id }),

@@ -47,6 +47,7 @@ pub fn run() {
             db::delete_customer,
             db::get_invoices,
             db::get_invoices_paginated,
+            db::global_search,
             db::add_invoice,
             db::update_invoice,
             db::delete_invoice,

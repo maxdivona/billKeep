@@ -1,4 +1,4 @@
-import { useEffect, useState, Fragment } from 'react'
+import { useEffect, useState, Fragment, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
@@ -71,6 +71,7 @@ export default function Customers() {
   const [invoiceEditDueDate, setInvoiceEditDueDate] = useState('')
   const [invoiceEditAmount, setInvoiceEditAmount] = useState('')
   const [invoiceEditError, setInvoiceEditError] = useState('')
+  const [pendingInvoiceEditId, setPendingInvoiceEditId] = useState(null)
 
   // If a customer is selected, load their specific details
   const loadCustomerDetail = async (customerId) => {
@@ -99,6 +100,19 @@ export default function Customers() {
     }
   }
 
+  const handleOpenInvoiceEdit = useCallback(
+    (inv) => {
+      setSelectedInvoiceToEdit(inv)
+      setInvoiceEditCustomerId(selectedCustomer?.id || '')
+      setInvoiceEditIssueDate(inv.issue_date ? inv.issue_date.split(' ')[0] : '')
+      setInvoiceEditDueDate(inv.due_date ? inv.due_date.split(' ')[0] : '')
+      setInvoiceEditAmount(inv.amount.toString())
+      setInvoiceEditError('')
+      setInvoiceEditModalOpen(true)
+    },
+    [selectedCustomer]
+  )
+
   useEffect(() => {
     fetchCustomers()
   }, [fetchCustomers])
@@ -107,26 +121,39 @@ export default function Customers() {
     if (location.state?.selectedCustomerId && customers.length > 0) {
       const cust = customers.find((c) => c.id === location.state.selectedCustomerId)
       if (cust) {
+        const editInvoiceId = location.state.openEditInvoiceId
         // Usa setTimeout per evitare cascading render sincroni derivanti da setState nell'effetto
         setTimeout(() => {
           setSelectedCustomer(cust)
           loadCustomerDetail(cust.id)
+          if (editInvoiceId) {
+            setPendingInvoiceEditId(editInvoiceId)
+          }
         }, 0)
         // Pulisce lo stato per evitare reinvocazioni su re-render
         navigate(location.pathname, { replace: true, state: {} })
       }
     }
+
+    if (location.state?.openNewCustomerModal) {
+      setTimeout(() => {
+        setModalOpen(true)
+      }, 0)
+      navigate(location.pathname, { replace: true, state: {} })
+    }
   }, [location.state, customers, navigate, location.pathname])
 
-  const handleOpenInvoiceEdit = (inv) => {
-    setSelectedInvoiceToEdit(inv)
-    setInvoiceEditCustomerId(selectedCustomer.id)
-    setInvoiceEditIssueDate(inv.issue_date ? inv.issue_date.split(' ')[0] : '')
-    setInvoiceEditDueDate(inv.due_date ? inv.due_date.split(' ')[0] : '')
-    setInvoiceEditAmount(inv.amount.toString())
-    setInvoiceEditError('')
-    setInvoiceEditModalOpen(true)
-  }
+  useEffect(() => {
+    if (pendingInvoiceEditId && unpaidInvoices.length > 0) {
+      const inv = unpaidInvoices.find((i) => i.id === pendingInvoiceEditId)
+      if (inv) {
+        setTimeout(() => {
+          handleOpenInvoiceEdit(inv)
+          setPendingInvoiceEditId(null)
+        }, 0)
+      }
+    }
+  }, [pendingInvoiceEditId, unpaidInvoices, handleOpenInvoiceEdit])
 
   const handleUpdateInvoice = async (e) => {
     e.preventDefault()
