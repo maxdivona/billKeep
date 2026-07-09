@@ -20,22 +20,25 @@ export default function Sidebar() {
         </p>
       </div>
 
+      <div className="mb-md">
+        <button
+          onClick={() => setSpotlightOpen(true)}
+          className="flex items-center justify-between gap-md px-sm py-[7px] rounded-lg border border-outline-variant/50 hover:border-outline-variant/80 transition-all duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low cursor-pointer w-full text-left font-body-md text-body-md"
+          title="Cerca globalmente o digita comandi (Alt+S)"
+        >
+          <div className="flex items-center gap-md">
+            <span className="material-symbols-outlined">search</span>
+            <span className="text-on-surface-variant/70">Cerca...</span>
+          </div>
+          <span className="text-[10px] font-medium text-on-surface-variant/50 tracking-wider">
+            Alt+S
+          </span>
+        </button>
+      </div>
+
+      <hr className="border-t border-outline-variant/40 mb-md" />
+
       <ul className="flex flex-col gap-sm flex-grow">
-        <li>
-          <button
-            onClick={() => setSpotlightOpen(true)}
-            className="flex items-center justify-between gap-md px-sm py-[7px] rounded-lg border border-outline-variant/50 hover:border-outline-variant/80 transition-all duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low cursor-pointer w-full text-left font-body-md text-body-md"
-            title="Cerca globalmente o digita comandi (Alt+S)"
-          >
-            <div className="flex items-center gap-md">
-              <span className="material-symbols-outlined">search</span>
-              <span className="text-on-surface-variant/70">Cerca...</span>
-            </div>
-            <span className="text-[10px] font-medium text-on-surface-variant/50 tracking-wider">
-              Alt+S
-            </span>
-          </button>
-        </li>
         <li>
           <NavLink to="/" className={linkClass}>
             <span className="material-symbols-outlined fill">dashboard</span>
