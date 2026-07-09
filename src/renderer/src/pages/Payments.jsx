@@ -2,21 +2,29 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
+import SearchableSelect from '../components/SearchableSelect'
 
 export default function Payments() {
   const {
     payments,
     invoices,
+    customers,
     loading,
     fetchPayments,
     fetchInvoices,
-    addPayment,
+    fetchCustomers,
+    addMultiPayment,
     updatePayment,
     deletePayment
   } = useStore()
 
   // Form State
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState('')
+  const [selectedCustomerId, setSelectedCustomerId] = useState('')
+  const [unpaidInvoices, setUnpaidInvoices] = useState([])
+  const [allocType, setAllocType] = useState('auto') // 'auto', 'manual', 'acconto'
+  const [manualAllocations, setManualAllocations] = useState({})
+  const [detailLoading, setDetailLoading] = useState(false)
+
   const [amount, setAmount] = useState('')
   const [paymentDate, setPaymentDate] = useState(() => new Date().toISOString().split('T')[0])
   const [method, setMethod] = useState('Bonifico')
@@ -39,7 +47,8 @@ export default function Payments() {
   useEffect(() => {
     fetchPayments()
     fetchInvoices()
-  }, [fetchPayments, fetchInvoices])
+    fetchCustomers()
+  }, [fetchPayments, fetchInvoices, fetchCustomers])
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val)
@@ -51,43 +60,156 @@ export default function Payments() {
     return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
+  const handleCustomerChange = async (customerId) => {
+    setSelectedCustomerId(customerId)
+    setFormError('')
+    setFormSuccess('')
+    if (!customerId) {
+      setUnpaidInvoices([])
+      setManualAllocations({})
+      return
+    }
+
+    setDetailLoading(true)
+    try {
+      const invoicesList = await window.api.getCustomerUnpaidInvoices(customerId)
+      setUnpaidInvoices(invoicesList)
+      
+      if (invoicesList.length === 0) {
+        setAllocType('acconto')
+      } else {
+        setAllocType('auto')
+      }
+
+      // Initialize manual allocation inputs to empty strings
+      const initialManual = {}
+      invoicesList.forEach((inv) => {
+        initialManual[inv.id] = ''
+      })
+      setManualAllocations(initialManual)
+    } catch (err) {
+      console.error('Errore caricamento fatture scoperte:', err)
+      setFormError('Errore nel caricamento delle fatture scoperte.')
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  const getManualRemaining = () => {
+    const total = parseFloat(amount) || 0
+    let allocTotal = 0
+    for (const invId in manualAllocations) {
+      const amt = parseFloat(manualAllocations[invId])
+      if (!isNaN(amt) && amt > 0) {
+        allocTotal += amt
+      }
+    }
+    return total - allocTotal
+  }
+
   const handleRegister = async (e) => {
     e.preventDefault()
     setFormError('')
     setFormSuccess('')
 
-    if (!selectedInvoiceId) {
-      setFormError('Seleziona una fattura.')
+    if (!selectedCustomerId) {
+      setFormError('Seleziona un cliente.')
       return
     }
 
-    const numAmount = parseFloat(amount)
-    if (isNaN(numAmount) || numAmount <= 0) {
+    const total = parseFloat(amount)
+    if (isNaN(total) || total <= 0) {
       setFormError("L'importo deve essere maggiore di zero.")
       return
     }
 
-    // Find the selected invoice to get its customer_id
-    const selectedInvoice = invoices.find((inv) => inv.id === selectedInvoiceId)
-    if (!selectedInvoice) {
-      setFormError('Fattura non trovata.')
-      return
+    let allocations = []
+    let accontoAmount = 0
+
+    if (allocType === 'auto') {
+      // Allocate automatically from oldest to newest unpaid invoice
+      let remaining = total
+      const sortedInvoices = [...unpaidInvoices].sort(
+        (a, b) => new Date(a.due_date) - new Date(b.due_date)
+      )
+
+      for (const inv of sortedInvoices) {
+        if (remaining <= 0) break
+        const needed = inv.remaining_amount ?? inv.amount
+        const toPay = Math.min(remaining, needed)
+        allocations.push({ invoiceId: inv.id, amount: toPay })
+        remaining -= toPay
+      }
+
+      if (remaining > 0) {
+        accontoAmount = remaining
+      }
+    } else if (allocType === 'manual') {
+      // Manual allocations
+      let allocTotal = 0
+      
+      for (const invId in manualAllocations) {
+        const rawVal = manualAllocations[invId]
+        if (rawVal !== '' && rawVal !== undefined && rawVal !== null) {
+          const amt = parseFloat(rawVal)
+          if (isNaN(amt) || amt < 0) {
+            setFormError("Gli importi di allocazione inseriti devono essere positivi.")
+            return
+          }
+          if (amt > 0) {
+            const inv = unpaidInvoices.find(i => i.id === invId)
+            if (!inv) continue
+            
+            const remaining = inv.remaining_amount ?? inv.amount
+            if (amt > remaining + 0.001) {
+              setFormError(`L'importo inserito per la fattura #${invId} (€ ${amt.toFixed(2)}) supera il saldo residuo di € ${remaining.toFixed(2)}.`);
+              return
+            }
+            
+            allocations.push({ invoiceId: invId, amount: amt })
+            allocTotal += amt
+          }
+        }
+      }
+
+      if (allocTotal === 0) {
+        setFormError("Hai selezionato l'allocazione manuale ma non hai inserito alcun importo. Se desideri registrare l'intero importo come acconto, seleziona 'Solo Acconto'.")
+        return
+      }
+
+      if (allocTotal > total + 0.001) {
+        setFormError(
+          `L'importo inserito (€ ${total.toFixed(2)}) è minore della somma delle allocazioni (€ ${allocTotal.toFixed(2)}).`
+        )
+        return
+      }
+
+      accontoAmount = total - allocTotal
+      if (accontoAmount < 0.001) {
+        accontoAmount = 0
+      }
+    } else {
+      // Solo Acconto
+      accontoAmount = total
     }
 
-    const newPayment = {
-      id: `PAY-${Date.now()}`,
-      invoiceId: selectedInvoice.id,
-      customerId: selectedInvoice.customer_id,
-      amount: numAmount,
+    const paymentData = {
+      customerId: selectedCustomerId,
+      totalAmount: total,
       method: method,
-      payment_date: paymentDate
+      date: paymentDate,
+      allocations,
+      accontoAmount
     }
 
-    const res = await addPayment(newPayment)
+    const res = await addMultiPayment(paymentData)
     if (res.success) {
       setFormSuccess('Pagamento registrato con successo!')
       setAmount('')
-      setSelectedInvoiceId('')
+      setSelectedCustomerId('')
+      setUnpaidInvoices([])
+      setManualAllocations({})
+      setAllocType('auto')
     } else {
       setFormError(`Errore durante il salvataggio: ${res.error}`)
     }
@@ -255,31 +377,21 @@ export default function Payments() {
               <p className="text-secondary font-label-md text-label-md">{formSuccess}</p>
             )}
 
-            {/* Invoice Selection */}
+            {/* Customer Selection */}
             <div className="space-y-sm">
               <label className="block font-label-sm text-label-sm text-on-surface-variant">
-                Fattura Correlata <span className="text-error">*</span>
+                Cliente <span className="text-error">*</span>
               </label>
-              <select
-                className="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-on-surface"
-                value={selectedInvoiceId}
-                onChange={(e) => {
-                  setSelectedInvoiceId(e.target.value)
-                  // Set payment amount automatically to the remaining amount of the invoice
-                  const inv = invoices.find((i) => i.id === e.target.value)
-                  if (inv) {
-                    setAmount(inv.amount.toString())
-                  }
-                }}
+              <SearchableSelect
+                options={customers.map((c) => ({
+                  id: c.id,
+                  name: `${c.name} (Saldo: ${formatCurrency(c.balance || 0)})`
+                }))}
+                value={selectedCustomerId}
+                onChange={handleCustomerChange}
+                placeholder="Cerca cliente..."
                 required
-              >
-                <option value="">Seleziona una fattura da saldare...</option>
-                {outstandingInvoices.map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    #{inv.id} - {inv.customer_name} ({formatCurrency(inv.amount)})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             {/* Amount */}
@@ -356,6 +468,166 @@ export default function Payments() {
                 ))}
               </div>
             </div>
+
+            {/* Distribution section */}
+            {selectedCustomerId && (
+              <div className="border-t border-outline-variant pt-3 space-y-sm">
+                {detailLoading ? (
+                  <p className="text-xs text-on-surface-variant/80 italic">Caricamento fatture scoperte...</p>
+                ) : unpaidInvoices.length === 0 ? (
+                  <div className="bg-primary/10 border border-primary/20 rounded p-3 text-xs flex items-start gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-primary">info</span>
+                    <div>
+                      <p className="font-semibold text-on-surface">Nessuna fattura scoperta</p>
+                      <p className="text-on-surface-variant mt-0.5">
+                        {"Tutte le fatture di questo cliente risultano pagate. L'intero importo verrà registrato come acconto."}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <span className="block font-label-sm text-label-sm text-on-surface font-semibold">
+                      Modalità Distribuzione Fondi
+                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        className={`py-2 px-1 border rounded text-xs font-semibold cursor-pointer text-center ${
+                          allocType === 'auto'
+                            ? 'border-primary bg-primary/10 text-primary font-bold'
+                            : 'border-outline-variant text-on-surface-variant'
+                        }`}
+                        onClick={() => setAllocType('auto')}
+                      >
+                        Automatica
+                      </button>
+                      <button
+                        type="button"
+                        className={`py-2 px-1 border rounded text-xs font-semibold cursor-pointer text-center ${
+                          allocType === 'manual'
+                            ? 'border-primary bg-primary/10 text-primary font-bold'
+                            : 'border-outline-variant text-on-surface-variant'
+                        }`}
+                        onClick={() => setAllocType('manual')}
+                      >
+                        Manuale
+                      </button>
+                      <button
+                        type="button"
+                        className={`py-2 px-1 border rounded text-xs font-semibold cursor-pointer text-center ${
+                          allocType === 'acconto'
+                            ? 'border-primary bg-primary/10 text-primary font-bold'
+                            : 'border-outline-variant text-on-surface-variant'
+                        }`}
+                        onClick={() => setAllocType('acconto')}
+                      >
+                        Solo Acconto
+                      </button>
+                    </div>
+
+                    {allocType === 'manual' && (
+                      <div className="space-y-2 mt-2">
+                        <div className="space-y-2 max-h-[160px] overflow-y-auto border border-outline-variant/60 rounded p-2 bg-surface-container-lowest">
+                          {unpaidInvoices.map((inv) => {
+                            const remaining = inv.remaining_amount ?? inv.amount
+                            const val = parseFloat(manualAllocations[inv.id])
+                            const inputError = !isNaN(val) && (val > remaining || val < 0)
+                            return (
+                              <div key={inv.id} className="flex flex-col gap-1 py-1 border-b border-outline-variant/30 last:border-b-0">
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className={`font-medium ${inputError ? 'text-error font-bold' : 'text-on-surface'}`}>
+                                    #{inv.id} (Rimanente: {formatCurrency(remaining)})
+                                  </span>
+                                  <input
+                                    className={`w-24 border rounded px-2 py-1 bg-surface text-right tabular-nums text-on-surface focus:outline-none ${
+                                      inputError
+                                        ? 'border-error focus:border-error text-error bg-error-container/20 font-bold'
+                                        : 'border-outline-variant focus:border-primary'
+                                    }`}
+                                    placeholder="0.00"
+                                    type="number"
+                                    step="0.01"
+                                    value={manualAllocations[inv.id] || ''}
+                                    onChange={(e) =>
+                                      setManualAllocations({
+                                        ...manualAllocations,
+                                        [inv.id]: e.target.value
+                                      })
+                                    }
+                                  />
+                                </div>
+                                {inputError && (
+                                  <span className="text-[10px] text-error text-right font-medium">
+                                    {val < 0 ? "L'importo deve essere positivo" : `Supera il saldo di ${formatCurrency(remaining)}`}
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                        {(() => {
+                          const restante = getManualRemaining()
+                          return (
+                            <div className={`p-2 rounded text-xs font-semibold flex justify-between items-center ${
+                              restante > 0.005
+                                ? 'bg-primary-container/20 text-primary border border-primary/20'
+                                : Math.abs(restante) <= 0.005
+                                ? 'bg-success-container/20 text-success border border-success/20'
+                                : 'bg-error-container/20 text-error border border-error/20'
+                            }`}>
+                              <span>Restante da attribuire:</span>
+                              <span className="tabular-nums font-bold">
+                                {formatCurrency(restante)}
+                                {restante > 0.005 && " (in acconto)"}
+                              </span>
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    )}
+
+                    {allocType === 'auto' && (
+                      <div className="space-y-2 mt-2">
+                        <p className="text-[11px] text-on-surface-variant/80 italic">
+                          I fondi verranno usati per pagare le fatture scoperte partendo dalla più vecchia.
+                        </p>
+                        {(() => {
+                          const total = parseFloat(amount) || 0
+                          let remaining = total
+                          let allocated = 0
+                          for (const inv of unpaidInvoices) {
+                            const needed = inv.remaining_amount ?? inv.amount
+                            const toPay = Math.min(remaining, needed)
+                            allocated += toPay
+                            remaining -= toPay
+                          }
+                          return (
+                            <div className="p-2 rounded text-xs bg-surface-container-low border border-outline-variant/30 text-on-surface-variant space-y-1">
+                              <div className="flex justify-between">
+                                <span>Assegnato a fatture:</span>
+                                <span className="font-semibold">{formatCurrency(allocated)}</span>
+                              </div>
+                              {remaining > 0 && (
+                                <div className="flex justify-between text-primary font-semibold">
+                                  <span>Eccedenza (in acconto):</span>
+                                  <span>{formatCurrency(remaining)}</span>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    )}
+
+                    {allocType === 'acconto' && (
+                      <p className="text-xs text-on-surface-variant/80 italic mt-2">
+                        {"L'intero importo verrà registrato come acconto sul conto del cliente."}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"
