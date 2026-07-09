@@ -26,6 +26,16 @@ export const useStore = create((set, get) => ({
   loading: false,
   error: null,
 
+  // Paginated lists
+  paginatedInvoices: [],
+  invoicesPagination: { limit: 50, offset: 0, totalCount: 0, hasMore: false, search: '', status: '' },
+  
+  paginatedPayments: [],
+  paymentsPagination: { limit: 50, offset: 0, totalCount: 0, hasMore: false, search: '' },
+
+  paginatedJournalEntries: [],
+  journalPagination: { limit: 50, offset: 0, totalCount: 0, hasMore: false, search: '', customerId: '' },
+
   // Actions
   fetchStats: async () => {
     set({ loading: true, error: null })
@@ -116,9 +126,11 @@ export const useStore = create((set, get) => ({
       if (result.success) {
         await Promise.all([
           get().fetchInvoices(),
+          get().fetchInvoicesPaginated(true),
           get().fetchStats(),
           get().fetchCustomers(),
-          get().fetchJournalEntries()
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -137,10 +149,13 @@ export const useStore = create((set, get) => ({
       if (result.success) {
         await Promise.all([
           get().fetchInvoices(),
+          get().fetchInvoicesPaginated(true),
           get().fetchStats(),
           get().fetchCustomers(),
           get().fetchPayments(),
-          get().fetchJournalEntries()
+          get().fetchPaymentsPaginated(true),
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -159,10 +174,13 @@ export const useStore = create((set, get) => ({
       if (result.success) {
         await Promise.all([
           get().fetchInvoices(),
+          get().fetchInvoicesPaginated(true),
           get().fetchStats(),
           get().fetchCustomers(),
           get().fetchPayments(),
-          get().fetchJournalEntries()
+          get().fetchPaymentsPaginated(true),
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -181,10 +199,13 @@ export const useStore = create((set, get) => ({
       if (result.success) {
         await Promise.all([
           get().fetchInvoices(),
+          get().fetchInvoicesPaginated(true),
           get().fetchStats(),
           get().fetchCustomers(),
           get().fetchPayments(),
-          get().fetchJournalEntries()
+          get().fetchPaymentsPaginated(true),
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -205,7 +226,9 @@ export const useStore = create((set, get) => ({
           get().fetchCustomers(),
           get().fetchStats(),
           get().fetchInvoices(),
-          get().fetchJournalEntries()
+          get().fetchInvoicesPaginated(true),
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -226,7 +249,9 @@ export const useStore = create((set, get) => ({
           get().fetchCustomers(),
           get().fetchStats(),
           get().fetchInvoices(),
-          get().fetchJournalEntries()
+          get().fetchInvoicesPaginated(true),
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -245,10 +270,13 @@ export const useStore = create((set, get) => ({
       if (result.success) {
         await Promise.all([
           get().fetchInvoices(),
+          get().fetchInvoicesPaginated(true),
           get().fetchStats(),
           get().fetchCustomers(),
           get().fetchPayments(),
-          get().fetchJournalEntries()
+          get().fetchPaymentsPaginated(true),
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -267,10 +295,13 @@ export const useStore = create((set, get) => ({
       if (result.success) {
         await Promise.all([
           get().fetchInvoices(),
+          get().fetchInvoicesPaginated(true),
           get().fetchStats(),
           get().fetchCustomers(),
           get().fetchPayments(),
-          get().fetchJournalEntries()
+          get().fetchPaymentsPaginated(true),
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -289,10 +320,13 @@ export const useStore = create((set, get) => ({
       if (result.success) {
         await Promise.all([
           get().fetchInvoices(),
+          get().fetchInvoicesPaginated(true),
           get().fetchStats(),
           get().fetchCustomers(),
           get().fetchPayments(),
-          get().fetchJournalEntries()
+          get().fetchPaymentsPaginated(true),
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -311,10 +345,13 @@ export const useStore = create((set, get) => ({
       if (result.success) {
         await Promise.all([
           get().fetchInvoices(),
+          get().fetchInvoicesPaginated(true),
           get().fetchStats(),
           get().fetchCustomers(),
           get().fetchPayments(),
-          get().fetchJournalEntries()
+          get().fetchPaymentsPaginated(true),
+          get().fetchJournalEntries(),
+          get().fetchJournalEntriesPaginated(true)
         ])
       } else {
         throw new Error(result.error)
@@ -324,6 +361,122 @@ export const useStore = create((set, get) => ({
       return { success: false, error: err.message }
     }
     return { success: true }
+  },
+
+  fetchInvoicesPaginated: async (reset = false) => {
+    const currentPagination = get().invoicesPagination
+    const newOffset = reset ? 0 : currentPagination.offset + currentPagination.limit
+    
+    set({ loading: true, error: null })
+    try {
+      const filters = {
+        limit: currentPagination.limit,
+        offset: newOffset,
+        search: currentPagination.search,
+        status: currentPagination.status
+      }
+      
+      const pageData = await window.api.getInvoicesPaginated(filters)
+      
+      set((state) => ({
+        paginatedInvoices: reset ? pageData.invoices : [...state.paginatedInvoices, ...pageData.invoices],
+        invoicesPagination: {
+          ...state.invoicesPagination,
+          offset: newOffset,
+          totalCount: pageData.totalCount,
+          hasMore: pageData.hasMore
+        },
+        loading: false
+      }))
+    } catch (err) {
+      set({ error: err.message, loading: false })
+    }
+  },
+
+  setInvoicesFilters: (filters) => {
+    set((state) => ({
+      invoicesPagination: {
+        ...state.invoicesPagination,
+        ...filters
+      }
+    }))
+  },
+
+  fetchPaymentsPaginated: async (reset = false) => {
+    const currentPagination = get().paymentsPagination
+    const newOffset = reset ? 0 : currentPagination.offset + currentPagination.limit
+    
+    set({ loading: true, error: null })
+    try {
+      const filters = {
+        limit: currentPagination.limit,
+        offset: newOffset,
+        search: currentPagination.search
+      }
+      
+      const pageData = await window.api.getPaymentsPaginated(filters)
+      
+      set((state) => ({
+        paginatedPayments: reset ? pageData.payments : [...state.paginatedPayments, ...pageData.payments],
+        paymentsPagination: {
+          ...state.paymentsPagination,
+          offset: newOffset,
+          totalCount: pageData.totalCount,
+          hasMore: pageData.hasMore
+        },
+        loading: false
+      }))
+    } catch (err) {
+      set({ error: err.message, loading: false })
+    }
+  },
+
+  setPaymentsFilters: (filters) => {
+    set((state) => ({
+      paymentsPagination: {
+        ...state.paymentsPagination,
+        ...filters
+      }
+    }))
+  },
+
+  fetchJournalEntriesPaginated: async (reset = false) => {
+    const currentPagination = get().journalPagination
+    const newOffset = reset ? 0 : currentPagination.offset + currentPagination.limit
+    
+    set({ loading: true, error: null })
+    try {
+      const filters = {
+        limit: currentPagination.limit,
+        offset: newOffset,
+        search: currentPagination.search,
+        customerId: currentPagination.customerId
+      }
+      
+      const pageData = await window.api.getJournalEntriesPaginated(filters)
+      
+      set((state) => ({
+        paginatedJournalEntries: reset ? pageData.journalEntries : [...state.paginatedJournalEntries, ...pageData.journalEntries],
+        journalPagination: {
+          ...state.journalPagination,
+          offset: newOffset,
+          totalCount: pageData.totalCount,
+          hasMore: pageData.hasMore
+        },
+        loading: false
+      }))
+    } catch (err) {
+      set({ error: err.message, loading: false })
+    }
+  },
+
+  setJournalFilters: (filters) => {
+    set((state) => ({
+      journalPagination: {
+        ...state.journalPagination,
+        ...filters
+      }
+    }))
   },
 
   setTheme: (theme) => {

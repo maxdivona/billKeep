@@ -65,6 +65,30 @@ pub struct JournalEntry {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct InvoicePage {
+    pub invoices: Vec<Invoice>,
+    pub total_count: u32,
+    pub has_more: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PaymentPage {
+    pub payments: Vec<Payment>,
+    pub total_count: u32,
+    pub has_more: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct JournalEntryPage {
+    pub journal_entries: Vec<JournalEntry>,
+    pub total_count: u32,
+    pub has_more: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct DashboardStats {
     pub total_invoiced: f64,
     pub total_paid: f64,
@@ -1512,6 +1536,280 @@ pub async fn restore_database_dialog(app: tauri::AppHandle, state: tauri::State<
             error: Some("Operazione annullata".to_string()),
         })
     }
+}
+
+#[tauri::command]
+pub fn get_invoices_paginated(
+    state: tauri::State<AppState>,
+    limit: u32,
+    offset: u32,
+    search: Option<String>,
+    status: Option<String>,
+) -> Result<InvoicePage, String> {
+    let conn = state.db_conn.lock().unwrap();
+
+    let mut where_clauses = Vec::new();
+    let mut params = Vec::new();
+
+    if let Some(ref s) = search {
+        if !s.trim().is_empty() {
+            where_clauses.push("(i.id LIKE ? OR c.name LIKE ?)".to_string());
+            let like_str = format!("%{}%", s.trim());
+            params.push(rusqlite::types::Value::Text(like_str.clone()));
+            params.push(rusqlite::types::Value::Text(like_str));
+        }
+    }
+
+    if let Some(ref st) = status {
+        if !st.is_empty() {
+            where_clauses.push("i.status = ?".to_string());
+            params.push(rusqlite::types::Value::Text(st.clone()));
+        }
+    }
+
+    let where_sql = if where_clauses.is_empty() {
+        "".to_string()
+    } else {
+        format!("WHERE {}", where_clauses.join(" AND "))
+    };
+
+    let count_sql = format!("
+        SELECT COUNT(*)
+        FROM invoices i
+        JOIN customers c ON i.customer_id = c.id
+        {}
+    ", where_sql);
+
+    let total_count: u32 = conn
+        .query_row(&count_sql, rusqlite::params_from_iter(params.iter()), |r| r.get(0))
+        .map_err(|e| e.to_string())?;
+
+    let query_sql = format!("
+        SELECT i.id, i.customer_id, i.issue_date, i.due_date, i.amount, i.status, c.name as customer_name
+        FROM invoices i
+        JOIN customers c ON i.customer_id = c.id
+        {}
+        ORDER BY i.issue_date DESC, i.id DESC
+        LIMIT ? OFFSET ?
+    ", where_sql);
+
+    params.push(rusqlite::types::Value::Integer(limit as i64));
+    params.push(rusqlite::types::Value::Integer(offset as i64));
+
+    let mut stmt = conn.prepare(&query_sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(rusqlite::params_from_iter(params), |row| {
+            Ok(Invoice {
+                id: row.get(0)?,
+                customer_id: row.get(1)?,
+                issue_date: row.get(2)?,
+                due_date: row.get(3)?,
+                amount: row.get(4)?,
+                status: row.get(5)?,
+                customer_name: Some(row.get(6)?),
+                total_paid: None,
+                remaining_amount: None,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut invoices = Vec::new();
+    for r in rows {
+        invoices.push(r.map_err(|e| e.to_string())?);
+    }
+
+    Ok(InvoicePage {
+        invoices,
+        total_count,
+        has_more: offset + limit < total_count,
+    })
+}
+
+#[tauri::command]
+pub fn get_payments_paginated(
+    state: tauri::State<AppState>,
+    limit: u32,
+    offset: u32,
+    search: Option<String>,
+) -> Result<PaymentPage, String> {
+    let conn = state.db_conn.lock().unwrap();
+
+    let mut where_clauses = Vec::new();
+    let mut params = Vec::new();
+
+    if let Some(ref s) = search {
+        if !s.trim().is_empty() {
+            where_clauses.push("(p.id LIKE ? OR c.name LIKE ? OR p.invoice_id LIKE ?)".to_string());
+            let like_str = format!("%{}%", s.trim());
+            params.push(rusqlite::types::Value::Text(like_str.clone()));
+            params.push(rusqlite::types::Value::Text(like_str.clone()));
+            params.push(rusqlite::types::Value::Text(like_str));
+        }
+    }
+
+    let where_sql = if where_clauses.is_empty() {
+        "".to_string()
+    } else {
+        format!("WHERE {}", where_clauses.join(" AND "))
+    };
+
+    let count_sql = format!("
+        SELECT COUNT(*)
+        FROM payments p
+        JOIN customers c ON p.customer_id = c.id
+        {}
+    ", where_sql);
+
+    let total_count: u32 = conn
+        .query_row(&count_sql, rusqlite::params_from_iter(params.iter()), |r| r.get(0))
+        .map_err(|e| e.to_string())?;
+
+    let query_sql = format!("
+        SELECT p.id, p.invoice_id, p.customer_id, p.amount, p.payment_date, p.method, c.name as customer_name
+        FROM payments p
+        JOIN customers c ON p.customer_id = c.id
+        {}
+        ORDER BY p.payment_date DESC, p.id DESC
+        LIMIT ? OFFSET ?
+    ", where_sql);
+
+    params.push(rusqlite::types::Value::Integer(limit as i64));
+    params.push(rusqlite::types::Value::Integer(offset as i64));
+
+    let mut stmt = conn.prepare(&query_sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(rusqlite::params_from_iter(params), |row| {
+            Ok(Payment {
+                id: row.get(0)?,
+                invoice_id: row.get(1)?,
+                customer_id: row.get(2)?,
+                amount: row.get(3)?,
+                payment_date: row.get(4)?,
+                method: row.get(5)?,
+                customer_name: Some(row.get(6)?),
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut payments = Vec::new();
+    for r in rows {
+        payments.push(r.map_err(|e| e.to_string())?);
+    }
+
+    Ok(PaymentPage {
+        payments,
+        total_count,
+        has_more: offset + limit < total_count,
+    })
+}
+
+#[tauri::command]
+pub fn get_journal_entries_paginated(
+    state: tauri::State<AppState>,
+    limit: u32,
+    offset: u32,
+    search: Option<String>,
+    customer_id: Option<String>,
+) -> Result<JournalEntryPage, String> {
+    let conn = state.db_conn.lock().unwrap();
+
+    let mut where_clauses = Vec::new();
+    let mut params = Vec::new();
+
+    if let Some(ref s) = search {
+        if !s.trim().is_empty() {
+            where_clauses.push("(je.id LIKE ? OR je.description LIKE ? OR c.name LIKE ?)".to_string());
+            let like_str = format!("%{}%", s.trim());
+            params.push(rusqlite::types::Value::Text(like_str.clone()));
+            params.push(rusqlite::types::Value::Text(like_str.clone()));
+            params.push(rusqlite::types::Value::Text(like_str));
+        }
+    }
+
+    if let Some(ref c_id) = customer_id {
+        if !c_id.trim().is_empty() {
+            where_clauses.push("je.customer_id = ?".to_string());
+            params.push(rusqlite::types::Value::Text(c_id.clone()));
+        }
+    }
+
+    let where_sql = if where_clauses.is_empty() {
+        "".to_string()
+    } else {
+        format!("WHERE {}", where_clauses.join(" AND "))
+    };
+
+    let count_sql = format!("
+        SELECT COUNT(*)
+        FROM journal_entries je
+        LEFT JOIN customers c ON je.customer_id = c.id
+        {}
+    ", where_sql);
+
+    let total_count: u32 = conn
+        .query_row(&count_sql, rusqlite::params_from_iter(params.iter()), |r| r.get(0))
+        .map_err(|e| e.to_string())?;
+
+    let query_sql = format!("
+        SELECT je.id, je.entry_date, je.description, je.reference_type, je.reference_id, je.customer_id, c.name as customer_name
+        FROM journal_entries je
+        LEFT JOIN customers c ON je.customer_id = c.id
+        {}
+        ORDER BY je.entry_date DESC, je.id DESC
+        LIMIT ? OFFSET ?
+    ", where_sql);
+
+    params.push(rusqlite::types::Value::Integer(limit as i64));
+    params.push(rusqlite::types::Value::Integer(offset as i64));
+
+    let mut stmt = conn.prepare(&query_sql).map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map(rusqlite::params_from_iter(params), |row| {
+            Ok(JournalEntry {
+                id: row.get(0)?,
+                entry_date: row.get(1)?,
+                description: row.get(2)?,
+                reference_type: row.get(3)?,
+                reference_id: row.get(4)?,
+                customer_id: row.get(5)?,
+                customer_name: row.get(6)?,
+                lines: Vec::new(),
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut journal_entries = Vec::new();
+    for r in rows {
+        let mut entry: JournalEntry = r.map_err(|e| e.to_string())?;
+        
+        let mut line_stmt = conn.prepare("
+            SELECT id, entry_id, account_name, type, amount
+            FROM journal_lines
+            WHERE entry_id = ?
+        ").map_err(|e| e.to_string())?;
+
+        let line_rows = line_stmt.query_map([&entry.id], |row| {
+            Ok(JournalLine {
+                id: row.get(0)?,
+                entry_id: row.get(1)?,
+                account_name: row.get(2)?,
+                type_: row.get(3)?,
+                amount: row.get(4)?,
+            })
+        }).map_err(|e| e.to_string())?;
+
+        for lr in line_rows {
+            entry.lines.push(lr.map_err(|e| e.to_string())?);
+        }
+
+        journal_entries.push(entry);
+    }
+
+    Ok(JournalEntryPage {
+        journal_entries,
+        total_count,
+        has_more: offset + limit < total_count,
+    })
 }
 
 #[cfg(test)]

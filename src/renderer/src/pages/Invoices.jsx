@@ -8,10 +8,12 @@ import SearchableSelect from '../components/SearchableSelect'
 export default function Invoices() {
   const navigate = useNavigate()
   const {
-    invoices,
+    paginatedInvoices,
+    invoicesPagination,
+    fetchInvoicesPaginated,
+    setInvoicesFilters,
     customers,
     loading,
-    fetchInvoices,
     fetchCustomers,
     addInvoice,
     updateInvoice,
@@ -45,10 +47,22 @@ export default function Invoices() {
   const [deleteInvoiceId, setDeleteInvoiceId] = useState('')
   const [deleteError, setDeleteError] = useState('')
 
+  const [searchTerm, setSearchTerm] = useState(invoicesPagination.search)
+  const [statusFilter, setStatusFilter] = useState(invoicesPagination.status)
+
+  // Sincronizza filtri e ricarica i dati su modifica
   useEffect(() => {
-    fetchInvoices()
+    const delayDebounce = setTimeout(() => {
+      setInvoicesFilters({ search: searchTerm, status: statusFilter })
+      fetchInvoicesPaginated(true)
+    }, 300)
+
+    return () => clearTimeout(delayDebounce)
+  }, [searchTerm, statusFilter, setInvoicesFilters, fetchInvoicesPaginated])
+
+  useEffect(() => {
     fetchCustomers()
-  }, [fetchInvoices, fetchCustomers])
+  }, [fetchCustomers])
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val)
@@ -188,6 +202,52 @@ export default function Invoices() {
         </button>
       </div>
 
+      {/* Search and Filters */}
+      <div className="bg-surface-container-low border border-outline-variant rounded-xl p-md shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto">
+          <div className="relative w-full md:w-80">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
+              search
+            </span>
+            <input
+              type="text"
+              placeholder="Cerca per ID fattura o cliente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-md bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-[18px] cursor-pointer"
+              >
+                close
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <label className="text-body-md text-on-surface-variant whitespace-nowrap">
+              Stato:
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full md:w-44 border border-outline-variant rounded-md px-3 py-2 bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md cursor-pointer"
+            >
+              <option value="">Tutti</option>
+              <option value="unpaid">Non pagate (Scoperte)</option>
+              <option value="partial">Pagate parzialmente</option>
+              <option value="paid">Pagate totalmente</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="text-body-sm font-label-sm text-on-surface-variant/80 bg-surface-container-high px-3 py-1.5 rounded-md self-end md:self-auto">
+          Trovate: <strong className="text-on-surface">{invoicesPagination.totalCount}</strong> fatture
+        </div>
+      </div>
+
       {/* Invoice Table Container */}
       <div className="bg-surface-container-low border border-outline-variant rounded-xl shadow-sm overflow-hidden">
         <DataTable
@@ -200,7 +260,7 @@ export default function Invoices() {
             { text: 'Stato', align: 'center' },
             { text: 'Azioni', align: 'center' }
           ]}
-          data={invoices}
+          data={paginatedInvoices}
           loading={loading}
           emptyMessage="Nessuna fattura emessa."
           renderRow={(inv) => (
@@ -279,6 +339,17 @@ export default function Invoices() {
             </tr>
           )}
         />
+        {invoicesPagination.hasMore && (
+          <div className="py-md flex justify-center border-t border-outline-variant bg-surface-container-low">
+            <button
+              onClick={() => fetchInvoicesPaginated(false)}
+              className="px-6 py-2 rounded-md font-label-md text-label-md bg-secondary-container hover:bg-secondary-container/85 text-on-secondary-container transition-colors cursor-pointer flex items-center gap-2"
+            >
+              Mostra altre fatture
+              <span className="material-symbols-outlined text-[16px]">expand_more</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal: Emetti Fattura */}

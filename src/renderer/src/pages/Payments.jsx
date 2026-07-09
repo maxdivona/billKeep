@@ -6,12 +6,12 @@ import SearchableSelect from '../components/SearchableSelect'
 
 export default function Payments() {
   const {
-    payments,
-    invoices,
+    paginatedPayments,
+    paymentsPagination,
+    fetchPaymentsPaginated,
+    setPaymentsFilters,
     customers,
     loading,
-    fetchPayments,
-    fetchInvoices,
     fetchCustomers,
     addMultiPayment,
     updatePayment,
@@ -44,11 +44,21 @@ export default function Payments() {
   const [deletePaymentId, setDeletePaymentId] = useState('')
   const [deleteError, setDeleteError] = useState('')
 
+  const [searchTerm, setSearchTerm] = useState(paymentsPagination.search)
+
+  // Sincronizza filtri e ricarica i dati su modifica
   useEffect(() => {
-    fetchPayments()
-    fetchInvoices()
+    const delayDebounce = setTimeout(() => {
+      setPaymentsFilters({ search: searchTerm })
+      fetchPaymentsPaginated(true)
+    }, 300)
+
+    return () => clearTimeout(delayDebounce)
+  }, [searchTerm, setPaymentsFilters, fetchPaymentsPaginated])
+
+  useEffect(() => {
     fetchCustomers()
-  }, [fetchPayments, fetchInvoices, fetchCustomers])
+  }, [fetchCustomers])
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val)
@@ -268,18 +278,41 @@ export default function Payments() {
     }
   }
 
-  // Filter invoices that are not fully paid to show in the dropdown selector
-  const outstandingInvoices = invoices.filter((inv) => inv.status !== 'paid')
-
   return (
     <div className="flex flex-col lg:flex-row gap-gutter">
       {/* Left Column: Payments Log Table */}
       <div className="flex-1 flex flex-col gap-gutter bg-surface-container-lowest border border-outline-variant rounded-xl p-lg shadow-sm">
-        <div className="flex justify-between items-center mb-md">
-          <h3 className="font-headline-md text-headline-md font-semibold">Registro Pagamenti</h3>
-          <span className="font-label-sm text-label-sm text-on-surface-variant">
-            {payments.length} transazioni registrate
-          </span>
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center mb-md">
+          <div>
+            <h3 className="font-headline-md text-headline-md font-semibold">Registro Pagamenti</h3>
+          </div>
+          
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                search
+              </span>
+              <input
+                type="text"
+                placeholder="Cerca transazione o cliente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-8 py-1.5 border border-outline-variant rounded-md bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-sm font-body-sm"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-[16px] cursor-pointer"
+                >
+                  close
+                </button>
+              )}
+            </div>
+
+            <div className="text-body-sm font-label-sm text-on-surface-variant/80 bg-surface-container-high px-2.5 py-1.5 rounded-md whitespace-nowrap">
+              Trovate: <strong className="text-on-surface">{paymentsPagination.totalCount}</strong>
+            </div>
+          </div>
         </div>
 
         <DataTable
@@ -291,7 +324,7 @@ export default function Payments() {
             'Fattura Correlata',
             { text: 'Azioni', align: 'center' }
           ]}
-          data={payments}
+          data={paginatedPayments}
           loading={loading}
           emptyMessage="Nessun pagamento registrato."
           renderRow={(pay) => (
@@ -361,6 +394,17 @@ export default function Payments() {
             </tr>
           )}
         />
+        {paymentsPagination.hasMore && (
+          <div className="py-md flex justify-center border-t border-outline-variant bg-surface-container-low">
+            <button
+              onClick={() => fetchPaymentsPaginated(false)}
+              className="px-6 py-2 rounded-md font-label-md text-label-md bg-secondary-container hover:bg-secondary-container/85 text-on-secondary-container transition-colors cursor-pointer flex items-center gap-2"
+            >
+              Mostra altri pagamenti
+              <span className="material-symbols-outlined text-[16px]">expand_more</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Right Column: Registration Panel */}

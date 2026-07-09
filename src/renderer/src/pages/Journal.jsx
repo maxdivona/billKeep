@@ -2,28 +2,37 @@ import { useEffect, useState, Fragment } from 'react'
 import { useStore } from '../store/useStore'
 
 export default function Journal() {
-  const { journalEntries, customers, loading, fetchJournalEntries, fetchCustomers } = useStore()
-  const [selectedCustomerId, setSelectedCustomerId] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
+  const {
+    paginatedJournalEntries,
+    journalPagination,
+    fetchJournalEntriesPaginated,
+    setJournalFilters,
+    customers,
+    loading,
+    fetchCustomers
+  } = useStore()
+  
+  const [selectedCustomerId, setSelectedCustomerId] = useState(journalPagination.customerId)
+  const [searchTerm, setSearchTerm] = useState(journalPagination.search)
   const [expandedEntries, setExpandedEntries] = useState({})
 
+  // Sincronizza filtri e ricarica i dati su modifica
   useEffect(() => {
-    fetchJournalEntries()
-    fetchCustomers()
-  }, [fetchJournalEntries, fetchCustomers])
+    const delayDebounce = setTimeout(() => {
+      setJournalFilters({ search: searchTerm, customerId: selectedCustomerId })
+      fetchJournalEntriesPaginated(true)
+    }, 300)
 
-  const handleFilter = () => {
-    const filters = {}
-    if (selectedCustomerId) {
-      filters.customerId = selectedCustomerId
-    }
-    fetchJournalEntries(filters)
-  }
+    return () => clearTimeout(delayDebounce)
+  }, [searchTerm, selectedCustomerId, setJournalFilters, fetchJournalEntriesPaginated])
+
+  useEffect(() => {
+    fetchCustomers()
+  }, [fetchCustomers])
 
   const handleReset = () => {
     setSelectedCustomerId('')
     setSearchTerm('')
-    fetchJournalEntries({})
   }
 
   const toggleExpand = (id) => {
@@ -49,14 +58,9 @@ export default function Journal() {
     })
   }
 
-  // Filter entries locally based on search term
-  const filteredEntries = journalEntries.filter((entry) => {
-    const matchSearch =
-      entry.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      entry.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (entry.customer_name && entry.customer_name.toLowerCase().includes(searchTerm.toLowerCase()))
-    return matchSearch
-  })
+  // Con il filtraggio e la paginazione eseguiti lato database Rust,
+  // usiamo direttamente la lista restituita dallo store
+  const filteredEntries = paginatedJournalEntries
 
   // Calculate sum of Dare/Avere for checking
   const getEntryTotal = (entry) => {
@@ -113,14 +117,10 @@ export default function Journal() {
           </select>
         </div>
 
-        <div className="flex gap-2 w-full md:w-auto">
-          <button
-            className="flex-1 md:flex-initial bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md px-6 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
-            onClick={handleFilter}
-          >
-            <span className="material-symbols-outlined text-[20px]">filter_alt</span>
-            Applica
-          </button>
+        <div className="flex gap-2 w-full md:w-auto items-center">
+          <div className="text-body-sm font-label-sm text-on-surface-variant/80 bg-surface-container-high px-3 py-2 rounded-lg whitespace-nowrap self-stretch flex items-center justify-center">
+            Trovate: <strong className="text-on-surface ml-1">{journalPagination.totalCount}</strong>
+          </div>
           <button
             className="flex-1 md:flex-initial bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-6 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
             onClick={handleReset}
@@ -294,6 +294,17 @@ export default function Journal() {
               })}
             </tbody>
           </table>
+        )}
+        {journalPagination.hasMore && (
+          <div className="py-md flex justify-center border-t border-outline-variant bg-surface-container-low">
+            <button
+              onClick={() => fetchJournalEntriesPaginated(false)}
+              className="px-6 py-2 rounded-md font-label-md text-label-md bg-secondary-container hover:bg-secondary-container/85 text-on-secondary-container transition-colors cursor-pointer flex items-center gap-2"
+            >
+              Mostra altre registrazioni
+              <span className="material-symbols-outlined text-[16px]">expand_more</span>
+            </button>
+          </div>
         )}
       </div>
     </div>
