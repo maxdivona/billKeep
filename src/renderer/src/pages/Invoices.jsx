@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import SearchableSelect from '../components/SearchableSelect'
 
 export default function Invoices() {
+  const navigate = useNavigate()
   const {
     invoices,
     customers,
@@ -203,8 +205,24 @@ export default function Invoices() {
           emptyMessage="Nessuna fattura emessa."
           renderRow={(inv) => (
             <tr key={inv.id} className="hover:bg-surface-container-high transition-colors">
-              <td className="py-sm px-sm font-medium">{inv.id}</td>
-              <td className="py-sm px-sm">{inv.customer_name}</td>
+              <td className="py-sm px-sm font-medium">
+                <button
+                  type="button"
+                  onClick={() => navigate('/clients', { state: { selectedCustomerId: inv.customer_id } })}
+                  className="text-primary hover:underline cursor-pointer font-semibold text-left focus:outline-none"
+                >
+                  #{inv.id}
+                </button>
+              </td>
+              <td className="py-sm px-sm">
+                <button
+                  type="button"
+                  onClick={() => navigate('/clients', { state: { selectedCustomerId: inv.customer_id } })}
+                  className="hover:underline cursor-pointer font-medium text-left focus:outline-none"
+                >
+                  {inv.customer_name}
+                </button>
+              </td>
               <td className="py-sm px-sm text-on-surface-variant">{formatDate(inv.issue_date)}</td>
               <td
                 className={`py-sm px-sm ${

@@ -1,4 +1,5 @@
 import { useEffect, useState, Fragment } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
@@ -14,6 +15,8 @@ export default function Customers() {
     addMultiPayment,
     allocateAcconto
   } = useStore()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedCustomer, setSelectedCustomer] = useState(null)
@@ -58,10 +61,6 @@ export default function Customers() {
   // Expand state for customer journal double entry
   const [expandedJournal, setExpandedJournal] = useState({})
 
-  useEffect(() => {
-    fetchCustomers()
-  }, [fetchCustomers])
-
   // If a customer is selected, load their specific details
   const loadCustomerDetail = async (customerId) => {
     setDetailLoading(true)
@@ -88,6 +87,25 @@ export default function Customers() {
       setDetailLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchCustomers()
+  }, [fetchCustomers])
+
+  useEffect(() => {
+    if (location.state?.selectedCustomerId && customers.length > 0) {
+      const cust = customers.find((c) => c.id === location.state.selectedCustomerId)
+      if (cust) {
+        // Usa setTimeout per evitare cascading render sincroni derivanti da setState nell'effetto
+        setTimeout(() => {
+          setSelectedCustomer(cust)
+          loadCustomerDetail(cust.id)
+        }, 0)
+        // Pulisce lo stato per evitare reinvocazioni su re-render
+        navigate(location.pathname, { replace: true, state: {} })
+      }
+    }
+  }, [location.state, customers, navigate, location.pathname])
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val)
