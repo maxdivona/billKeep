@@ -24,11 +24,12 @@ npm run dev
 
 ### Compilazione di Produzione (Release)
 
-Questo comando compila l'applicazione Rust con ottimizzazioni complete e genera il pacchetto di distribuzione nativo (es. `.deb`, `.appimage` su Linux):
+Questo comando compila l'applicazione Rust con ottimizzazioni complete e genera il pacchetto di distribuzione nativo (es. `.deb` su Linux). Al termine della compilazione, il pacchetto finale viene automaticamente copiato nella cartella `release/` nella radice del progetto per un facile accesso:
 
 ```bash
 npm run build
 ```
+
 
 ## Struttura del Progetto
 
