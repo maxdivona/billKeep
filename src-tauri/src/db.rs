@@ -47,6 +47,7 @@ pub struct JournalLine {
     pub id: String,
     pub entry_id: String,
     pub account_name: String,
+    #[serde(rename = "type")]
     pub type_: String, // "debit" | "credit"
     pub amount: f64,
 }
