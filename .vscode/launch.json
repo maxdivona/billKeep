@@ -6,11 +6,7 @@
       "request": "launch",
       "name": "Tauri Rust Debug",
       "cargo": {
-        "args": [
-          "build",
-          "--manifest-path=./src-tauri/Cargo.toml",
-          "--no-default-features"
-        ]
+        "args": ["build", "--manifest-path=./src-tauri/Cargo.toml", "--no-default-features"]
       }
     },
     {

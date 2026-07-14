@@ -99,7 +99,7 @@ export default function Payments() {
     try {
       const invoicesList = await window.api.getCustomerUnpaidInvoices(customerId)
       setUnpaidInvoices(invoicesList)
-      
+
       if (invoicesList.length === 0) {
         setAllocType('acconto')
       } else {
@@ -172,25 +172,27 @@ export default function Payments() {
     } else if (allocType === 'manual') {
       // Manual allocations
       let allocTotal = 0
-      
+
       for (const invId in manualAllocations) {
         const rawVal = manualAllocations[invId]
         if (rawVal !== '' && rawVal !== undefined && rawVal !== null) {
           const amt = parseFloat(rawVal)
           if (isNaN(amt) || amt < 0) {
-            setFormError("Gli importi di allocazione inseriti devono essere positivi.")
+            setFormError('Gli importi di allocazione inseriti devono essere positivi.')
             return
           }
           if (amt > 0) {
-            const inv = unpaidInvoices.find(i => i.id === invId)
+            const inv = unpaidInvoices.find((i) => i.id === invId)
             if (!inv) continue
-            
+
             const remaining = inv.remaining_amount ?? inv.amount
             if (amt > remaining + 0.001) {
-              setFormError(`L'importo inserito per la fattura #${invId} (€ ${amt.toFixed(2)}) supera il saldo residuo di € ${remaining.toFixed(2)}.`);
+              setFormError(
+                `L'importo inserito per la fattura #${invId} (€ ${amt.toFixed(2)}) supera il saldo residuo di € ${remaining.toFixed(2)}.`
+              )
               return
             }
-            
+
             allocations.push({ invoiceId: invId, amount: amt })
             allocTotal += amt
           }
@@ -198,7 +200,9 @@ export default function Payments() {
       }
 
       if (allocTotal === 0) {
-        setFormError("Hai selezionato l'allocazione manuale ma non hai inserito alcun importo. Se desideri registrare l'intero importo come acconto, seleziona 'Solo Acconto'.")
+        setFormError(
+          "Hai selezionato l'allocazione manuale ma non hai inserito alcun importo. Se desideri registrare l'intero importo come acconto, seleziona 'Solo Acconto'."
+        )
         return
       }
 
@@ -301,7 +305,7 @@ export default function Payments() {
           <div>
             <h3 className="font-headline-md text-headline-md font-semibold">Registro Pagamenti</h3>
           </div>
-          
+
           <div className="flex items-center gap-4 w-full sm:w-auto">
             <div className="relative w-full sm:w-64">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
@@ -533,14 +537,18 @@ export default function Payments() {
             {selectedCustomerId && (
               <div className="border-t border-outline-variant pt-3 space-y-sm">
                 {detailLoading ? (
-                  <p className="text-xs text-on-surface-variant/80 italic">Caricamento fatture scoperte...</p>
+                  <p className="text-xs text-on-surface-variant/80 italic">
+                    Caricamento fatture scoperte...
+                  </p>
                 ) : unpaidInvoices.length === 0 ? (
                   <div className="bg-primary/10 border border-primary/20 rounded p-3 text-xs flex items-start gap-2">
                     <span className="material-symbols-outlined text-[18px] text-primary">info</span>
                     <div>
                       <p className="font-semibold text-on-surface">Nessuna fattura scoperta</p>
                       <p className="text-on-surface-variant mt-0.5">
-                        {"Tutte le fatture di questo cliente risultano pagate. L'intero importo verrà registrato come acconto."}
+                        {
+                          "Tutte le fatture di questo cliente risultano pagate. L'intero importo verrà registrato come acconto."
+                        }
                       </p>
                     </div>
                   </div>
@@ -593,9 +601,14 @@ export default function Payments() {
                             const val = parseFloat(manualAllocations[inv.id])
                             const inputError = !isNaN(val) && (val > remaining || val < 0)
                             return (
-                              <div key={inv.id} className="flex flex-col gap-1 py-1 border-b border-outline-variant/30 last:border-b-0">
+                              <div
+                                key={inv.id}
+                                className="flex flex-col gap-1 py-1 border-b border-outline-variant/30 last:border-b-0"
+                              >
                                 <div className="flex justify-between items-center text-xs">
-                                  <span className={`font-medium ${inputError ? 'text-error font-bold' : 'text-on-surface'}`}>
+                                  <span
+                                    className={`font-medium ${inputError ? 'text-error font-bold' : 'text-on-surface'}`}
+                                  >
                                     #{inv.id} (Rimanente: {formatCurrency(remaining)})
                                   </span>
                                   <input
@@ -618,7 +631,9 @@ export default function Payments() {
                                 </div>
                                 {inputError && (
                                   <span className="text-[10px] text-error text-right font-medium">
-                                    {val < 0 ? "L'importo deve essere positivo" : `Supera il saldo di ${formatCurrency(remaining)}`}
+                                    {val < 0
+                                      ? "L'importo deve essere positivo"
+                                      : `Supera il saldo di ${formatCurrency(remaining)}`}
                                   </span>
                                 )}
                               </div>
@@ -628,17 +643,19 @@ export default function Payments() {
                         {(() => {
                           const restante = getManualRemaining()
                           return (
-                            <div className={`p-2 rounded text-xs font-semibold flex justify-between items-center ${
-                              restante > 0.005
-                                ? 'bg-primary-container/20 text-primary border border-primary/20'
-                                : Math.abs(restante) <= 0.005
-                                ? 'bg-success-container/20 text-success border border-success/20'
-                                : 'bg-error-container/20 text-error border border-error/20'
-                            }`}>
+                            <div
+                              className={`p-2 rounded text-xs font-semibold flex justify-between items-center ${
+                                restante > 0.005
+                                  ? 'bg-primary-container/20 text-primary border border-primary/20'
+                                  : Math.abs(restante) <= 0.005
+                                    ? 'bg-success-container/20 text-success border border-success/20'
+                                    : 'bg-error-container/20 text-error border border-error/20'
+                              }`}
+                            >
                               <span>Restante da attribuire:</span>
                               <span className="tabular-nums font-bold">
                                 {formatCurrency(restante)}
-                                {restante > 0.005 && " (in acconto)"}
+                                {restante > 0.005 && ' (in acconto)'}
                               </span>
                             </div>
                           )
@@ -649,7 +666,8 @@ export default function Payments() {
                     {allocType === 'auto' && (
                       <div className="space-y-2 mt-2">
                         <p className="text-[11px] text-on-surface-variant/80 italic">
-                          I fondi verranno usati per pagare le fatture scoperte partendo dalla più vecchia.
+                          I fondi verranno usati per pagare le fatture scoperte partendo dalla più
+                          vecchia.
                         </p>
                         {(() => {
                           const total = parseFloat(amount) || 0

@@ -241,9 +241,7 @@ export default function Invoices() {
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <label className="text-body-md text-on-surface-variant whitespace-nowrap">
-              Stato:
-            </label>
+            <label className="text-body-md text-on-surface-variant whitespace-nowrap">Stato:</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -258,7 +256,8 @@ export default function Invoices() {
         </div>
 
         <div className="text-body-sm font-label-sm text-on-surface-variant/80 bg-surface-container-high px-3 py-1.5 rounded-md self-end md:self-auto">
-          Trovate: <strong className="text-on-surface">{invoicesPagination.totalCount}</strong> fatture
+          Trovate: <strong className="text-on-surface">{invoicesPagination.totalCount}</strong>{' '}
+          fatture
         </div>
       </div>
 
@@ -282,7 +281,9 @@ export default function Invoices() {
               <td className="py-sm px-sm font-medium">
                 <button
                   type="button"
-                  onClick={() => navigate('/clients', { state: { selectedCustomerId: inv.customer_id } })}
+                  onClick={() =>
+                    navigate('/clients', { state: { selectedCustomerId: inv.customer_id } })
+                  }
                   className="text-primary hover:underline cursor-pointer font-semibold text-left focus:outline-none"
                 >
                   #{inv.id}
@@ -291,7 +292,9 @@ export default function Invoices() {
               <td className="py-sm px-sm">
                 <button
                   type="button"
-                  onClick={() => navigate('/clients', { state: { selectedCustomerId: inv.customer_id } })}
+                  onClick={() =>
+                    navigate('/clients', { state: { selectedCustomerId: inv.customer_id } })
+                  }
                   className="hover:underline cursor-pointer font-medium text-left focus:outline-none"
                 >
                   {inv.customer_name}

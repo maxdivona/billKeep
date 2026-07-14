@@ -120,7 +120,7 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
     // 1. Registra le allocazioni sulle fatture specificate
     for (idx, alloc) in payment_data.allocations.iter().enumerate() {
         let pay_id = format!("PAY-{}-{}", chrono::Utc::now().timestamp_millis(), idx);
-        
+
         tx.execute(
             "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, ?, ?, ?, ?, ?)",
             params![pay_id, alloc.invoiceId, payment_data.customerId, alloc.amount, payment_data.method, payment_date],
@@ -274,7 +274,6 @@ Ogni evento amministrativo dell'applicazione scrive automaticamente sul giornale
    - **Verifica dell'Integrità:** Validare preventivamente la firma del file (i primi 16 byte devono corrispondere a `SQLite format 3\0`) prima di procedere alla sovrascrittura.
    - **Versionabilità e Allineamento Schema:** Subito dopo il ripristino del file fisico, eseguire immediatamente la procedura di inizializzazione dello schema (`init_database()`). Questo assicura che eventuali tabelle mancanti vengano create e che le migrazioni pendenti (es. vincoli di colonna o nuove tabelle) siano applicate in modo che i dati siano sempre compatibili con l'ultima versione dell'applicazione.
 9. **Automazione del Processo di Build (Copia Post-Build):** Il comando `npm run build` esegue in coda uno script di copia (`scripts/post-build.js`) che estrae i pacchetti di installazione nativi compilati (es. formato `.deb` su Linux) e li posiziona direttamente all'interno della cartella `release/` alla radice del progetto. Questo assicura l'accessibilità immediata delle release stabili senza dover navigare nelle sottocartelle del compilatore Rust.
-
 
 ---
 

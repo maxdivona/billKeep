@@ -602,13 +602,12 @@ export default function Settings() {
                       Tema dell&apos;Applicazione
                     </h4>
                     <p className="text-body-sm text-on-surface-variant">
-                      Seleziona la modalità di visualizzazione tra tema chiaro e tema scuro (Eye
-                      Care).
+                      Seleziona la modalità di visualizzazione dell&apos;applicazione.
                     </p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-sm">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-sm">
                   {/* Light Theme Button */}
                   <button
                     onClick={() => setTheme('light')}
@@ -641,6 +640,24 @@ export default function Settings() {
                       <div className="font-label-md text-label-md">Tema Oscuro</div>
                       <div className="text-[12px] font-normal text-on-surface-variant/80">
                         Contrasto ottimizzato per affaticare meno la vista
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Minimal Theme Button */}
+                  <button
+                    onClick={() => setTheme('minimal')}
+                    className={`flex items-center gap-md p-md rounded-xl border text-left cursor-pointer transition-all duration-200 ${
+                      theme === 'minimal'
+                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-sm'
+                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[24px]">contrast</span>
+                    <div>
+                      <div className="font-label-md text-label-md">Tema Minimal</div>
+                      <div className="text-[12px] font-normal text-on-surface-variant/80">
+                        Bianco e nero essenziale per massima leggibilità
                       </div>
                     </div>
                   </button>

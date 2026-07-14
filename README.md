@@ -30,7 +30,6 @@ Questo comando compila l'applicazione Rust con ottimizzazioni complete e genera 
 npm run build
 ```
 
-
 ## Struttura del Progetto
 
 - `src/renderer/`: Frontend in React + Vite + Tailwind CSS.

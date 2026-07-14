@@ -11,7 +11,7 @@ export default function Journal() {
     loading,
     fetchCustomers
   } = useStore()
-  
+
   const [selectedCustomerId, setSelectedCustomerId] = useState(journalPagination.customerId)
   const [searchTerm, setSearchTerm] = useState(journalPagination.search)
   const [expandedEntries, setExpandedEntries] = useState({})
@@ -119,7 +119,8 @@ export default function Journal() {
 
         <div className="flex gap-2 w-full md:w-auto items-center">
           <div className="text-body-sm font-label-sm text-on-surface-variant/80 bg-surface-container-high px-3 py-2 rounded-lg whitespace-nowrap self-stretch flex items-center justify-center">
-            Trovate: <strong className="text-on-surface ml-1">{journalPagination.totalCount}</strong>
+            Trovate:{' '}
+            <strong className="text-on-surface ml-1">{journalPagination.totalCount}</strong>
           </div>
           <button
             className="flex-1 md:flex-initial bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-6 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"

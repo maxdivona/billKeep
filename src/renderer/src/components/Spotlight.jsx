@@ -38,8 +38,8 @@ const getDefaultActions = (theme) => [
   {
     category: 'action',
     id: 'toggle_theme',
-    title: '🌓 Cambia Tema (Chiaro/Scuro)',
-    subtitle: `Attiva il tema ${theme === 'dark' ? 'chiaro' : 'scuro'}`,
+    title: '🌓 Cambia Tema',
+    subtitle: `Attiva il tema ${theme === 'light' ? 'scuro' : theme === 'dark' ? 'minimal' : 'chiaro'}`,
     route: '',
     actionKey: 'action:toggle_theme'
   }
@@ -103,14 +103,14 @@ export default function Spotlight() {
     const delayDebounce = setTimeout(async () => {
       try {
         const dbResults = await window.api.globalSearch(searchQuery)
-        
+
         // Filtra le azioni rapide predefinite in base al testo inserito
         const matchedActions = getDefaultActions(theme).filter(
           (a) =>
             a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             a.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
         )
-        
+
         setTimeout(() => {
           setResults([...matchedActions, ...dbResults])
           setSelectedIndex(0)
@@ -154,7 +154,8 @@ export default function Spotlight() {
 
     if (item.category === 'action') {
       if (item.actionKey === 'action:toggle_theme') {
-        setTheme(theme === 'dark' ? 'light' : 'dark')
+        const nextTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'minimal' : 'light'
+        setTheme(nextTheme)
       } else if (item.actionKey === 'action:backup_db') {
         window.api.backupDatabase()
       } else if (item.actionKey === 'action:new_customer') {
@@ -169,7 +170,9 @@ export default function Spotlight() {
         const parts = item.actionKey.split(':')
         const invoiceId = parts[1]
         const customerId = parts[2]
-        navigate('/clients', { state: { selectedCustomerId: customerId, openEditInvoiceId: invoiceId } })
+        navigate('/clients', {
+          state: { selectedCustomerId: customerId, openEditInvoiceId: invoiceId }
+        })
       } else {
         navigate(item.route)
       }
@@ -183,17 +186,19 @@ export default function Spotlight() {
   if (!isOpen) return null
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-background/50 backdrop-blur-[4px] z-[9999] flex justify-center items-start pt-[12vh] px-md transition-opacity duration-200"
       onClick={() => setIsOpen(false)}
     >
-      <div 
+      <div
         className="bg-surface-container border border-outline-variant rounded-2xl w-full max-w-[620px] shadow-2xl overflow-hidden flex flex-col scale-100 animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Barra di Ricerca */}
         <div className="flex items-center px-lg py-md border-b border-outline-variant gap-md">
-          <span className="material-symbols-outlined text-on-surface-variant text-[24px]">search</span>
+          <span className="material-symbols-outlined text-on-surface-variant text-[24px]">
+            search
+          </span>
           <input
             ref={inputRef}
             type="text"
@@ -224,23 +229,27 @@ export default function Spotlight() {
                   onClick={() => handleSelect(item)}
                   onMouseEnter={() => setSelectedIndex(index)}
                   className={`flex items-center justify-between px-md py-sm rounded-lg cursor-pointer transition-all ${
-                    isActive 
-                      ? 'bg-primary text-on-primary shadow-sm font-semibold' 
+                    isActive
+                      ? 'bg-primary text-on-primary shadow-sm font-semibold'
                       : 'hover:bg-surface-container-high text-on-surface'
                   }`}
                 >
                   <div className="flex flex-col">
                     <span className="text-body-md font-medium">{item.title}</span>
-                    <span className={`text-xs font-normal ${isActive ? 'text-on-primary/80' : 'text-on-surface-variant/80'}`}>
+                    <span
+                      className={`text-xs font-normal ${isActive ? 'text-on-primary/80' : 'text-on-surface-variant/80'}`}
+                    >
                       {item.subtitle}
                     </span>
                   </div>
-                  
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                    isActive 
-                      ? 'bg-on-primary/20 text-on-primary' 
-                      : 'bg-surface-container-highest text-on-surface-variant'
-                  }`}>
+
+                  <span
+                    className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      isActive
+                        ? 'bg-on-primary/20 text-on-primary'
+                        : 'bg-surface-container-highest text-on-surface-variant'
+                    }`}
+                  >
                     {item.category === 'customer' && 'Cliente'}
                     {item.category === 'invoice' && 'Fattura'}
                     {item.category === 'payment' && 'Pagamento'}
