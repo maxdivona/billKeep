@@ -152,45 +152,45 @@ body {
 
 /* Tema Minimal (Bianco e Nero) */
 .minimal {
-  --color-primary: #000000;
+  --color-primary: #09090b;
   --color-on-primary: #ffffff;
-  --color-primary-container: #1a1a1a;
+  --color-primary-container: #27272a;
   --color-on-primary-container: #ffffff;
 
-  --color-secondary: #262626;
+  --color-secondary: #27272a;
   --color-on-secondary: #ffffff;
-  --color-secondary-container: #e5e5e5;
-  --color-on-secondary-container: #000000;
+  --color-secondary-container: #f4f4f5;
+  --color-on-secondary-container: #09090b;
 
-  --color-tertiary: #404040;
+  --color-tertiary: #52525b;
   --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #f5f5f5;
-  --color-on-tertiary-container: #000000;
+  --color-tertiary-container: #fafafa;
+  --color-on-tertiary-container: #09090b;
 
   --color-error: #e11d48;
   --color-on-error: #ffffff;
   --color-error-container: #ffe4e6;
   --color-on-error-container: #9f1239;
 
-  --color-background: #ffffff;
-  --color-on-background: #000000;
+  --color-background: #f4f4f5;
+  --color-on-background: #09090b;
 
   --color-surface: #ffffff;
-  --color-on-surface: #000000;
-  --color-on-surface-variant: #525252;
+  --color-on-surface: #09090b;
+  --color-on-surface-variant: #52525b;
 
-  --color-outline: #000000;
-  --color-outline-variant: #e5e5e5;
+  --color-outline: #09090b;
+  --color-outline-variant: #e4e4e7;
 
   --color-surface-container: #fafafa;
-  --color-surface-container-low: #f5f5f5;
-  --color-surface-container-high: #e5e5e5;
-  --color-surface-container-highest: #d4d4d4;
+  --color-surface-container-low: #f4f4f5;
+  --color-surface-container-high: #e4e4e7;
+  --color-surface-container-highest: #d4d4d8;
   --color-surface-container-lowest: #ffffff;
 
   --color-surface-bright: #ffffff;
-  --color-surface-dim: #f5f5f5;
-  --color-inverse-surface: #000000;
+  --color-surface-dim: #e4e4e7;
+  --color-inverse-surface: #09090b;
   --color-inverse-on-surface: #ffffff;
   --color-inverse-primary: #ffffff;
 }
