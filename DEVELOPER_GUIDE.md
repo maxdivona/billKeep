@@ -96,6 +96,10 @@ CREATE INDEX IF NOT EXISTS idx_journal_entries_customer ON journal_entries(custo
 CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
 ```
 
+> [!NOTE]
+> **Serializzazione dei Dati (Rust -> JSON)**:
+> Nella struct `JournalLine` in Rust, il campo `type` della tabella SQL è mappato come `type_` nel backend Rust per evitare conflitti con la parola chiave riservata del linguaggio. Durante la serializzazione JSON viene però rinominato in `"type"` mediante l'attributo `#[serde(rename = "type")]` per allinearsi perfettamente con le condizioni e le logiche di visualizzazione del frontend React (es. `line.type === 'debit'` / `'credit'`).
+
 ---
 
 ## 🛡️ 4. Gestione Errori & Transazioni Atomiche
