@@ -175,20 +175,20 @@ body {
   --color-background: #f4f4f5;
   --color-on-background: #09090b;
 
-  --color-surface: #ffffff;
+  --color-surface: #fafafa;
   --color-on-surface: #09090b;
   --color-on-surface-variant: #52525b;
 
   --color-outline: #09090b;
   --color-outline-variant: #e4e4e7;
 
-  --color-surface-container: #fafafa;
-  --color-surface-container-low: #f4f4f5;
+  --color-surface-container: #f4f4f5;
+  --color-surface-container-low: #f0f0f3;
   --color-surface-container-high: #e4e4e7;
   --color-surface-container-highest: #d4d4d8;
-  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-lowest: #fafafa;
 
-  --color-surface-bright: #ffffff;
+  --color-surface-bright: #fafafa;
   --color-surface-dim: #e4e4e7;
   --color-inverse-surface: #09090b;
   --color-inverse-on-surface: #ffffff;
