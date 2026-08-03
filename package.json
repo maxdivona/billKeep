@@ -1,6 +1,6 @@
 {
   "name": "billkeep",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Applicazione desktop locale per la gestione di fatture, pagamenti e contabilità in partita doppia (Prima Nota).",
   "main": "index.html",
   "author": "Massimo Di Vona",
@@ -9,6 +9,7 @@
     "format": "prettier --write .",
     "lint": "eslint --cache .",
     "dev": "tauri dev",
+    "tauri": "tauri",
     "build": "tauri build && node scripts/post-build.js",
     "vite-dev": "vite",
     "vite-build": "vite build"
