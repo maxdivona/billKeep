@@ -25,7 +25,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb"],
+    "targets": "all",
     "publisher": "Massimo Di Vona",
     "copyright": "© 2026 Massimo Di Vona. Tutti i diritti riservati.",
     "licenseFile": "../LICENSE",
