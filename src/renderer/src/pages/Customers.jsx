@@ -106,7 +106,7 @@ export default function Customers() {
       setInvoiceEditCustomerId(selectedCustomer?.id || '')
       setInvoiceEditIssueDate(inv.issue_date ? inv.issue_date.split(' ')[0] : '')
       setInvoiceEditDueDate(inv.due_date ? inv.due_date.split(' ')[0] : '')
-      setInvoiceEditAmount(inv.amount.toString())
+      setInvoiceEditAmount((Math.round(inv.amount * 100) / 100).toString())
       setInvoiceEditError('')
       setInvoiceEditModalOpen(true)
     },
@@ -315,9 +315,9 @@ export default function Customers() {
       for (const inv of sortedInvoices) {
         if (remaining <= 0) break
         const needed = inv.remaining_amount ?? inv.amount
-        const toPay = Math.min(remaining, needed)
+        const toPay = Math.round(Math.min(remaining, needed) * 100) / 100
         allocations.push({ invoiceId: inv.id, amount: toPay })
-        remaining -= toPay
+        remaining = Math.round((remaining - toPay) * 100) / 100
       }
 
       if (remaining > 0) {
@@ -367,7 +367,7 @@ export default function Customers() {
         return
       }
 
-      accontoAmount = total - allocTotal
+      accontoAmount = Math.round((total - allocTotal) * 100) / 100
       // Fix potential float precision issues (e.g. 0.0000000001)
       if (accontoAmount < 0.001) {
         accontoAmount = 0
@@ -463,7 +463,7 @@ export default function Customers() {
 
   // Quick Pay Invoice helper (Salda interamente)
   const handleQuickPay = (invoice) => {
-    const rem = invoice.remaining_amount ?? invoice.amount
+    const rem = Math.round((invoice.remaining_amount ?? invoice.amount) * 100) / 100
     setReceiptAmount(rem.toString())
     setAllocType('manual')
 

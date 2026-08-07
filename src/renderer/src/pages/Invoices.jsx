@@ -136,7 +136,7 @@ export default function Invoices() {
     setEditCustomerId(inv.customer_id)
     setEditIssueDate(inv.issue_date)
     setEditDueDate(inv.due_date)
-    setEditAmount(inv.amount.toString())
+    setEditAmount((Math.round(inv.amount * 100) / 100).toString())
     setEditFormError('')
     setEditModalOpen(true)
   }

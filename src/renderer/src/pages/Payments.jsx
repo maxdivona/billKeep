@@ -161,9 +161,9 @@ export default function Payments() {
       for (const inv of sortedInvoices) {
         if (remaining <= 0) break
         const needed = inv.remaining_amount ?? inv.amount
-        const toPay = Math.min(remaining, needed)
+        const toPay = Math.round(Math.min(remaining, needed) * 100) / 100
         allocations.push({ invoiceId: inv.id, amount: toPay })
-        remaining -= toPay
+        remaining = Math.round((remaining - toPay) * 100) / 100
       }
 
       if (remaining > 0) {
@@ -213,7 +213,7 @@ export default function Payments() {
         return
       }
 
-      accontoAmount = total - allocTotal
+      accontoAmount = Math.round((total - allocTotal) * 100) / 100
       if (accontoAmount < 0.001) {
         accontoAmount = 0
       }
@@ -246,7 +246,7 @@ export default function Payments() {
 
   const handleEdit = (pay) => {
     setSelectedPayment(pay)
-    setEditAmount(pay.amount.toString())
+    setEditAmount((Math.round(pay.amount * 100) / 100).toString())
     setEditPaymentDate(pay.payment_date ? pay.payment_date.split(' ')[0] : '')
     setEditMethod(pay.method)
     setEditFormError('')

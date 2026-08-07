@@ -5,6 +5,12 @@ use std::sync::Mutex;
 use std::fs;
 use crate::logs::write_log;
 
+// Arrotonda un importo monetario a 2 decimali (centesimi), evitando i residui
+// di precisione binaria tipici dei calcoli in virgola mobile (es. 0.1 + 0.2).
+fn round_cents(value: f64) -> f64 {
+    (value * 100.0).round() / 100.0
+}
+
 // --- Structs ---
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -287,10 +293,10 @@ pub fn get_customers(state: tauri::State<AppState>) -> Result<Vec<Customer>, Str
                 id: row.get(0)?,
                 name: row.get(1)?,
                 email: row.get(2)?,
-                total_invoiced: row.get(3)?,
-                total_paid: row.get(4)?,
-                total_acconto: row.get(5)?,
-                balance: row.get(6)?,
+                total_invoiced: round_cents(row.get(3)?),
+                total_paid: round_cents(row.get(4)?),
+                total_acconto: round_cents(row.get(5)?),
+                balance: round_cents(row.get(6)?),
             })
         })
         .map_err(|e| e.to_string())?;
@@ -436,13 +442,14 @@ pub fn add_invoice(state: tauri::State<AppState>, invoice: Invoice) -> Result<Ac
     let mut conn = state.db_conn.lock().unwrap();
     
     let tx = conn.transaction().map_err(|e| e.to_string())?;
-    
+
     let status = if invoice.status.is_empty() { "unpaid" } else { &invoice.status };
+    let amount = round_cents(invoice.amount);
 
     // 1. Inserisci fattura
     tx.execute(
         "INSERT INTO invoices (id, customer_id, issue_date, due_date, amount, status) VALUES (?, ?, ?, ?, ?, ?)",
-        params![invoice.id, invoice.customer_id, invoice.issue_date, invoice.due_date, invoice.amount, status],
+        params![invoice.id, invoice.customer_id, invoice.issue_date, invoice.due_date, amount, status],
     ).map_err(|e| e.to_string())?;
 
     // 2. Scrittura Prima Nota
@@ -456,18 +463,18 @@ pub fn add_invoice(state: tauri::State<AppState>, invoice: Invoice) -> Result<Ac
     // Dare Crediti v/Clienti
     tx.execute(
         "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-        params![format!("line-{}-1", invoice.id), entry_id, "Crediti v/Clienti", "debit", invoice.amount],
+        params![format!("line-{}-1", invoice.id), entry_id, "Crediti v/Clienti", "debit", amount],
     ).map_err(|e| e.to_string())?;
 
     // Avere Ricavi per Vendite
     tx.execute(
         "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-        params![format!("line-{}-2", invoice.id), entry_id, "Ricavi per Vendite", "credit", invoice.amount],
+        params![format!("line-{}-2", invoice.id), entry_id, "Ricavi per Vendite", "credit", amount],
     ).map_err(|e| e.to_string())?;
 
     tx.commit().map_err(|e| e.to_string())?;
 
-    write_log(&state.logs_path, "info", "system", &format!("Emessa fattura {} per importo {}", invoice.id, invoice.amount));
+    write_log(&state.logs_path, "info", "system", &format!("Emessa fattura {} per importo {}", invoice.id, amount));
 
     Ok(ActionResult {
         success: true,
@@ -480,20 +487,22 @@ pub fn update_invoice(state: tauri::State<AppState>, id: String, data: Invoice) 
     let mut conn = state.db_conn.lock().unwrap();
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 
+    let amount = round_cents(data.amount);
+
     // 1. Aggiorna fattura
     tx.execute(
         "UPDATE invoices SET customer_id = ?, issue_date = ?, due_date = ?, amount = ? WHERE id = ?",
-        params![data.customer_id, data.issue_date, data.due_date, data.amount, id],
+        params![data.customer_id, data.issue_date, data.due_date, amount, id],
     ).map_err(|e| e.to_string())?;
 
     // 2. Ricalcola stato in base a pagamenti ricevuti
-    let payments_sum: f64 = tx.query_row(
+    let payments_sum: f64 = round_cents(tx.query_row(
         "SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?",
         [&id],
         |row| row.get(0),
-    ).map_err(|e| e.to_string())?;
+    ).map_err(|e| e.to_string())?);
 
-    let new_status = if payments_sum >= data.amount {
+    let new_status = if payments_sum >= amount {
         "paid"
     } else if payments_sum > 0.0 {
         "partial"
@@ -516,12 +525,12 @@ pub fn update_invoice(state: tauri::State<AppState>, id: String, data: Invoice) 
 
     tx.execute(
         "UPDATE journal_lines SET amount = ? WHERE id = ?",
-        params![data.amount, format!("line-{}-1", id)],
+        params![amount, format!("line-{}-1", id)],
     ).map_err(|e| e.to_string())?;
 
     tx.execute(
         "UPDATE journal_lines SET amount = ? WHERE id = ?",
-        params![data.amount, format!("line-{}-2", id)],
+        params![amount, format!("line-{}-2", id)],
     ).map_err(|e| e.to_string())?;
 
     // 4. Aggiorna anagrafiche su pagamenti e prima nota correlata
@@ -540,7 +549,7 @@ pub fn update_invoice(state: tauri::State<AppState>, id: String, data: Invoice) 
 
     tx.commit().map_err(|e| e.to_string())?;
 
-    write_log(&state.logs_path, "info", "system", &format!("Modificata fattura {}: cliente={}, importo={}", id, data.customer_id, data.amount));
+    write_log(&state.logs_path, "info", "system", &format!("Modificata fattura {}: cliente={}, importo={}", id, data.customer_id, amount));
 
     Ok(ActionResult {
         success: true,
@@ -635,10 +644,12 @@ pub fn add_payment(state: tauri::State<AppState>, payment: Payment) -> Result<Ac
         &payment.payment_date
     };
 
+    let amount = round_cents(payment.amount);
+
     // Inserisci pagamento
     tx.execute(
         "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, ?, ?, ?, ?, ?)",
-        params![pay_id, payment.invoice_id, payment.customer_id, payment.amount, payment.method, payment_date],
+        params![pay_id, payment.invoice_id, payment.customer_id, amount, payment.method, payment_date],
     ).map_err(|e| e.to_string())?;
 
     let entry_id = format!("entry-{}", pay_id);
@@ -651,7 +662,7 @@ pub fn add_payment(state: tauri::State<AppState>, payment: Payment) -> Result<Ac
             |row| Ok((row.get(0)?, row.get(1)?)),
         ).map_err(|e| e.to_string())?;
 
-        let new_status = if total_paid >= invoice_amount {
+        let new_status = if round_cents(total_paid) >= round_cents(invoice_amount) {
             "paid"
         } else {
             "partial"
@@ -668,12 +679,12 @@ pub fn add_payment(state: tauri::State<AppState>, payment: Payment) -> Result<Ac
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", payment.amount],
+            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", amount],
         ).map_err(|e| e.to_string())?;
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-2", pay_id), entry_id, "Crediti v/Clienti", "credit", payment.amount],
+            params![format!("line-{}-2", pay_id), entry_id, "Crediti v/Clienti", "credit", amount],
         ).map_err(|e| e.to_string())?;
     } else {
         // Incasso Acconto (Dare Cassa/Banca, Avere Acconti da Clienti)
@@ -684,18 +695,18 @@ pub fn add_payment(state: tauri::State<AppState>, payment: Payment) -> Result<Ac
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", payment.amount],
+            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", amount],
         ).map_err(|e| e.to_string())?;
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-2", pay_id), entry_id, "Acconti da Clienti", "credit", payment.amount],
+            params![format!("line-{}-2", pay_id), entry_id, "Acconti da Clienti", "credit", amount],
         ).map_err(|e| e.to_string())?;
     }
 
     tx.commit().map_err(|e| e.to_string())?;
 
-    write_log(&state.logs_path, "info", "system", &format!("Registrato pagamento {} di {}", pay_id, payment.amount));
+    write_log(&state.logs_path, "info", "system", &format!("Registrato pagamento {} di {}", pay_id, amount));
 
     Ok(ActionResult {
         success: true,
@@ -714,10 +725,12 @@ pub fn update_payment(state: tauri::State<AppState>, id: String, data: Payment) 
         |row| Ok((row.get(0)?, row.get(1)?)),
     ).map_err(|e| e.to_string())?;
 
+    let amount = round_cents(data.amount);
+
     // 1. Aggiorna dati in payments
     tx.execute(
         "UPDATE payments SET amount = ?, payment_date = ?, method = ? WHERE id = ?",
-        params![data.amount, data.payment_date, data.method, id],
+        params![amount, data.payment_date, data.method, id],
     ).map_err(|e| e.to_string())?;
 
     // 2. Aggiorna prima nota
@@ -727,7 +740,7 @@ pub fn update_payment(state: tauri::State<AppState>, id: String, data: Payment) 
     } else {
         "Incasso acconto cliente".to_string()
     };
-    
+
     tx.execute(
         "UPDATE journal_entries SET entry_date = ?, description = ? WHERE id = ?",
         params![data.payment_date, desc, entry_id],
@@ -735,27 +748,27 @@ pub fn update_payment(state: tauri::State<AppState>, id: String, data: Payment) 
 
     tx.execute(
         "UPDATE journal_lines SET amount = ? WHERE id = ?",
-        params![data.amount, format!("line-{}-1", id)],
+        params![amount, format!("line-{}-1", id)],
     ).map_err(|e| e.to_string())?;
 
     tx.execute(
         "UPDATE journal_lines SET amount = ? WHERE id = ?",
-        params![data.amount, format!("line-{}-2", id)],
+        params![amount, format!("line-{}-2", id)],
     ).map_err(|e| e.to_string())?;
 
     // 3. Ricalcola stato fattura
     if let Some(ref inv_id) = invoice_id {
-        let payments_sum: f64 = tx.query_row(
+        let payments_sum: f64 = round_cents(tx.query_row(
             "SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?",
             [inv_id],
             |row| row.get(0),
-        ).map_err(|e| e.to_string())?;
+        ).map_err(|e| e.to_string())?);
 
-        let inv_amount: f64 = tx.query_row(
+        let inv_amount: f64 = round_cents(tx.query_row(
             "SELECT amount FROM invoices WHERE id = ?",
             [inv_id],
             |row| row.get(0),
-        ).map_err(|e| e.to_string())?;
+        ).map_err(|e| e.to_string())?);
 
         let new_status = if payments_sum >= inv_amount {
             "paid"
@@ -770,7 +783,7 @@ pub fn update_payment(state: tauri::State<AppState>, id: String, data: Payment) 
 
     tx.commit().map_err(|e| e.to_string())?;
 
-    write_log(&state.logs_path, "info", "system", &format!("Modificato pagamento {}: importo={}, metodo={}", id, data.amount, data.method));
+    write_log(&state.logs_path, "info", "system", &format!("Modificato pagamento {}: importo={}, metodo={}", id, amount, data.method));
 
     Ok(ActionResult {
         success: true,
@@ -802,17 +815,17 @@ pub fn delete_payment(state: tauri::State<AppState>, id: String) -> Result<Actio
 
     // 3. Ricalcola stato fattura
     if let Some(ref inv_id) = invoice_id {
-        let payments_sum: f64 = tx.query_row(
+        let payments_sum: f64 = round_cents(tx.query_row(
             "SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?",
             [inv_id],
             |row| row.get(0),
-        ).map_err(|e| e.to_string())?;
+        ).map_err(|e| e.to_string())?);
 
-        let inv_amount: f64 = tx.query_row(
+        let inv_amount: f64 = round_cents(tx.query_row(
             "SELECT amount FROM invoices WHERE id = ?",
             [inv_id],
             |row| row.get(0),
-        ).map_err(|e| e.to_string())?;
+        ).map_err(|e| e.to_string())?);
 
         let new_status = if payments_sum >= inv_amount {
             "paid"
@@ -870,8 +883,8 @@ pub fn get_customer_unpaid_invoices(state: tauri::State<AppState>, customer_id: 
             amount: row.get(3)?, // original amount
             status: row.get(4)?,
             customer_name: None,
-            total_paid: Some(row.get(5)?),
-            remaining_amount: Some(row.get(6)?),
+            total_paid: Some(round_cents(row.get(5)?)),
+            remaining_amount: Some(round_cents(row.get(6)?)),
         })
     }).map_err(|e| e.to_string())?;
 
@@ -925,10 +938,11 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
     // 1. Registra le allocazioni sulle fatture specificate
     for (idx, alloc) in payment_data.allocations.iter().enumerate() {
         let pay_id = format!("PAY-{}-{}", chrono::Utc::now().timestamp_millis(), idx);
-        
+        let alloc_amount = round_cents(alloc.amount);
+
         tx.execute(
             "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, ?, ?, ?, ?, ?)",
-            params![pay_id, alloc.invoiceId, payment_data.customerId, alloc.amount, payment_data.method, payment_date],
+            params![pay_id, alloc.invoiceId, payment_data.customerId, alloc_amount, payment_data.method, payment_date],
         ).map_err(|e| e.to_string())?;
 
         // Ricalcola stato fattura
@@ -938,7 +952,7 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
             |row| Ok((row.get(0)?, row.get(1)?)),
         ).map_err(|e| e.to_string())?;
 
-        let new_status = if total_paid >= inv_amount {
+        let new_status = if round_cents(total_paid) >= round_cents(inv_amount) {
             "paid"
         } else {
             "partial"
@@ -955,21 +969,22 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", alloc.amount],
+            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", alloc_amount],
         ).map_err(|e| e.to_string())?;
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-2", pay_id), entry_id, "Crediti v/Clienti", "credit", alloc.amount],
+            params![format!("line-{}-2", pay_id), entry_id, "Crediti v/Clienti", "credit", alloc_amount],
         ).map_err(|e| e.to_string())?;
     }
 
     // 2. Registra eventuale acconto residuo
-    if payment_data.accontoAmount > 0.0 {
+    let acconto_amount = round_cents(payment_data.accontoAmount);
+    if acconto_amount > 0.0 {
         let pay_id = format!("PAY-ACC-{}-99", chrono::Utc::now().timestamp_millis());
         tx.execute(
             "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, NULL, ?, ?, ?, ?)",
-            params![pay_id, payment_data.customerId, payment_data.accontoAmount, payment_data.method, payment_date],
+            params![pay_id, payment_data.customerId, acconto_amount, payment_data.method, payment_date],
         ).map_err(|e| e.to_string())?;
 
         // Scrittura Prima Nota (Dare Cassa/Banca, Avere Acconti da Clienti)
@@ -981,12 +996,12 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", payment_data.accontoAmount],
+            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", acconto_amount],
         ).map_err(|e| e.to_string())?;
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-2", pay_id), entry_id, "Acconti da Clienti", "credit", payment_data.accontoAmount],
+            params![format!("line-{}-2", pay_id), entry_id, "Acconti da Clienti", "credit", acconto_amount],
         ).map_err(|e| e.to_string())?;
     }
 
@@ -1022,14 +1037,14 @@ pub fn allocate_acconto(state: tauri::State<AppState>, data: AllocateAccontoData
     }
     drop(stmt);
 
-    let mut to_consume = data.amountToAllocate;
+    let mut to_consume = round_cents(data.amountToAllocate);
     for (acc_id, acc_amount) in acconti {
         if to_consume <= 0.0 { break; }
         if acc_amount <= to_consume {
-            to_consume -= acc_amount;
+            to_consume = round_cents(to_consume - acc_amount);
             tx.execute("DELETE FROM payments WHERE id = ?", [&acc_id]).map_err(|e| e.to_string())?;
         } else {
-            let new_amount = acc_amount - to_consume;
+            let new_amount = round_cents(acc_amount - to_consume);
             to_consume = 0.0;
             tx.execute("UPDATE payments SET amount = ? WHERE id = ?", params![new_amount, acc_id]).map_err(|e| e.to_string())?;
         }
@@ -1046,10 +1061,11 @@ pub fn allocate_acconto(state: tauri::State<AppState>, data: AllocateAccontoData
     let payment_date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     for (idx, alloc) in data.allocations.iter().enumerate() {
         let pay_id = format!("PAY-ALLOC-{}-{}", chrono::Utc::now().timestamp_millis(), idx);
-        
+        let alloc_amount = round_cents(alloc.amount);
+
         tx.execute(
             "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, ?, ?, ?, ?, ?)",
-            params![pay_id, alloc.invoiceId, data.customerId, alloc.amount, "Uso Credito", payment_date],
+            params![pay_id, alloc.invoiceId, data.customerId, alloc_amount, "Uso Credito", payment_date],
         ).map_err(|e| e.to_string())?;
 
         // Ricalcola stato fattura
@@ -1059,7 +1075,7 @@ pub fn allocate_acconto(state: tauri::State<AppState>, data: AllocateAccontoData
             |row| Ok((row.get(0)?, row.get(1)?)),
         ).map_err(|e| e.to_string())?;
 
-        let new_status = if total_paid >= inv_amount {
+        let new_status = if round_cents(total_paid) >= round_cents(inv_amount) {
             "paid"
         } else {
             "partial"
@@ -1076,12 +1092,12 @@ pub fn allocate_acconto(state: tauri::State<AppState>, data: AllocateAccontoData
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-1", pay_id), entry_id, "Acconti da Clienti", "debit", alloc.amount],
+            params![format!("line-{}-1", pay_id), entry_id, "Acconti da Clienti", "debit", alloc_amount],
         ).map_err(|e| e.to_string())?;
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-2", pay_id), entry_id, "Crediti v/Clienti", "credit", alloc.amount],
+            params![format!("line-{}-2", pay_id), entry_id, "Crediti v/Clienti", "credit", alloc_amount],
         ).map_err(|e| e.to_string())?;
     }
 
@@ -1180,19 +1196,19 @@ pub fn get_journal_entries(state: tauri::State<AppState>, customer_id: Option<St
 pub fn get_dashboard_stats(state: tauri::State<AppState>) -> Result<DashboardStats, String> {
     let conn = state.db_conn.lock().unwrap();
 
-    let total_invoiced: f64 = conn.query_row(
+    let total_invoiced: f64 = round_cents(conn.query_row(
         "SELECT COALESCE(SUM(amount), 0) FROM invoices",
         [],
         |row| row.get(0),
-    ).unwrap_or(0.0);
+    ).unwrap_or(0.0));
 
-    let total_paid: f64 = conn.query_row(
+    let total_paid: f64 = round_cents(conn.query_row(
         "SELECT COALESCE(SUM(amount), 0) FROM payments",
         [],
         |row| row.get(0),
-    ).unwrap_or(0.0);
+    ).unwrap_or(0.0));
 
-    let balance = total_invoiced - total_paid;
+    let balance = round_cents(total_invoiced - total_paid);
 
     let today_str = chrono::Local::now().format("%Y-%m-%d").to_string();
     let expired_count: i64 = conn.query_row(
