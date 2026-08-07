@@ -1,4 +1,4 @@
-# 📘 Manuale Tecnico e Linee Guida di Sviluppo: BillKeep (v1.3.0)
+# 📘 Manuale Tecnico e Linee Guida di Sviluppo: BillKeep (v1.3.1)
 
 Questo documento stabilisce l'architettura tecnica, le best practices e gli standard di codifica per lo sviluppo dell'applicazione desktop locale di gestione fatture, pagamenti e contabilità in partita doppia (Prima Nota).
 
