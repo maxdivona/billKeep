@@ -1,0 +1,56 @@
+name: Release Windows
+
+# Compila BillKeep esclusivamente per Windows (NSIS + MSI) e pubblica una
+# GitHub Release con gli installer allegati. Il tag/nome release è preso
+# dalla versione in package.json, così non serve mantenerlo sincronizzato
+# a mano nel workflow.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build (src-tauri)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Determine release tag from package.json
+        id: version
+        shell: bash
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Build and publish Windows release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ steps.version.outputs.tag }}
+          releaseName: 'BillKeep ${{ steps.version.outputs.tag }}'
+          releaseBody: |
+            Release automatica per Windows (installer NSIS e MSI in allegato).
+            Vedi la cronologia dei commit per il changelog dettagliato.
+          releaseDraft: false
+          prerelease: false
+          args: --bundles nsis,msi
