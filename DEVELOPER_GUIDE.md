@@ -1,4 +1,4 @@
-# 📘 Manuale Tecnico e Linee Guida di Sviluppo: BillKeep (v1.3.1)
+# 📘 Manuale Tecnico e Linee Guida di Sviluppo: BillKeep (v1.3.2)
 
 Questo documento stabilisce l'architettura tecnica, le best practices e gli standard di codifica per lo sviluppo dell'applicazione desktop locale di gestione fatture, pagamenti e contabilità in partita doppia (Prima Nota).
 
@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS payments (
     amount REAL NOT NULL CHECK(amount > 0),
     payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     method TEXT,
+    receipt_id TEXT, -- NULLABLE: accomuna le righe generate da un unico incasso multi-fattura (vedi add_multi_payment)
     FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
 );
@@ -91,6 +92,7 @@ CREATE TABLE IF NOT EXISTS journal_lines (
 CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
+CREATE INDEX IF NOT EXISTS idx_payments_receipt ON payments(receipt_id);
 CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(entry_date);
 CREATE INDEX IF NOT EXISTS idx_journal_entries_customer ON journal_entries(customer_id);
 CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
@@ -100,6 +102,12 @@ CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
 > **Serializzazione dei Dati (Rust -> JSON)**:
 > Nella struct `JournalLine` in Rust, il campo `type` della tabella SQL è mappato come `type_` nel backend Rust per evitare conflitti con la parola chiave riservata del linguaggio. Durante la serializzazione JSON viene però rinominato in `"type"` mediante l'attributo `#[serde(rename = "type")]` per allinearsi perfettamente con le condizioni e le logiche di visualizzazione del frontend React (es. `line.type === 'debit'` / `'credit'`).
 
+> [!NOTE]
+> **Raggruppamento incassi multi-fattura (`receipt_id`)**:
+> Quando un incasso viene spalmato automaticamente su più fatture (+ eventuale acconto residuo), `add_multi_payment` genera un `receipt_id` (`RCPT-{timestamp}`) condiviso da tutte le righe `payments` create in quella chiamata. Il frontend (Storico Pagamenti in `Customers.jsx`, elenco in `Payments.jsx`) raggruppa le righe con lo stesso `receipt_id` mostrando il totale realmente incassato, espandibile per vedere lo split fattura per fattura. Le righe generate da altri percorsi (`add_payment`, `allocate_acconto`, ripristino acconto su delete) restano con `receipt_id = NULL` e vengono mostrate singolarmente, usando il proprio `id` come chiave di raggruppamento (fallback `COALESCE(receipt_id, id)`): questo evita che i pagamenti pre-esistenti alla migrazione vengano accorpati fra loro solo perché condividono un `NULL`.
+>
+> **Migrazione**: la colonna è aggiunta con `ALTER TABLE payments ADD COLUMN receipt_id TEXT` in `init_database` all'avvio, solo se assente — compatibile sia con database recenti sia con quelli molto vecchi (che passano anche dalla precedente migrazione `invoice_id NOT NULL → NULL`). Nessun dato pre-esistente viene toccato.
+
 ---
 
 ## 🛡️ 4. Gestione Errori & Transazioni Atomiche
@@ -107,6 +115,10 @@ CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
 ### Politica delle Transazioni Contabili (Processo Rust)
 
 La registrazione di un pagamento o l'allocazione di un acconto richiede un'operazione atomica: l'inserimento o modifica dei record dei pagamenti, l'aggiornamento dello stato delle fatture e l'inserimento delle relative righe contabili in partita doppia. Se una sola operazione fallisce, la transazione deve eseguire il _rollback_ automatico.
+
+> [!NOTE]
+> **Arrotondamento degli importi (`round_cents`)**:
+> Tutti gli importi sono `f64` (SQLite `REAL`), quindi somme e sottrazioni in virgola mobile possono produrre residui binari (es. `0.1 + 0.2 = 0.30000000000000004`). L'helper `round_cents(value: f64) -> f64` in `db.rs` (`(value * 100.0).round() / 100.0`) va applicato ad ogni importo prima di scriverlo su DB e prima di ogni confronto che determina lo stato `paid`/`partial` di una fattura, per evitare sia decimali "sporchi" in UI sia fatture bloccate in `partial` per un centesimo di errore binario mai realmente dovuto.
 
 Ecco lo standard di implementazione nel backend Rust utilizzando `rusqlite`:
 
@@ -121,23 +133,28 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
         _ => &now_str,
     };
 
+    // ID di ricevuta condiviso da tutte le righe generate da questo incasso,
+    // per poterle raggruppare in UI (vedi nota sopra sullo schema payments).
+    let receipt_id = format!("RCPT-{}", chrono::Utc::now().timestamp_millis());
+
     // 1. Registra le allocazioni sulle fatture specificate
     for (idx, alloc) in payment_data.allocations.iter().enumerate() {
         let pay_id = format!("PAY-{}-{}", chrono::Utc::now().timestamp_millis(), idx);
+        let alloc_amount = round_cents(alloc.amount); // arrotonda a 2 decimali, evita residui binari
 
         tx.execute(
-            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, ?, ?, ?, ?, ?)",
-            params![pay_id, alloc.invoiceId, payment_data.customerId, alloc.amount, payment_data.method, payment_date],
+            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date, receipt_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            params![pay_id, alloc.invoiceId, payment_data.customerId, alloc_amount, payment_data.method, payment_date, receipt_id],
         ).map_err(|e| e.to_string())?;
 
-        // Ricalcola stato fattura
+        // Ricalcola stato fattura (confronto sempre su importi arrotondati)
         let (inv_amount, total_paid): (f64, f64) = tx.query_row(
             "SELECT amount, (SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?) FROM invoices WHERE id = ?",
             params![alloc.invoiceId, alloc.invoiceId],
             |row| Ok((row.get(0)?, row.get(1)?)),
         ).map_err(|e| e.to_string())?;
 
-        let new_status = if total_paid >= inv_amount {
+        let new_status = if round_cents(total_paid) >= round_cents(inv_amount) {
             "paid"
         } else {
             "partial"
@@ -154,21 +171,22 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", alloc.amount],
+            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", alloc_amount],
         ).map_err(|e| e.to_string())?;
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-2", pay_id), entry_id, "Crediti v/Clienti", "credit", alloc.amount],
+            params![format!("line-{}-2", pay_id), entry_id, "Crediti v/Clienti", "credit", alloc_amount],
         ).map_err(|e| e.to_string())?;
     }
 
     // 2. Registra eventuale acconto residuo
-    if payment_data.accontoAmount > 0.0 {
+    let acconto_amount = round_cents(payment_data.accontoAmount);
+    if acconto_amount > 0.0 {
         let pay_id = format!("PAY-ACC-{}-99", chrono::Utc::now().timestamp_millis());
         tx.execute(
-            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, NULL, ?, ?, ?, ?)",
-            params![pay_id, payment_data.customerId, payment_data.accontoAmount, payment_data.method, payment_date],
+            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date, receipt_id) VALUES (?, NULL, ?, ?, ?, ?, ?)",
+            params![pay_id, payment_data.customerId, acconto_amount, payment_data.method, payment_date, receipt_id],
         ).map_err(|e| e.to_string())?;
 
         // Scrittura Prima Nota (Dare Cassa/Banca, Avere Acconti da Clienti)
@@ -180,12 +198,12 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", payment_data.accontoAmount],
+            params![format!("line-{}-1", pay_id), entry_id, "Cassa/Banca", "debit", acconto_amount],
         ).map_err(|e| e.to_string())?;
 
         tx.execute(
             "INSERT INTO journal_lines (id, entry_id, account_name, type, amount) VALUES (?, ?, ?, ?, ?)",
-            params![format!("line-{}-2", pay_id), entry_id, "Acconti da Clienti", "credit", payment_data.accontoAmount],
+            params![format!("line-{}-2", pay_id), entry_id, "Acconti da Clienti", "credit", acconto_amount],
         ).map_err(|e| e.to_string())?;
     }
 
