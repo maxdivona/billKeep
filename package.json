@@ -8,6 +8,7 @@
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
+    "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build && node scripts/post-build.js",
     "vite-dev": "vite",
