@@ -1,9 +1,40 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import SearchableSelect from '../components/SearchableSelect'
+
+// Raggruppa le righe generate da un unico "Registra Incasso" (stesso
+// receipt_id) in un'unica voce, per mostrare quanto è stato effettivamente
+// incassato quel giorno prima dello split sulle fatture. I pagamenti senza
+// receipt_id (acconti usati come credito, o precedenti alla migrazione)
+// restano singoli, usando il proprio id come chiave.
+function groupPaymentsByReceipt(payments) {
+  const groups = []
+  const indexByKey = new Map()
+  for (const p of payments) {
+    const key = p.receipt_id || p.id
+    if (!indexByKey.has(key)) {
+      indexByKey.set(key, groups.length)
+      groups.push({
+        id: key,
+        payment_date: p.payment_date,
+        method: p.method,
+        customer_name: p.customer_name,
+        items: [],
+        total: 0
+      })
+    }
+    const g = groups[indexByKey.get(key)]
+    g.items.push(p)
+    g.total += p.amount
+  }
+  for (const g of groups) {
+    g.total = Math.round(g.total * 100) / 100
+  }
+  return groups
+}
 
 export default function Payments() {
   const location = useLocation()
@@ -48,6 +79,8 @@ export default function Payments() {
   const [deleteError, setDeleteError] = useState('')
 
   const [searchTerm, setSearchTerm] = useState(paymentsPagination.search)
+  // Expand state for grouped receipts in the payments list
+  const [expandedReceipts, setExpandedReceipts] = useState({})
 
   useEffect(() => {
     if (location.state?.focusPaymentForm) {
@@ -343,75 +376,112 @@ export default function Payments() {
             'Fattura Correlata',
             { text: 'Azioni', align: 'center' }
           ]}
-          data={paginatedPayments}
+          data={groupPaymentsByReceipt(paginatedPayments)}
           loading={loading}
           emptyMessage="Nessun pagamento registrato."
-          renderRow={(pay) => (
-            <tr key={pay.id} className="hover:bg-surface-container-low transition-colors">
-              <td className="py-sm px-sm text-on-surface-variant">
-                {formatDate(pay.payment_date)}
-              </td>
-              <td className="py-sm px-sm font-medium">{pay.customer_name}</td>
-              <td className="py-sm px-sm text-right text-secondary font-medium tabular-nums">
-                + {formatCurrency(pay.amount)}
-              </td>
-              <td className="py-sm px-sm">
-                <div className="flex items-center gap-xs text-on-surface-variant">
-                  {pay.method === 'Bonifico' && (
-                    <span className="material-symbols-outlined text-[16px]">account_balance</span>
-                  )}
-                  {pay.method === 'Carta' && (
-                    <span className="material-symbols-outlined text-[16px]">credit_card</span>
-                  )}
-                  {pay.method === 'Contanti' && (
-                    <span className="material-symbols-outlined text-[16px]">payments</span>
-                  )}
-                  {!(
-                    pay.method === 'Bonifico' ||
-                    pay.method === 'Carta' ||
-                    pay.method === 'Contanti'
-                  ) && <span className="material-symbols-outlined text-[16px]">more_horiz</span>}
-                  {pay.method}
-                </div>
-              </td>
-              <td className="py-sm px-sm font-medium">
-                {pay.invoice_id ? (
-                  <span className="text-primary">#{pay.invoice_id}</span>
-                ) : (
-                  <span className="inline-flex px-2 py-0.5 bg-secondary-container text-on-secondary-container text-xs font-semibold rounded-full">
-                    Acconto
-                  </span>
+          renderRow={(group) => {
+            const renderMethodCell = (method) => (
+              <div className="flex items-center gap-xs text-on-surface-variant">
+                {method === 'Bonifico' && (
+                  <span className="material-symbols-outlined text-[16px]">account_balance</span>
                 )}
-              </td>
-              <td className="py-sm px-sm text-center">
-                <div className="flex justify-center gap-2">
-                  <button
-                    className={`p-1 transition-colors flex items-center ${
-                      pay.method === 'Uso Credito'
-                        ? 'text-on-surface-variant/35 cursor-not-allowed'
-                        : 'hover:text-primary cursor-pointer'
-                    }`}
-                    onClick={() => pay.method !== 'Uso Credito' && handleEdit(pay)}
-                    disabled={pay.method === 'Uso Credito'}
-                    title={
-                      pay.method === 'Uso Credito'
-                        ? 'Le allocazioni di credito non possono essere modificate direttamente'
-                        : 'Modifica'
-                    }
-                  >
-                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                  </button>
-                  <button
-                    className="p-1 hover:text-error transition-colors cursor-pointer flex items-center"
-                    onClick={() => handleDeleteClick(pay.id)}
-                    title="Elimina"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          )}
+                {method === 'Carta' && (
+                  <span className="material-symbols-outlined text-[16px]">credit_card</span>
+                )}
+                {method === 'Contanti' && (
+                  <span className="material-symbols-outlined text-[16px]">payments</span>
+                )}
+                {!(method === 'Bonifico' || method === 'Carta' || method === 'Contanti') && (
+                  <span className="material-symbols-outlined text-[16px]">more_horiz</span>
+                )}
+                {method}
+              </div>
+            )
+
+            const renderPaymentRow = (pay) => (
+              <tr key={pay.id} className="hover:bg-surface-container-low transition-colors">
+                <td className="py-sm px-sm text-on-surface-variant">
+                  {formatDate(pay.payment_date)}
+                </td>
+                <td className="py-sm px-sm font-medium">{pay.customer_name}</td>
+                <td className="py-sm px-sm text-right text-secondary font-medium tabular-nums">
+                  + {formatCurrency(pay.amount)}
+                </td>
+                <td className="py-sm px-sm">{renderMethodCell(pay.method)}</td>
+                <td className="py-sm px-sm font-medium">
+                  {pay.invoice_id ? (
+                    <span className="text-primary">#{pay.invoice_id}</span>
+                  ) : (
+                    <span className="inline-flex px-2 py-0.5 bg-secondary-container text-on-secondary-container text-xs font-semibold rounded-full">
+                      Acconto
+                    </span>
+                  )}
+                </td>
+                <td className="py-sm px-sm text-center">
+                  <div className="flex justify-center gap-2">
+                    <button
+                      className={`p-1 transition-colors flex items-center ${
+                        pay.method === 'Uso Credito'
+                          ? 'text-on-surface-variant/35 cursor-not-allowed'
+                          : 'hover:text-primary cursor-pointer'
+                      }`}
+                      onClick={() => pay.method !== 'Uso Credito' && handleEdit(pay)}
+                      disabled={pay.method === 'Uso Credito'}
+                      title={
+                        pay.method === 'Uso Credito'
+                          ? 'Le allocazioni di credito non possono essere modificate direttamente'
+                          : 'Modifica'
+                      }
+                    >
+                      <span className="material-symbols-outlined text-[18px]">edit</span>
+                    </button>
+                    <button
+                      className="p-1 hover:text-error transition-colors cursor-pointer flex items-center"
+                      onClick={() => handleDeleteClick(pay.id)}
+                      title="Elimina"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )
+
+            if (group.items.length === 1) {
+              return renderPaymentRow(group.items[0])
+            }
+
+            const isExpanded = !!expandedReceipts[group.id]
+            return (
+              <Fragment key={group.id}>
+                <tr
+                  className="hover:bg-surface-container-low transition-colors cursor-pointer"
+                  onClick={() =>
+                    setExpandedReceipts((prev) => ({ ...prev, [group.id]: !prev[group.id] }))
+                  }
+                >
+                  <td className="py-sm px-sm text-on-surface-variant">
+                    {formatDate(group.payment_date)}
+                  </td>
+                  <td className="py-sm px-sm font-medium">{group.customer_name}</td>
+                  <td className="py-sm px-sm text-right text-secondary font-bold tabular-nums">
+                    + {formatCurrency(group.total)}
+                  </td>
+                  <td className="py-sm px-sm">{renderMethodCell(group.method)}</td>
+                  <td className="py-sm px-sm font-medium">
+                    <span className="inline-flex items-center gap-1 text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[18px]">
+                        {isExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+                      </span>
+                      Split su {group.items.length}
+                    </span>
+                  </td>
+                  <td className="py-sm px-sm text-center text-on-surface-variant/50">—</td>
+                </tr>
+                {isExpanded && group.items.map((pay) => renderPaymentRow(pay))}
+              </Fragment>
+            )
+          }}
         />
         {paymentsPagination.hasMore && (
           <div className="py-md flex justify-center border-t border-outline-variant bg-surface-container-low">

@@ -40,12 +40,29 @@ pub struct Invoice {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Payment {
     pub id: String,
+    #[serde(default)]
     pub invoice_id: Option<String>,
     pub customer_id: String,
     pub amount: f64,
     pub payment_date: String,
     pub method: String,
+    #[serde(default)]
     pub customer_name: Option<String>,
+    // Accomuna le righe generate da un unico incasso multi-fattura (vedi
+    // add_multi_payment). None per i pagamenti pre-esistenti alla migrazione
+    // e per quelli creati da altri percorsi: vengono mostrati singolarmente.
+    #[serde(default)]
+    pub receipt_id: Option<String>,
+}
+
+// Payload di update_payment: solo i campi realmente modificabili dall'utente.
+// (Payment non va bene qui: richiede id/customer_id che il form di modifica
+// non possiede, causando un errore di deserializzazione lato IPC.)
+#[derive(Deserialize, Debug)]
+pub struct PaymentUpdateInput {
+    pub amount: f64,
+    pub payment_date: String,
+    pub method: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -207,6 +224,27 @@ pub fn init_database(conn: &Connection) -> rusqlite::Result<()> {
         }
     }
 
+    // 1b. Migrazione tabella payments: aggiungi colonna receipt_id se mancante.
+    // Raggruppa le righe generate da un unico incasso multi-fattura, senza toccare
+    // i pagamenti già registrati (restano NULL e vengono mostrati singolarmente).
+    if table_check.is_some() {
+        let mut has_receipt_id = false;
+        {
+            let mut stmt = conn.prepare("PRAGMA table_info(payments)")?;
+            let mut rows = stmt.query([])?;
+            while let Some(row) = rows.next()? {
+                let name: String = row.get(1)?;
+                if name == "receipt_id" {
+                    has_receipt_id = true;
+                }
+            }
+        }
+        if !has_receipt_id {
+            println!("[DB] Migrazione tabella payments: aggiunta colonna receipt_id...");
+            conn.execute("ALTER TABLE payments ADD COLUMN receipt_id TEXT", [])?;
+        }
+    }
+
     // 2. Creazione tabelle core
     conn.execute_batch("
         CREATE TABLE IF NOT EXISTS customers (
@@ -233,6 +271,7 @@ pub fn init_database(conn: &Connection) -> rusqlite::Result<()> {
             amount REAL NOT NULL CHECK(amount > 0),
             payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
             method TEXT,
+            receipt_id TEXT,
             FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,
             FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
         );
@@ -259,10 +298,15 @@ pub fn init_database(conn: &Connection) -> rusqlite::Result<()> {
         CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer_id);
         CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
         CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
+        CREATE INDEX IF NOT EXISTS idx_payments_receipt ON payments(receipt_id);
         CREATE INDEX IF NOT EXISTS idx_journal_entries_date ON journal_entries(entry_date);
         CREATE INDEX IF NOT EXISTS idx_journal_entries_customer ON journal_entries(customer_id);
         CREATE INDEX IF NOT EXISTS idx_journal_lines_entry ON journal_lines(entry_id);
     ")?;
+
+    // Indice per receipt_id anche sui database esistenti (la colonna può essere
+    // stata aggiunta dalla migrazione 1b in una connessione precedente).
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_payments_receipt ON payments(receipt_id)", [])?;
 
     Ok(())
 }
@@ -598,7 +642,7 @@ pub fn get_payments(state: tauri::State<AppState>) -> Result<Vec<Payment>, Strin
     let conn = state.db_conn.lock().unwrap();
     let mut stmt = conn
         .prepare("
-            SELECT p.id, p.invoice_id, p.customer_id, p.amount, p.payment_date, p.method, c.name as customer_name
+            SELECT p.id, p.invoice_id, p.customer_id, p.amount, p.payment_date, p.method, c.name as customer_name, p.receipt_id
             FROM payments p
             JOIN customers c ON p.customer_id = c.id
             ORDER BY p.payment_date DESC, p.id DESC
@@ -615,6 +659,7 @@ pub fn get_payments(state: tauri::State<AppState>) -> Result<Vec<Payment>, Strin
                 payment_date: row.get(4)?,
                 method: row.get(5)?,
                 customer_name: Some(row.get(6)?),
+                receipt_id: row.get(7)?,
             })
         })
         .map_err(|e| e.to_string())?;
@@ -715,7 +760,7 @@ pub fn add_payment(state: tauri::State<AppState>, payment: Payment) -> Result<Ac
 }
 
 #[tauri::command]
-pub fn update_payment(state: tauri::State<AppState>, id: String, data: Payment) -> Result<ActionResult, String> {
+pub fn update_payment(state: tauri::State<AppState>, id: String, data: PaymentUpdateInput) -> Result<ActionResult, String> {
     let mut conn = state.db_conn.lock().unwrap();
     let tx = conn.transaction().map_err(|e| e.to_string())?;
 
@@ -899,7 +944,7 @@ pub fn get_customer_unpaid_invoices(state: tauri::State<AppState>, customer_id: 
 pub fn get_customer_payments(state: tauri::State<AppState>, customer_id: String) -> Result<Vec<Payment>, String> {
     let conn = state.db_conn.lock().unwrap();
     let mut stmt = conn.prepare("
-        SELECT p.id, p.invoice_id, p.amount, p.payment_date, p.method
+        SELECT p.id, p.invoice_id, p.amount, p.payment_date, p.method, p.receipt_id
         FROM payments p
         WHERE p.customer_id = ?
         ORDER BY p.payment_date DESC, p.id DESC
@@ -914,6 +959,7 @@ pub fn get_customer_payments(state: tauri::State<AppState>, customer_id: String)
             payment_date: row.get(3)?,
             method: row.get(4)?,
             customer_name: None,
+            receipt_id: row.get(5)?,
         })
     }).map_err(|e| e.to_string())?;
 
@@ -935,14 +981,18 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
         _ => &now_str,
     };
 
+    // ID di ricevuta condiviso da tutte le righe generate da questo incasso,
+    // per poterle raggruppare in UI (vedi migrazione 1b: colonna receipt_id).
+    let receipt_id = format!("RCPT-{}", chrono::Utc::now().timestamp_millis());
+
     // 1. Registra le allocazioni sulle fatture specificate
     for (idx, alloc) in payment_data.allocations.iter().enumerate() {
         let pay_id = format!("PAY-{}-{}", chrono::Utc::now().timestamp_millis(), idx);
         let alloc_amount = round_cents(alloc.amount);
 
         tx.execute(
-            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, ?, ?, ?, ?, ?)",
-            params![pay_id, alloc.invoiceId, payment_data.customerId, alloc_amount, payment_data.method, payment_date],
+            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date, receipt_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            params![pay_id, alloc.invoiceId, payment_data.customerId, alloc_amount, payment_data.method, payment_date, receipt_id],
         ).map_err(|e| e.to_string())?;
 
         // Ricalcola stato fattura
@@ -983,8 +1033,8 @@ pub fn add_multi_payment(state: tauri::State<AppState>, payment_data: MultiPayme
     if acconto_amount > 0.0 {
         let pay_id = format!("PAY-ACC-{}-99", chrono::Utc::now().timestamp_millis());
         tx.execute(
-            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date) VALUES (?, NULL, ?, ?, ?, ?)",
-            params![pay_id, payment_data.customerId, acconto_amount, payment_data.method, payment_date],
+            "INSERT INTO payments (id, invoice_id, customer_id, amount, method, payment_date, receipt_id) VALUES (?, NULL, ?, ?, ?, ?, ?)",
+            params![pay_id, payment_data.customerId, acconto_amount, payment_data.method, payment_date, receipt_id],
         ).map_err(|e| e.to_string())?;
 
         // Scrittura Prima Nota (Dare Cassa/Banca, Avere Acconti da Clienti)
@@ -1248,7 +1298,7 @@ pub fn get_dashboard_stats(state: tauri::State<AppState>) -> Result<DashboardSta
 
     // Ultimi 5 pagamenti
     let mut stmt = conn.prepare("
-        SELECT p.id, p.invoice_id, p.amount, p.payment_date, p.method, c.name as customer_name
+        SELECT p.id, p.invoice_id, p.amount, p.payment_date, p.method, c.name as customer_name, p.receipt_id
         FROM payments p
         JOIN customers c ON p.customer_id = c.id
         ORDER BY p.payment_date DESC, p.id DESC
@@ -1264,6 +1314,7 @@ pub fn get_dashboard_stats(state: tauri::State<AppState>) -> Result<DashboardSta
             payment_date: row.get(3)?,
             method: row.get(4)?,
             customer_name: Some(row.get(5)?),
+            receipt_id: row.get(6)?,
         })
     }).map_err(|e| e.to_string())?;
 
@@ -1693,7 +1744,7 @@ pub fn get_payments_paginated(
         .map_err(|e| e.to_string())?;
 
     let query_sql = format!("
-        SELECT p.id, p.invoice_id, p.customer_id, p.amount, p.payment_date, p.method, c.name as customer_name
+        SELECT p.id, p.invoice_id, p.customer_id, p.amount, p.payment_date, p.method, c.name as customer_name, p.receipt_id
         FROM payments p
         JOIN customers c ON p.customer_id = c.id
         {}
@@ -1715,6 +1766,7 @@ pub fn get_payments_paginated(
                 payment_date: row.get(4)?,
                 method: row.get(5)?,
                 customer_name: Some(row.get(6)?),
+                receipt_id: row.get(7)?,
             })
         })
         .map_err(|e| e.to_string())?;

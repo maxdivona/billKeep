@@ -5,6 +5,30 @@ import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import SearchableSelect from '../components/SearchableSelect'
 
+// Raggruppa le righe di pagamento generate da un unico "Registra Incasso"
+// (stesso receipt_id) in un'unica voce, per mostrare quanto è stato
+// effettivamente incassato quel giorno prima dello split sulle fatture.
+// I pagamenti senza receipt_id (acconti usati come credito, o precedenti
+// alla migrazione) restano singoli, usando il proprio id come chiave.
+function groupPaymentsByReceipt(payments) {
+  const groups = []
+  const indexByKey = new Map()
+  for (const p of payments) {
+    const key = p.receipt_id || p.id
+    if (!indexByKey.has(key)) {
+      indexByKey.set(key, groups.length)
+      groups.push({ id: key, payment_date: p.payment_date, method: p.method, items: [], total: 0 })
+    }
+    const g = groups[indexByKey.get(key)]
+    g.items.push(p)
+    g.total += p.amount
+  }
+  for (const g of groups) {
+    g.total = Math.round(g.total * 100) / 100
+  }
+  return groups
+}
+
 export default function Customers() {
   const {
     customers,
@@ -62,6 +86,8 @@ export default function Customers() {
 
   // Expand state for customer journal double entry
   const [expandedJournal, setExpandedJournal] = useState({})
+  // Expand state for grouped receipts in Storico Pagamenti
+  const [expandedReceipts, setExpandedReceipts] = useState({})
 
   // Invoice Edit Modal States
   const [invoiceEditModalOpen, setInvoiceEditModalOpen] = useState(false)
@@ -732,6 +758,7 @@ export default function Customers() {
 
   // SELECTED CLIENT DETAILS VIEW
   const availableCredit = selectedCustomer.total_acconto || 0
+  const groupedClientPayments = groupPaymentsByReceipt(clientPayments)
 
   return (
     <div>
@@ -945,28 +972,89 @@ export default function Customers() {
         ) : detailTab === 'payments' ? (
           <DataTable
             headers={['Data Incasso', 'Importo', 'Metodo', 'Destinazione Contabile']}
-            data={clientPayments}
+            data={groupedClientPayments}
             emptyMessage="Nessun pagamento registrato per questo cliente."
-            renderRow={(pay) => (
-              <tr key={pay.id} className="hover:bg-surface-container-high transition-colors">
-                <td className="py-xs px-sm text-on-surface-variant">
-                  {formatDateTime(pay.payment_date)}
-                </td>
-                <td className="py-xs px-sm text-secondary font-medium tabular-nums">
-                  + {formatCurrency(pay.amount)}
-                </td>
-                <td className="py-xs px-sm">{pay.method}</td>
-                <td className="py-xs px-sm font-medium">
-                  {pay.invoice_id ? (
-                    <span className="text-primary">Fattura #{pay.invoice_id}</span>
-                  ) : (
-                    <span className="inline-flex px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[11px] font-bold rounded-full">
-                      Acconto / Credito Libero
-                    </span>
+            renderRow={(group) => {
+              if (group.items.length === 1) {
+                const pay = group.items[0]
+                return (
+                  <tr key={group.id} className="hover:bg-surface-container-high transition-colors">
+                    <td className="py-xs px-sm text-on-surface-variant">
+                      {formatDateTime(pay.payment_date)}
+                    </td>
+                    <td className="py-xs px-sm text-secondary font-medium tabular-nums">
+                      + {formatCurrency(pay.amount)}
+                    </td>
+                    <td className="py-xs px-sm">{pay.method}</td>
+                    <td className="py-xs px-sm font-medium">
+                      {pay.invoice_id ? (
+                        <span className="text-primary">Fattura #{pay.invoice_id}</span>
+                      ) : (
+                        <span className="inline-flex px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[11px] font-bold rounded-full">
+                          Acconto / Credito Libero
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              }
+
+              const isExpanded = !!expandedReceipts[group.id]
+              return (
+                <Fragment key={group.id}>
+                  <tr
+                    className="hover:bg-surface-container-high transition-colors cursor-pointer"
+                    onClick={() =>
+                      setExpandedReceipts((prev) => ({ ...prev, [group.id]: !prev[group.id] }))
+                    }
+                  >
+                    <td className="py-xs px-sm text-on-surface-variant">
+                      {formatDateTime(group.payment_date)}
+                    </td>
+                    <td className="py-xs px-sm text-secondary font-bold tabular-nums">
+                      + {formatCurrency(group.total)}
+                    </td>
+                    <td className="py-xs px-sm">{group.method}</td>
+                    <td className="py-xs px-sm font-medium">
+                      <span className="inline-flex items-center gap-1 text-on-surface-variant">
+                        <span className="material-symbols-outlined text-[18px]">
+                          {isExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
+                        </span>
+                        Split su {group.items.length} operazioni
+                      </span>
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr className="bg-surface-container-lowest/30">
+                      <td colSpan="4" className="p-sm">
+                        <div className="ml-8 max-w-[420px] border border-outline-variant rounded-lg overflow-hidden bg-surface-container-lowest shadow-sm">
+                          <table className="w-full border-collapse text-left text-xs">
+                            <tbody>
+                              {group.items.map((pay) => (
+                                <tr key={pay.id} className="border-b border-outline-variant/30 last:border-b-0">
+                                  <td className="py-xs px-sm font-medium">
+                                    {pay.invoice_id ? (
+                                      <span className="text-primary">Fattura #{pay.invoice_id}</span>
+                                    ) : (
+                                      <span className="inline-flex px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[10px] font-bold rounded-full">
+                                        Acconto / Credito Libero
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-xs px-sm text-right font-semibold text-secondary tabular-nums">
+                                    + {formatCurrency(pay.amount)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            )}
+                </Fragment>
+              )
+            }}
           />
         ) : (
           /* ACCOUNTING PRIMA NOTA */
