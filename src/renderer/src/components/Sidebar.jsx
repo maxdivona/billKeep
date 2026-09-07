@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onNavigate }) {
   const setSpotlightOpen = useStore((state) => state.setSpotlightOpen)
 
   const linkClass = ({ isActive }) =>
@@ -12,7 +12,11 @@ export default function Sidebar() {
     }`
 
   return (
-    <nav className="bg-surface text-primary font-body-md text-body-md h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex flex-col py-md px-md z-20">
+    <nav
+      className={`bg-surface text-primary font-body-md text-body-md h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex flex-col py-md px-md z-30 transform transition-transform duration-200 ease-in-out md:translate-x-0 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
+    >
       <div className="mb-lg mt-sm">
         <h1 className="font-headline-lg text-headline-lg font-bold text-primary">BillKeep</h1>
         <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
@@ -40,37 +44,37 @@ export default function Sidebar() {
 
       <ul className="flex flex-col gap-sm flex-grow">
         <li>
-          <NavLink to="/" className={linkClass}>
+          <NavLink to="/" className={linkClass} onClick={onNavigate}>
             <span className="material-symbols-outlined fill">dashboard</span>
             Dashboard
           </NavLink>
         </li>
         <li>
-          <NavLink to="/clients" className={linkClass}>
+          <NavLink to="/clients" className={linkClass} onClick={onNavigate}>
             <span className="material-symbols-outlined">group</span>
             Clienti
           </NavLink>
         </li>
         <li>
-          <NavLink to="/invoices" className={linkClass}>
+          <NavLink to="/invoices" className={linkClass} onClick={onNavigate}>
             <span className="material-symbols-outlined">receipt_long</span>
             Fatture
           </NavLink>
         </li>
         <li>
-          <NavLink to="/payments" className={linkClass}>
+          <NavLink to="/payments" className={linkClass} onClick={onNavigate}>
             <span className="material-symbols-outlined">payments</span>
             Pagamenti
           </NavLink>
         </li>
         <li>
-          <NavLink to="/journal" className={linkClass}>
+          <NavLink to="/journal" className={linkClass} onClick={onNavigate}>
             <span className="material-symbols-outlined">menu_book</span>
             Prima Nota
           </NavLink>
         </li>
         <li>
-          <NavLink to="/settings" className={linkClass}>
+          <NavLink to="/settings" className={linkClass} onClick={onNavigate}>
             <span className="material-symbols-outlined">settings</span>
             Impostazioni
           </NavLink>
