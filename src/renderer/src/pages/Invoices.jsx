@@ -119,6 +119,10 @@ export default function Invoices() {
       setFormError('Date di emissione e scadenza sono richieste.')
       return
     }
+    if (new Date(dueDate) < new Date(issueDate)) {
+      setFormError('La data di scadenza non può essere precedente alla data di emissione.')
+      return
+    }
 
     const newInvoice = {
       id: invoiceId.trim(),
@@ -166,6 +170,10 @@ export default function Invoices() {
     }
     if (!editIssueDate || !editDueDate) {
       setEditFormError('Date di emissione e scadenza sono richieste.')
+      return
+    }
+    if (new Date(editDueDate) < new Date(editIssueDate)) {
+      setEditFormError('La data di scadenza non può essere precedente alla data di emissione.')
       return
     }
 

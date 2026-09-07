@@ -68,6 +68,7 @@ export default function Customers() {
   const [clientJournal, setClientJournal] = useState([])
   const [detailTab, setDetailTab] = useState('unpaid') // 'unpaid' | 'payments' | 'accounting'
   const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState('')
 
   // Advanced Receipt Modal States
   const [receiptModalOpen, setReceiptModalOpen] = useState(false)
@@ -102,6 +103,7 @@ export default function Customers() {
   // If a customer is selected, load their specific details
   const loadCustomerDetail = async (customerId) => {
     setDetailLoading(true)
+    setDetailError('')
     try {
       const [invoices, payments, journal] = await Promise.all([
         window.api.getCustomerUnpaidInvoices(customerId),
@@ -121,6 +123,9 @@ export default function Customers() {
       setAllocCreditManual(initialManual)
     } catch (err) {
       console.error('Errore caricamento dettagli cliente:', err)
+      setDetailError(
+        'Errore nel caricamento dei dettagli del cliente. Riprova selezionando nuovamente il cliente.'
+      )
     } finally {
       setDetailLoading(false)
     }
@@ -257,8 +262,13 @@ export default function Customers() {
       return
     }
 
+    const newCustomerId =
+      typeof crypto !== 'undefined' && crypto.randomUUID
+        ? `cust-${crypto.randomUUID()}`
+        : `cust-${Date.now()}-${Math.floor(Math.random() * 100000)}`
+
     const newCustomer = {
-      id: `cust-${Date.now()}`,
+      id: newCustomerId,
       name: name.trim(),
       email: email.trim() || null
     }
@@ -922,6 +932,17 @@ export default function Customers() {
           <div className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
             <p className="text-on-surface-variant text-body-md">Caricamento in corso...</p>
+          </div>
+        ) : detailError ? (
+          <div className="p-8 text-center">
+            <p className="text-error text-body-md mb-sm">{detailError}</p>
+            <button
+              type="button"
+              onClick={() => loadCustomerDetail(selectedCustomer.id)}
+              className="text-primary font-label-md text-label-md hover:underline cursor-pointer"
+            >
+              Riprova
+            </button>
           </div>
         ) : detailTab === 'unpaid' ? (
           <DataTable
