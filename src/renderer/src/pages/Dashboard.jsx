@@ -48,7 +48,7 @@ export default function Dashboard() {
       </header>
 
       {/* KPI Section */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-md">
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-md">
         <StatCard
           title="Totale Fatturato"
           value={formatCurrency(stats.totalInvoiced)}
@@ -67,6 +67,13 @@ export default function Dashboard() {
           title="Da Incassare"
           value={formatCurrency(stats.balance)}
           icon="account_balance_wallet"
+          variant="error"
+        />
+
+        <StatCard
+          title="Fatture Scadute"
+          value={stats.expiredCount}
+          icon="event_busy"
           variant="error"
         />
       </section>

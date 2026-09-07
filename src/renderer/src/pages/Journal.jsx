@@ -1,5 +1,6 @@
 import { useEffect, useState, Fragment } from 'react'
 import { useStore } from '../store/useStore'
+import SearchableSelect from '../components/SearchableSelect'
 
 export default function Journal() {
   const {
@@ -103,18 +104,13 @@ export default function Journal() {
           <label className="block font-label-sm text-label-sm text-on-surface-variant">
             Filtra per Cliente
           </label>
-          <select
-            className="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm font-body-md text-body-md text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+          <SearchableSelect
+            options={customers.map((c) => ({ id: c.id, name: c.name }))}
             value={selectedCustomerId}
-            onChange={(e) => setSelectedCustomerId(e.target.value)}
-          >
-            <option value="">Tutti i clienti</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedCustomerId}
+            placeholder="Tutti i clienti"
+            noResultsText="Nessun cliente trovato"
+          />
         </div>
 
         <div className="flex gap-2 w-full md:w-auto items-center">

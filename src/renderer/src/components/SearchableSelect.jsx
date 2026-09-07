@@ -5,7 +5,8 @@ export default function SearchableSelect({
   value,
   onChange,
   placeholder = 'Seleziona...',
-  required = false
+  required = false,
+  noResultsText = 'Nessun risultato trovato'
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -118,6 +119,15 @@ export default function SearchableSelect({
       <div className="relative flex items-center">
         <input
           type="text"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-haspopup="listbox"
+          aria-controls="searchable-select-listbox"
+          aria-activedescendant={
+            focusedIndex >= 0 && filteredOptions[focusedIndex]
+              ? `searchable-select-option-${filteredOptions[focusedIndex].id}`
+              : undefined
+          }
           className="w-full border border-outline-variant rounded-md pl-3 pr-10 py-2 bg-surface text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md placeholder:text-on-surface-variant/50 transition-colors"
           placeholder={placeholder}
           value={searchTerm}
@@ -162,6 +172,8 @@ export default function SearchableSelect({
       {/* Lista dei Risultati */}
       {isOpen && (
         <div
+          id="searchable-select-listbox"
+          role="listbox"
           className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-surface-container-low border border-outline-variant rounded-lg shadow-lg z-50 py-1"
           ref={listRef}
         >
@@ -172,6 +184,9 @@ export default function SearchableSelect({
               return (
                 <button
                   key={option.id}
+                  id={`searchable-select-option-${option.id}`}
+                  role="option"
+                  aria-selected={isSelected}
                   type="button"
                   onClick={() => handleSelect(option)}
                   className={`w-full text-left px-3 py-2 text-body-md font-body-md cursor-pointer transition-colors duration-150 flex items-center justify-between ${
@@ -193,7 +208,7 @@ export default function SearchableSelect({
             })
           ) : (
             <div className="px-3 py-2 text-body-sm text-on-surface-variant/70 italic text-center">
-              Nessun cliente trovato
+              {noResultsText}
             </div>
           )}
         </div>

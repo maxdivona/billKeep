@@ -1593,6 +1593,7 @@ export default function Customers() {
                 value={invoiceEditCustomerId}
                 onChange={setInvoiceEditCustomerId}
                 placeholder="Seleziona o cerca cliente..."
+                noResultsText="Nessun cliente trovato"
                 required
               />
             </div>

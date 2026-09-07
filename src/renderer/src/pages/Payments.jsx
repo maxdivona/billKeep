@@ -455,6 +455,7 @@ export default function Payments() {
                 value={selectedCustomerId}
                 onChange={handleCustomerChange}
                 placeholder="Cerca cliente..."
+                noResultsText="Nessun cliente trovato"
                 required
               />
             </div>

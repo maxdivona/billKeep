@@ -410,6 +410,7 @@ export default function Invoices() {
                 value={customerId}
                 onChange={setCustomerId}
                 placeholder="Seleziona o cerca cliente..."
+                noResultsText="Nessun cliente trovato"
                 required
               />
             </div>
@@ -507,6 +508,7 @@ export default function Invoices() {
                 value={editCustomerId}
                 onChange={setEditCustomerId}
                 placeholder="Seleziona o cerca cliente..."
+                noResultsText="Nessun cliente trovato"
                 required
               />
             </div>
