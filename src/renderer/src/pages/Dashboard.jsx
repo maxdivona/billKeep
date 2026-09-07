@@ -174,6 +174,7 @@ export default function Dashboard() {
     dashboardSearch,
     selectedInvoiceId,
     setSelectedInvoiceId,
+    setSelectedInvoiceInfo,
     addPayment
   } = useStore()
 
