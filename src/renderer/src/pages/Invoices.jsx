@@ -51,14 +51,24 @@ export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState(invoicesPagination.search)
   const [statusFilter, setStatusFilter] = useState(invoicesPagination.status)
 
+  const openNewInvoiceModal = () => {
+    setInvoiceId(`INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`)
+    setCustomerId('')
+    setIssueDate(new Date().toISOString().split('T')[0])
+    setDueDate(() => {
+      const futureDate = new Date()
+      futureDate.setDate(futureDate.getDate() + 30)
+      return futureDate.toISOString().split('T')[0]
+    })
+    setAmount('')
+    setFormError('')
+    setModalOpen(true)
+  }
+
   useEffect(() => {
     if (location.state?.openNewInvoiceModal) {
       setTimeout(() => {
-        setInvoiceId(`INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`)
-        setCustomerId('')
-        setAmount('')
-        setFormError('')
-        setModalOpen(true)
+        openNewInvoiceModal()
       }, 50)
       navigate(location.pathname, { replace: true, state: {} })
     }
@@ -204,12 +214,7 @@ export default function Invoices() {
         </div>
         <button
           className="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
-          onClick={() => {
-            setInvoiceId(
-              `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`
-            )
-            setModalOpen(true)
-          }}
+          onClick={openNewInvoiceModal}
         >
           <span className="material-symbols-outlined">add</span>
           Emetti Fattura

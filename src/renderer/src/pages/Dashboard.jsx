@@ -173,7 +173,7 @@ export default function Dashboard() {
                 {stats.recentPayments.map((pay) => (
                   <li
                     key={pay.id}
-                    className="flex items-center justify-between p-sm rounded-lg hover:bg-surface-container-low transition-colors border border-transparent hover:border-outline-variant/50 cursor-pointer"
+                    className="flex items-center justify-between p-sm rounded-lg border border-transparent"
                   >
                     <div className="flex items-center gap-md">
                       <div className="w-10 h-10 rounded-full bg-secondary-container/20 flex items-center justify-center text-secondary">
@@ -184,7 +184,7 @@ export default function Dashboard() {
                           {pay.method} da {pay.customer_name}
                         </p>
                         <p className="font-label-sm text-label-sm text-on-surface-variant">
-                          Fattura #{pay.invoice_id}
+                          {pay.invoice_id ? `Fattura #${pay.invoice_id}` : 'Acconto libero'}
                         </p>
                       </div>
                     </div>

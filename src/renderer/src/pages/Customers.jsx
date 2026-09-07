@@ -459,9 +459,9 @@ export default function Customers() {
       }
     }
 
-    if (allocTotal !== totalToAllocate) {
+    if (Math.abs(allocTotal - totalToAllocate) > 0.001) {
       setAllocCreditError(
-        `La somma delle allocazioni manuali (€ ${allocTotal}) deve essere uguale all'importo da allocare (€ ${totalToAllocate}).`
+        `La somma delle allocazioni manuali (€ ${allocTotal.toFixed(2)}) deve essere uguale all'importo da allocare (€ ${totalToAllocate.toFixed(2)}).`
       )
       return
     }
@@ -648,6 +648,17 @@ export default function Customers() {
                 key={c.id}
                 className="hover:bg-surface-container-high transition-colors cursor-pointer"
                 onClick={() => {
+                  if (
+                    selectedCustomer &&
+                    selectedCustomer.id !== c.id &&
+                    allocType === 'manual' &&
+                    Object.values(manualAllocations).some((v) => parseFloat(v) > 0)
+                  ) {
+                    const confirmed = window.confirm(
+                      'Hai inserito allocazioni manuali per il cliente corrente. Cambiando cliente perderai questi dati non salvati. Continuare?'
+                    )
+                    if (!confirmed) return
+                  }
                   setSelectedCustomer(c)
                   loadCustomerDetail(c.id)
                 }}

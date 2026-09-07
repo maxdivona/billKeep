@@ -118,7 +118,19 @@ export default function Payments() {
     return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
   }
 
+  const hasUnsavedManualAllocations = () => {
+    if (allocType !== 'manual') return false
+    return Object.values(manualAllocations).some((v) => parseFloat(v) > 0)
+  }
+
   const handleCustomerChange = async (customerId) => {
+    if (hasUnsavedManualAllocations()) {
+      const confirmed = window.confirm(
+        'Hai inserito allocazioni manuali per il cliente corrente. Cambiando cliente perderai questi dati non salvati. Continuare?'
+      )
+      if (!confirmed) return
+    }
+
     setSelectedCustomerId(customerId)
     setFormError('')
     setFormSuccess('')
