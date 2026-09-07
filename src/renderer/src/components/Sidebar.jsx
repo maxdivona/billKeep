@@ -21,11 +21,7 @@ export default function Sidebar({ isOpen = false, onNavigate }) {
   ]
 
   return (
-    <aside
-      className={`w-56 bg-apple-sidebar border-r border-apple-border flex flex-col justify-between py-2 select-none flex-shrink-0 z-40 transition-transform duration-200 md:translate-x-0 ${
-        isOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'hidden md:flex'
-      }`}
-    >
+    <aside className="w-56 bg-apple-sidebar border-r border-apple-border flex flex-col justify-between py-2 select-none flex-shrink-0 z-20">
       <div className="flex-1 overflow-y-auto px-2 space-y-3.5">
         {/* Database / Workspace Picker */}
         <div className="px-1.5 pt-1">

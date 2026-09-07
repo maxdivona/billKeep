@@ -506,9 +506,9 @@ export default function Dashboard() {
       </div>
 
       {/* 2. Two-Pane Native Split Desktop Layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-0 divide-x divide-apple-border bg-[#FAFAFA]">
+      <div className="flex-1 grid grid-cols-12 min-h-0 divide-x divide-apple-border bg-[#FAFAFA]">
         {/* Left Pane: Native Invoice Data Grid (8 Cols) */}
-        <div className="lg:col-span-8 flex flex-col min-h-0 bg-white">
+        <div className="col-span-8 flex flex-col min-h-0 bg-white">
           {/* Table Filter & Search Sub-strip */}
           <div className="h-8 px-3 bg-white border-b border-apple-border flex items-center justify-between text-[11px] text-apple-secondary flex-shrink-0">
             <div className="flex items-center gap-2">
@@ -684,7 +684,7 @@ export default function Dashboard() {
         </div>
 
         {/* Right Pane: Native macOS Inspector / Dettaglio Documento & Scheda Cliente (4 Cols) */}
-        <div className="lg:col-span-4 flex flex-col min-h-0 bg-[#FBFBFC]">
+        <div className="col-span-4 flex flex-col min-h-0 bg-[#FBFBFC]">
           {/* Inspector Header & Native Actions */}
           <div className="h-8 px-3 bg-slate-50/80 border-b border-apple-border flex items-center justify-between text-[11px] flex-shrink-0">
             <div className="flex items-center gap-1.5 font-semibold text-apple-text">
