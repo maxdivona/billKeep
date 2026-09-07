@@ -5,13 +5,22 @@ const FOCUSABLE_SELECTOR =
 
 export default function Modal({ isOpen, onClose, title, children }) {
   const panelRef = useRef(null)
+  // onClose può essere una nuova funzione ad ogni render del genitore (es.
+  // un arrow function inline): usiamo una ref per leggerne sempre la
+  // versione più recente senza dover includerla tra le dipendenze degli
+  // effect sottostanti, che altrimenti si ri-eseguirebbero (rubando il
+  // focus dal campo in cui si sta scrivendo) ad ogni singola battitura.
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   // Keypress event listener for Escape key e focus trap (Tab/Shift+Tab
   // restano confinati al pannello finché la modale è aperta)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
         return
       }
 
@@ -37,7 +46,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
       // Prevent body scrolling
       document.body.style.overflow = 'hidden'
 
-      // Sposta il focus iniziale dentro il pannello
+      // Sposta il focus iniziale dentro il pannello, solo all'apertura
       const focusable = panelRef.current?.querySelectorAll(FOCUSABLE_SELECTOR)
       if (focusable && focusable.length > 0) {
         focusable[0].focus()
@@ -48,7 +57,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
       document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = 'unset'
     }
-  }, [isOpen, onClose])
+  }, [isOpen])
 
   if (!isOpen) return null
 
