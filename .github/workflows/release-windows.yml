@@ -51,6 +51,9 @@ jobs:
           releaseBody: |
             Release automatica per Windows (installer NSIS e MSI in allegato).
             Vedi la cronologia dei commit per il changelog dettagliato.
+
+            ⚠️ Build di sviluppo (beta), non ancora unita su `main`. Da usare
+            solo per test. Commit: ${{ github.sha }}
           releaseDraft: false
-          prerelease: false
+          prerelease: true
           args: --bundles nsis,msi
