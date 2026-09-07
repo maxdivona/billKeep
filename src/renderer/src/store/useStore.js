@@ -48,7 +48,9 @@ export const useStore = create((set, get) => ({
     totalCount: 0,
     hasMore: false,
     search: '',
-    customerId: ''
+    customerId: '',
+    dateFrom: '',
+    dateTo: ''
   },
 
   spotlightOpen: false,
@@ -472,7 +474,9 @@ export const useStore = create((set, get) => ({
         limit: currentPagination.limit,
         offset: newOffset,
         search: currentPagination.search,
-        customerId: currentPagination.customerId
+        customerId: currentPagination.customerId,
+        dateFrom: currentPagination.dateFrom,
+        dateTo: currentPagination.dateTo
       }
 
       const pageData = await window.api.getJournalEntriesPaginated(filters)

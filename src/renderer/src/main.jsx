@@ -56,7 +56,9 @@ window.api = {
       limit: filters.limit,
       offset: filters.offset,
       search: filters.search || null,
-      customerId: filters.customerId || null
+      customerId: filters.customerId || null,
+      dateFrom: filters.dateFrom || null,
+      dateTo: filters.dateTo || null
     }),
   getLogs: () => invoke('get_logs_command'),
   clearDatabase: () => invoke('clear_database'),

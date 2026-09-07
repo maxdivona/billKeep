@@ -28,7 +28,7 @@ export default function Sidebar({ isOpen = false, onNavigate }) {
         <button
           onClick={() => setSpotlightOpen(true)}
           className="flex items-center justify-between gap-md px-sm py-[7px] rounded-lg border border-outline-variant/50 hover:border-outline-variant/80 transition-all duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low cursor-pointer w-full text-left font-body-md text-body-md"
-          title="Cerca globalmente o digita comandi (Alt+S)"
+          title="Cerca globalmente o digita comandi (Alt+S o Alt+F)"
         >
           <div className="flex items-center gap-md">
             <span className="material-symbols-outlined">search</span>

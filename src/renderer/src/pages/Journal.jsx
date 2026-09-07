@@ -15,17 +15,26 @@ export default function Journal() {
 
   const [selectedCustomerId, setSelectedCustomerId] = useState(journalPagination.customerId)
   const [searchTerm, setSearchTerm] = useState(journalPagination.search)
+  const [dateFrom, setDateFrom] = useState(journalPagination.dateFrom)
+  const [dateTo, setDateTo] = useState(journalPagination.dateTo)
   const [expandedEntries, setExpandedEntries] = useState({})
 
   // Sincronizza filtri e ricarica i dati su modifica
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
-      setJournalFilters({ search: searchTerm, customerId: selectedCustomerId })
+      setJournalFilters({ search: searchTerm, customerId: selectedCustomerId, dateFrom, dateTo })
       fetchJournalEntriesPaginated(true)
     }, 300)
 
     return () => clearTimeout(delayDebounce)
-  }, [searchTerm, selectedCustomerId, setJournalFilters, fetchJournalEntriesPaginated])
+  }, [
+    searchTerm,
+    selectedCustomerId,
+    dateFrom,
+    dateTo,
+    setJournalFilters,
+    fetchJournalEntriesPaginated
+  ])
 
   useEffect(() => {
     fetchCustomers()
@@ -34,6 +43,8 @@ export default function Journal() {
   const handleReset = () => {
     setSelectedCustomerId('')
     setSearchTerm('')
+    setDateFrom('')
+    setDateTo('')
   }
 
   const toggleExpand = (id) => {
@@ -66,6 +77,54 @@ export default function Journal() {
   // Calculate sum of Dare/Avere for checking
   const getEntryTotal = (entry) => {
     return entry.lines.filter((l) => l.type === 'debit').reduce((sum, l) => sum + l.amount, 0)
+  }
+
+  // Esporta in CSV le scritture attualmente caricate (rispettando i filtri
+  // applicati). Se sono state caricate solo alcune pagine, l'export
+  // riguarda solo quelle: usare "Mostra altre registrazioni" prima di
+  // esportare per includere l'intero risultato filtrato.
+  const handleExportCsv = () => {
+    const escapeCsv = (val) => {
+      const str = String(val ?? '')
+      return /[",\n;]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str
+    }
+
+    const referenceTypeLabel = {
+      invoice: 'Fattura',
+      payment: 'Incasso',
+      allocation: 'Compensazione'
+    }
+
+    const header = ['Data', 'Descrizione', 'Cliente', 'Tipo Rif.', 'Valore', 'Stato']
+    const rows = filteredEntries.map((entry) => {
+      const totalDebit = entry.lines
+        .filter((l) => l.type === 'debit')
+        .reduce((sum, l) => sum + l.amount, 0)
+      const totalCredit = entry.lines
+        .filter((l) => l.type === 'credit')
+        .reduce((sum, l) => sum + l.amount, 0)
+      const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01
+
+      return [
+        entry.entry_date,
+        entry.description,
+        entry.customer_name || '',
+        referenceTypeLabel[entry.reference_type] || entry.reference_type,
+        getEntryTotal(entry).toFixed(2),
+        isBalanced ? 'Bilanciato' : 'Sbilanciato'
+      ]
+    })
+
+    const csvContent = [header, ...rows].map((r) => r.map(escapeCsv).join(';')).join('\n')
+    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `prima-nota_${new Date().toISOString().split('T')[0]}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -113,13 +172,52 @@ export default function Journal() {
           />
         </div>
 
+        <div className="w-full md:w-auto space-y-xs">
+          <label className="block font-label-sm text-label-sm text-on-surface-variant">
+            Dal
+          </label>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="w-full md:w-40 border border-outline-variant rounded-lg px-md py-sm bg-surface text-on-surface font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
+        <div className="w-full md:w-auto space-y-xs">
+          <label className="block font-label-sm text-label-sm text-on-surface-variant">Al</label>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="w-full md:w-40 border border-outline-variant rounded-lg px-md py-sm bg-surface text-on-surface font-body-md text-body-md focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
         <div className="flex gap-2 w-full md:w-auto items-center">
           <div className="text-body-sm font-label-sm text-on-surface-variant/80 bg-surface-container-high px-3 py-2 rounded-lg whitespace-nowrap self-stretch flex items-center justify-center">
             Trovate:{' '}
             <strong className="text-on-surface ml-1">{journalPagination.totalCount}</strong>
           </div>
           <button
-            className="flex-1 md:flex-initial bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-6 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
+            className={`flex-1 md:flex-initial bg-surface-container text-on-surface font-label-md text-label-md px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 ${
+              filteredEntries.length === 0
+                ? 'opacity-50 cursor-not-allowed'
+                : 'hover:bg-surface-container-high cursor-pointer'
+            }`}
+            onClick={handleExportCsv}
+            disabled={filteredEntries.length === 0}
+            title={
+              journalPagination.hasMore
+                ? "Esporta le registrazioni caricate finora. Usa 'Mostra altre registrazioni' per includerle tutte."
+                : 'Esporta in CSV le registrazioni filtrate'
+            }
+          >
+            <span className="material-symbols-outlined text-[20px]">download</span>
+            Esporta CSV
+          </button>
+          <button
+            className="flex-1 md:flex-initial bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-4 py-2.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
             onClick={handleReset}
           >
             <span className="material-symbols-outlined text-[20px]">restart_alt</span>

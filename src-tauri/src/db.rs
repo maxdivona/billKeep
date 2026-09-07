@@ -1790,6 +1790,8 @@ pub fn get_journal_entries_paginated(
     offset: u32,
     search: Option<String>,
     customer_id: Option<String>,
+    date_from: Option<String>,
+    date_to: Option<String>,
 ) -> Result<JournalEntryPage, String> {
     let conn = state.db_conn.lock().unwrap();
 
@@ -1810,6 +1812,20 @@ pub fn get_journal_entries_paginated(
         if !c_id.trim().is_empty() {
             where_clauses.push("je.customer_id = ?".to_string());
             params.push(rusqlite::types::Value::Text(c_id.clone()));
+        }
+    }
+
+    if let Some(ref from) = date_from {
+        if !from.trim().is_empty() {
+            where_clauses.push("date(je.entry_date) >= date(?)".to_string());
+            params.push(rusqlite::types::Value::Text(from.trim().to_string()));
+        }
+    }
+
+    if let Some(ref to) = date_to {
+        if !to.trim().is_empty() {
+            where_clauses.push("date(je.entry_date) <= date(?)".to_string());
+            params.push(rusqlite::types::Value::Text(to.trim().to_string()));
         }
     }
 
