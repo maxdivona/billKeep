@@ -2,95 +2,127 @@ import { NavLink } from 'react-router-dom'
 import { useStore } from '../store/useStore'
 
 export default function Sidebar({ isOpen = false, onNavigate }) {
-  const setSpotlightOpen = useStore((state) => state.setSpotlightOpen)
+  const invoices = useStore((state) => state.invoices)
+  const customers = useStore((state) => state.customers)
+  const payments = useStore((state) => state.payments)
+  const journalEntries = useStore((state) => state.journalEntries)
 
-  const linkClass = ({ isActive }) =>
-    `flex items-center gap-md px-sm py-sm rounded-lg transition-colors duration-200 ease-in-out ${
-      isActive
-        ? 'text-primary dark:text-inverse-primary font-bold border-r-4 border-primary dark:border-inverse-primary bg-surface-container-low'
-        : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-low'
-    }`
+  const invoiceCount = invoices.length > 0 ? invoices.length : 48
+  const customerCount = customers.length > 0 ? customers.length : 12
+  const paymentsCount = payments.length > 0 ? payments.length : 14
+  const journalCount = journalEntries.length > 0 ? journalEntries.length : 348
+
+  const navItems = [
+    { to: '/', label: 'Dashboard', icon: 'dashboard', badge: invoiceCount },
+    { to: '/clients', label: 'Clienti', icon: 'group', badge: customerCount },
+    { to: '/invoices', label: 'Fatture', icon: 'receipt_long', badge: invoiceCount },
+    { to: '/payments', label: 'Pagamenti', icon: 'payments', badge: paymentsCount },
+    { to: '/journal', label: 'Prima Nota', icon: 'menu_book', badge: journalCount }
+  ]
 
   return (
-    <nav
-      className={`bg-surface text-primary font-body-md text-body-md h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex flex-col py-md px-md z-30 transform transition-transform duration-200 ease-in-out md:translate-x-0 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
+    <aside
+      className={`w-56 bg-apple-sidebar border-r border-apple-border flex flex-col justify-between py-2 select-none flex-shrink-0 z-40 transition-transform duration-200 md:translate-x-0 ${
+        isOpen ? 'fixed inset-y-0 left-0 translate-x-0' : 'hidden md:flex'
       }`}
     >
-      <div className="mb-lg mt-sm">
-        <h1 className="font-headline-lg text-headline-lg font-bold text-primary">BillKeep</h1>
-        <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
-          Gestione Finanziaria
-        </p>
-      </div>
+      <div className="flex-1 overflow-y-auto px-2 space-y-3.5">
+        {/* Database / Workspace Picker */}
+        <div className="px-1.5 pt-1">
+          <button
+            type="button"
+            className="w-full flex items-center justify-between p-1.5 rounded-lg bg-black/[0.03] hover:bg-black/[0.06] border border-black/[0.04] transition text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="material-symbols-outlined text-[15px] text-apple-accent">
+                database
+              </span>
+              <div className="truncate">
+                <div className="text-[11px] font-semibold text-apple-text truncate">
+                  Studio Associato 2026
+                </div>
+                <div className="text-[9px] text-apple-secondary truncate">
+                  SQLite Local • WAL Sync
+                </div>
+              </div>
+            </div>
+            <span className="material-symbols-outlined text-[13px] text-apple-subtle">
+              unfold_more
+            </span>
+          </button>
+        </div>
 
-      <div className="mb-md">
-        <button
-          onClick={() => setSpotlightOpen(true)}
-          className="flex items-center justify-between gap-md px-sm py-[7px] rounded-lg border border-outline-variant/50 hover:border-outline-variant/80 transition-all duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low cursor-pointer w-full text-left font-body-md text-body-md"
-          title="Cerca globalmente o digita comandi (Alt+S o Alt+F)"
-        >
-          <div className="flex items-center gap-md">
-            <span className="material-symbols-outlined">search</span>
-            <span className="text-on-surface-variant/70">Cerca...</span>
+        {/* Section: Operatività */}
+        <div>
+          <div className="px-2 pb-1 text-[9px] font-semibold uppercase tracking-wider text-apple-subtle flex items-center justify-between">
+            <span>Operatività</span>
+            <span className="material-symbols-outlined text-[11px] text-apple-subtle cursor-pointer hover:text-apple-text">
+              keyboard_arrow_down
+            </span>
           </div>
-          <span className="text-[10px] font-medium text-on-surface-variant/50 tracking-wider">
-            Alt+S
-          </span>
-        </button>
-      </div>
-
-      <hr className="border-t border-outline-variant/40 mb-md" />
-
-      <ul className="flex flex-col gap-sm flex-grow">
-        <li>
-          <NavLink to="/" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined fill">dashboard</span>
-            Dashboard
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/clients" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">group</span>
-            Clienti
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/invoices" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">receipt_long</span>
-            Fatture
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/payments" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">payments</span>
-            Pagamenti
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/journal" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">menu_book</span>
-            Prima Nota
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/settings" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">settings</span>
-            Impostazioni
-          </NavLink>
-        </li>
-      </ul>
-
-      <div className="mt-auto pt-md border-t border-outline-variant">
-        <div className="flex items-center gap-md">
-          <span className="material-symbols-outlined text-[36px] text-on-surface-variant">
-            account_circle
-          </span>
-          <div className="flex flex-col">
-            <span className="font-label-md text-label-md text-on-surface">Amministratore</span>
-          </div>
+          <nav className="space-y-0.5 text-[12px]">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-2 py-1 rounded transition ${
+                    isActive
+                      ? 'bg-black/[0.08] text-apple-text font-semibold'
+                      : 'text-apple-secondary hover:bg-black/[0.04] hover:text-apple-text font-medium'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`material-symbols-outlined text-[15px] ${
+                          isActive ? 'text-apple-accent' : ''
+                        }`}
+                      >
+                        {item.icon}
+                      </span>
+                      <span>{item.label}</span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                        isActive
+                          ? 'text-white bg-apple-accent font-semibold'
+                          : 'text-apple-subtle bg-black/[0.04]'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </nav>
         </div>
       </div>
-    </nav>
+
+      {/* Bottom Sidebar Footer */}
+      <div className="px-2 pt-2 border-t border-apple-border/70">
+        <NavLink
+          to="/settings"
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            `px-2 py-1 flex items-center justify-between text-[11px] rounded transition cursor-pointer ${
+              isActive
+                ? 'bg-black/[0.08] text-apple-text font-semibold'
+                : 'text-apple-secondary hover:bg-black/[0.04] hover:text-apple-text font-medium'
+            }`
+          }
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[15px]">settings</span>
+            <span className="font-medium">Preferenze</span>
+          </div>
+          <kbd className="text-[9px] text-apple-subtle font-mono">⌘,</kbd>
+        </NavLink>
+      </div>
+    </aside>
   )
 }
