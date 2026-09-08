@@ -11,7 +11,7 @@ export default function StatusBar({ selectedInvoiceInfo: propInfo, totalInvoices
   const totalCount = totalInvoicesCount ?? (invoices.length > 0 ? invoices.length : 48)
 
   return (
-    <footer className="h-6 w-full bg-[#ECECED] border-t border-apple-border px-3 flex items-center justify-between text-[10px] text-apple-secondary select-none z-20 flex-shrink-0">
+    <footer className="h-7 w-full bg-[#ECECED] border-t border-apple-border px-3 flex items-center justify-between text-[12px] text-apple-secondary select-none z-20 flex-shrink-0">
       <div className="flex items-center gap-3 truncate">
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-apple-green animate-pulse" />
@@ -27,7 +27,7 @@ export default function StatusBar({ selectedInvoiceInfo: propInfo, totalInvoices
         <span className="text-apple-subtle flex-shrink-0">{totalCount} fatture totali</span>
       </div>
 
-      <div className="flex items-center gap-3 font-mono text-[9px] flex-shrink-0 hidden sm:flex">
+      <div className="flex items-center gap-3 font-mono text-[11px] flex-shrink-0 hidden sm:flex">
         <span className="text-apple-subtle">Esc: Deseleziona</span>
         <span>Space: Anteprima PDF</span>
         <span>↵: Modifica</span>

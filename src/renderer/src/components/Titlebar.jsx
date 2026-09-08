@@ -98,8 +98,8 @@ export default function Titlebar() {
           />
         </div>
         <div className="h-4 w-px bg-apple-border" />
-        <div className="flex items-center gap-1.5 text-[11px] text-apple-secondary">
-          <span className="material-symbols-outlined text-[15px] text-apple-secondary">
+        <div className="flex items-center gap-1.5 text-[13px] text-apple-secondary">
+          <span className="material-symbols-outlined text-[17px] text-apple-secondary">
             folder_open
           </span>
           <span className="font-medium text-apple-text">BillKeep</span>
@@ -108,7 +108,7 @@ export default function Titlebar() {
           <span className="text-apple-subtle">/</span>
           <span>Q3</span>
           <span className="text-apple-subtle">/</span>
-          <span className="font-semibold text-apple-text bg-black/[0.05] px-1.5 py-0.5 rounded text-[10px]">
+          <span className="font-semibold text-apple-text bg-black/[0.05] px-1.5 py-0.5 rounded text-[12px]">
             {getPageTitle()}
           </span>
         </div>
@@ -129,7 +129,7 @@ export default function Titlebar() {
                 key={tab.id}
                 type="button"
                 onClick={() => setDashboardFilter(tab.id)}
-                className={`px-2.5 py-0.5 text-[11px] rounded transition cursor-pointer ${
+                className={`px-2.5 py-0.5 text-[13px] rounded transition cursor-pointer ${
                   dashboardFilter === tab.id
                     ? 'font-semibold bg-white text-apple-text shadow-xs'
                     : 'font-medium text-apple-secondary hover:text-apple-text'
@@ -145,8 +145,8 @@ export default function Titlebar() {
       {/* Right: Actions & Search */}
       <div className="flex items-center gap-1.5">
         {isDashboard && (
-          <div className="relative flex items-center w-48 h-6 rounded bg-black/[0.04] hover:bg-black/[0.06] border border-black/[0.04] px-2 transition">
-            <span className="material-symbols-outlined text-apple-subtle text-[13px] mr-1.5">
+          <div className="relative flex items-center w-52 h-7 rounded bg-black/[0.04] hover:bg-black/[0.06] border border-black/[0.04] px-2 transition">
+            <span className="material-symbols-outlined text-apple-subtle text-[15px] mr-1.5">
               search
             </span>
             <input
@@ -155,9 +155,9 @@ export default function Titlebar() {
               value={dashboardSearch}
               onChange={(e) => setDashboardSearch(e.target.value)}
               placeholder="Cerca fattura, P.IVA..."
-              className="w-full bg-transparent text-[11px] text-apple-text placeholder:text-apple-subtle focus:outline-none"
+              className="w-full bg-transparent text-[13px] text-apple-text placeholder:text-apple-subtle focus:outline-none"
             />
-            <kbd className="text-[9px] text-apple-subtle font-mono bg-white shadow-xs px-1 py-0.2 rounded border border-black/[0.05]">
+            <kbd className="text-[11px] text-apple-subtle font-mono bg-white shadow-xs px-1 py-0.2 rounded border border-black/[0.05]">
               ⌘K
             </kbd>
           </div>
@@ -167,22 +167,22 @@ export default function Titlebar() {
           <>
             <button
               type="button"
-              className="h-6 px-2 rounded bg-white border border-apple-border text-[11px] font-medium text-apple-text shadow-xs hover:bg-slate-50 flex items-center gap-1 transition cursor-pointer"
+              className="h-7 px-2.5 rounded bg-white border border-apple-border text-[13px] font-medium text-apple-text shadow-xs hover:bg-slate-50 flex items-center gap-1 transition cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[13px] text-apple-secondary">
+              <span className="material-symbols-outlined text-[15px] text-apple-secondary">
                 filter_alt
               </span>
               <span>Filtra</span>
-              <kbd className="text-[9px] text-apple-subtle font-mono ml-0.5">⌥F</kbd>
+              <kbd className="text-[11px] text-apple-subtle font-mono ml-0.5">⌥F</kbd>
             </button>
 
             <button
               type="button"
               onClick={handleExport}
-              className="h-6 px-2 rounded bg-white border border-apple-border text-[11px] font-medium text-apple-text shadow-xs hover:bg-slate-50 flex items-center gap-1 transition cursor-pointer"
+              className="h-7 px-2.5 rounded bg-white border border-apple-border text-[13px] font-medium text-apple-text shadow-xs hover:bg-slate-50 flex items-center gap-1 transition cursor-pointer"
               title="Esporta elenco in CSV"
             >
-              <span className="material-symbols-outlined text-[13px] text-apple-secondary">
+              <span className="material-symbols-outlined text-[15px] text-apple-secondary">
                 file_download
               </span>
               <span>Esporta</span>
@@ -191,11 +191,11 @@ export default function Titlebar() {
             <button
               type="button"
               onClick={() => navigate('/invoices')}
-              className="h-6 px-2 rounded bg-apple-accent hover:bg-apple-accent-hover text-white text-[11px] font-medium shadow-xs flex items-center gap-1 transition cursor-pointer"
+              className="h-7 px-2.5 rounded bg-apple-accent hover:bg-apple-accent-hover text-white text-[13px] font-medium shadow-xs flex items-center gap-1 transition cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[13px]">add</span>
+              <span className="material-symbols-outlined text-[15px]">add</span>
               <span>Nuova Fattura</span>
-              <kbd className="text-[9px] text-white/80 font-mono ml-0.5">⌘N</kbd>
+              <kbd className="text-[11px] text-white/80 font-mono ml-0.5">⌘N</kbd>
             </button>
           </>
         )}
