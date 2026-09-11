@@ -99,7 +99,7 @@ export default function Titlebar() {
 
             <button
               type="button"
-              onClick={() => navigate('/invoices')}
+              onClick={() => navigate('/invoices', { state: { focusNewInvoice: true } })}
               className="h-7 px-3 rounded-md bg-apple-accent hover:bg-apple-accent-hover text-white text-[13px] font-medium shadow-xs flex items-center gap-1.5 transition cursor-pointer"
             >
               <span className="material-symbols-outlined text-[15px]">add</span>

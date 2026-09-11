@@ -9,7 +9,11 @@ export default function Layout({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
   const isWorkstationPage =
-    location.pathname === '/' || location.pathname === '/clients' || location.pathname === '/payments'
+    location.pathname === '/' ||
+    location.pathname === '/clients' ||
+    location.pathname === '/payments' ||
+    location.pathname === '/invoices' ||
+    location.pathname === '/settings'
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-apple-canvas text-apple-text antialiased select-none font-sans">
