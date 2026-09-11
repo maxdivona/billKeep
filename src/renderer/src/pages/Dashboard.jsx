@@ -791,7 +791,6 @@ export default function Dashboard() {
                     >
                       <span className="material-symbols-outlined text-[14px]">check_circle</span>
                       <span>Registra Incasso Rapido</span>
-                      <kbd className="text-[10px] opacity-80 font-mono">[F7]</kbd>
                     </button>
                     <button
                       type="button"

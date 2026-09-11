@@ -77,9 +77,6 @@ export default function Titlebar() {
               placeholder="Cerca fattura, P.IVA..."
               className="w-full bg-transparent text-[13px] text-apple-text placeholder:text-apple-subtle focus:outline-none"
             />
-            <kbd className="text-[11px] text-apple-subtle font-mono bg-white shadow-xs px-1.5 py-0.5 rounded border border-black/[0.05] select-none">
-              ⌘K
-            </kbd>
           </div>
         )}
       </div>
@@ -107,7 +104,6 @@ export default function Titlebar() {
             >
               <span className="material-symbols-outlined text-[15px]">add</span>
               <span>Nuova Fattura</span>
-              <kbd className="text-[11px] text-white/80 font-mono ml-0.5">⌘N</kbd>
             </button>
           </>
         )}

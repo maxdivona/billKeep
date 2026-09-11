@@ -116,7 +116,6 @@ export default function Sidebar({ isOpen = false, onNavigate }) {
             <span className="material-symbols-outlined text-[17px]">settings</span>
             <span className="font-medium">Preferenze</span>
           </div>
-          <kbd className="text-[11px] text-apple-subtle font-mono">⌘,</kbd>
         </NavLink>
       </div>
     </aside>
