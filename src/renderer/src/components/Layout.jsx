@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Titlebar from './Titlebar'
-import StatusBar from './StatusBar'
 import Spotlight from './Spotlight'
+import packageInfo from '../../../../package.json'
 
 export default function Layout({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false)
@@ -50,8 +50,17 @@ export default function Layout({ children }) {
             </main>
           )}
 
-          {/* Bottom Desktop Status Bar */}
-          <StatusBar />
+          {/* Bottom Desktop Footer Bar */}
+          <footer className="h-6.5 w-full bg-[#ECECED] border-t border-apple-border px-3 flex items-center justify-between text-[11px] text-apple-secondary select-none z-20 flex-shrink-0">
+            <div className="flex items-center gap-2 truncate">
+              <span className="font-medium text-apple-text">Sviluppatore: Massimo Di Vona</span>
+              <span className="text-apple-subtle">•</span>
+              <span>Versione {packageInfo.version}</span>
+            </div>
+            <div className="text-apple-subtle flex-shrink-0 hidden sm:block">
+              <span>© {new Date().getFullYear()} Massimo Di Vona • Tutti i diritti riservati</span>
+            </div>
+          </footer>
         </div>
       </div>
 
