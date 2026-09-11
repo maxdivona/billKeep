@@ -170,7 +170,6 @@ export default function Dashboard() {
     invoices: dbInvoices,
     customers,
     fetchAllData,
-    dashboardFilter,
     dashboardSearch,
     selectedInvoiceId,
     setSelectedInvoiceId,
@@ -279,16 +278,10 @@ export default function Dashboard() {
     return PROTOTYPE_INVOICES
   }, [dbInvoices, customers])
 
-  // Filtro combinato: Barra superiore (Tutte/Emesse/Ricevute/Da Incassare/Saldate) + Ricerca + Filtro stato interno
+  // Filtro combinato: Ricerca + Filtro stato interno
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter((inv) => {
-      // 1. Filtro Top Segmented Control
-      if (dashboardFilter === 'issued' && inv.type !== 'emessa') return false
-      if (dashboardFilter === 'received' && inv.type !== 'ricevuta') return false
-      if (dashboardFilter === 'unpaid' && inv.status === 'paid') return false
-      if (dashboardFilter === 'paid' && inv.status !== 'paid') return false
-
-      // 2. Filtro dropdown locale
+      // 1. Filtro dropdown locale
       if (localStatusFilter === 'paid' && inv.status !== 'paid') return false
       if (
         localStatusFilter === 'unpaid' &&
@@ -299,7 +292,7 @@ export default function Dashboard() {
         return false
       if (localStatusFilter === 'overdue' && inv.status !== 'overdue') return false
 
-      // 3. Ricerca full-text
+      // 2. Ricerca full-text
       if (dashboardSearch && dashboardSearch.trim() !== '') {
         const q = dashboardSearch.toLowerCase().trim()
         const matchId = inv.id.toLowerCase().includes(q)
@@ -310,7 +303,7 @@ export default function Dashboard() {
 
       return true
     })
-  }, [allInvoices, dashboardFilter, localStatusFilter, dashboardSearch])
+  }, [allInvoices, localStatusFilter, dashboardSearch])
 
   // Selezione della fattura attiva (predefinita la prima trovata)
   const activeInvoice = useMemo(() => {

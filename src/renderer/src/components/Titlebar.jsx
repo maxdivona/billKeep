@@ -7,33 +7,11 @@ export default function Titlebar() {
   const navigate = useNavigate()
   const searchInputRef = useRef(null)
 
-  const dashboardFilter = useStore((state) => state.dashboardFilter)
-  const setDashboardFilter = useStore((state) => state.setDashboardFilter)
   const dashboardSearch = useStore((state) => state.dashboardSearch)
   const setDashboardSearch = useStore((state) => state.setDashboardSearch)
   const invoices = useStore((state) => state.invoices)
 
   const isDashboard = location.pathname === '/'
-
-  // Page title mapping for breadcrumbs
-  const getPageTitle = () => {
-    switch (location.pathname) {
-      case '/':
-        return 'Fatture & Clienti'
-      case '/clients':
-        return 'Anagrafica Clienti'
-      case '/invoices':
-        return 'Registro Fatture'
-      case '/payments':
-        return 'Riconciliazione Pagamenti'
-      case '/journal':
-        return 'Prima Nota & Bilancio'
-      case '/settings':
-        return 'Preferenze'
-      default:
-        return 'Panoramica'
-    }
-  }
 
   // Keyboard shortcut listener for Cmd+K and Cmd+N
   useEffect(() => {
@@ -80,73 +58,15 @@ export default function Titlebar() {
   }
 
   return (
-    <header className="h-11 w-full bg-apple-sidebar/95 backdrop-blur-md border-b border-apple-border flex items-center justify-between px-3 select-none flex-shrink-0 z-30">
-      {/* Left: macOS Traffic Lights & Breadcrumbs */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 pr-1">
-          <span
-            className="w-3 h-3 rounded-full bg-[#FF5F56] border border-[#E0443E] hover:opacity-80 transition cursor-pointer"
-            title="Chiudi"
-          />
-          <span
-            className="w-3 h-3 rounded-full bg-[#FFBD2E] border border-[#DEA123] hover:opacity-80 transition cursor-pointer"
-            title="Minimizza"
-          />
-          <span
-            className="w-3 h-3 rounded-full bg-[#27C93F] border border-[#1AAB29] hover:opacity-80 transition cursor-pointer"
-            title="Espandi"
-          />
-        </div>
-        <div className="h-4 w-px bg-apple-border" />
-        <div className="flex items-center gap-1.5 text-[13px] text-apple-secondary">
-          <span className="material-symbols-outlined text-[17px] text-apple-secondary">
-            folder_open
-          </span>
-          <span className="font-medium text-apple-text">BillKeep</span>
-          <span className="text-apple-subtle">/</span>
-          <span>Esercizio {new Date().getFullYear()}</span>
-          <span className="text-apple-subtle">/</span>
-          <span>Q3</span>
-          <span className="text-apple-subtle">/</span>
-          <span className="font-semibold text-apple-text bg-black/[0.05] px-1.5 py-0.5 rounded text-[12px]">
-            {getPageTitle()}
-          </span>
-        </div>
-      </div>
+    <header className="h-11 w-full bg-apple-sidebar/95 backdrop-blur-md border-b border-apple-border grid grid-cols-3 items-center px-4 select-none flex-shrink-0 z-30">
+      {/* Left: Vuoto per bilanciare la griglia e centrare perfettamente la ricerca */}
+      <div className="flex items-center" />
 
-      {/* Center: Segmented Control (only for Dashboard) */}
-      {isDashboard && (
-        <div className="flex items-center">
-          <div className="inline-flex p-0.5 rounded-lg bg-black/[0.06] border border-black/[0.04]">
-            {[
-              { id: 'all', label: 'Tutte' },
-              { id: 'issued', label: 'Emesse' },
-              { id: 'received', label: 'Ricevute' },
-              { id: 'unpaid', label: 'Da Incassare' },
-              { id: 'paid', label: 'Saldate' }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setDashboardFilter(tab.id)}
-                className={`px-2.5 py-0.5 text-[13px] rounded transition cursor-pointer ${
-                  dashboardFilter === tab.id
-                    ? 'font-semibold bg-white text-apple-text shadow-xs'
-                    : 'font-medium text-apple-secondary hover:text-apple-text'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Right: Actions & Search */}
-      <div className="flex items-center gap-1.5">
+      {/* Center: Ricerca al centro */}
+      <div className="flex items-center justify-center">
         {isDashboard && (
-          <div className="relative flex items-center w-52 h-7 rounded bg-black/[0.04] hover:bg-black/[0.06] border border-black/[0.04] px-2 transition">
-            <span className="material-symbols-outlined text-apple-subtle text-[15px] mr-1.5">
+          <div className="relative flex items-center w-80 max-w-full h-7 rounded-md bg-black/[0.04] hover:bg-black/[0.06] border border-black/[0.06] px-2.5 transition">
+            <span className="material-symbols-outlined text-apple-subtle text-[15px] mr-2 select-none">
               search
             </span>
             <input
@@ -157,29 +77,21 @@ export default function Titlebar() {
               placeholder="Cerca fattura, P.IVA..."
               className="w-full bg-transparent text-[13px] text-apple-text placeholder:text-apple-subtle focus:outline-none"
             />
-            <kbd className="text-[11px] text-apple-subtle font-mono bg-white shadow-xs px-1 py-0.2 rounded border border-black/[0.05]">
+            <kbd className="text-[11px] text-apple-subtle font-mono bg-white shadow-xs px-1.5 py-0.5 rounded border border-black/[0.05] select-none">
               ⌘K
             </kbd>
           </div>
         )}
+      </div>
 
+      {/* Right: Esporta e Nuova Fattura */}
+      <div className="flex items-center justify-end gap-2">
         {isDashboard && (
           <>
             <button
               type="button"
-              className="h-7 px-2.5 rounded bg-white border border-apple-border text-[13px] font-medium text-apple-text shadow-xs hover:bg-slate-50 flex items-center gap-1 transition cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[15px] text-apple-secondary">
-                filter_alt
-              </span>
-              <span>Filtra</span>
-              <kbd className="text-[11px] text-apple-subtle font-mono ml-0.5">⌥F</kbd>
-            </button>
-
-            <button
-              type="button"
               onClick={handleExport}
-              className="h-7 px-2.5 rounded bg-white border border-apple-border text-[13px] font-medium text-apple-text shadow-xs hover:bg-slate-50 flex items-center gap-1 transition cursor-pointer"
+              className="h-7 px-3 rounded-md bg-white border border-apple-border text-[13px] font-medium text-apple-text shadow-xs hover:bg-slate-50 flex items-center gap-1.5 transition cursor-pointer"
               title="Esporta elenco in CSV"
             >
               <span className="material-symbols-outlined text-[15px] text-apple-secondary">
@@ -191,7 +103,7 @@ export default function Titlebar() {
             <button
               type="button"
               onClick={() => navigate('/invoices')}
-              className="h-7 px-2.5 rounded bg-apple-accent hover:bg-apple-accent-hover text-white text-[13px] font-medium shadow-xs flex items-center gap-1 transition cursor-pointer"
+              className="h-7 px-3 rounded-md bg-apple-accent hover:bg-apple-accent-hover text-white text-[13px] font-medium shadow-xs flex items-center gap-1.5 transition cursor-pointer"
             >
               <span className="material-symbols-outlined text-[15px]">add</span>
               <span>Nuova Fattura</span>
