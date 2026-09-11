@@ -169,19 +169,22 @@ export default function Dashboard() {
   const {
     invoices: dbInvoices,
     customers,
+    payments,
     fetchAllData,
     dashboardSearch,
     selectedInvoiceId,
     setSelectedInvoiceId,
     setSelectedInvoiceInfo,
-    addPayment
+    addMultiPayment
   } = useStore()
 
   const [localStatusFilter, setLocalStatusFilter] = useState('all')
   const [toastMessage, setToastMessage] = useState(null)
   const [quickPaymentModalOpen, setQuickPaymentModalOpen] = useState(false)
   const [quickPaymentAmount, setQuickPaymentAmount] = useState('')
+  const [quickPaymentDate, setQuickPaymentDate] = useState(() => new Date().toISOString().split('T')[0])
   const [quickPaymentMethod, setQuickPaymentMethod] = useState('Bonifico')
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false)
 
   useEffect(() => {
     fetchAllData()
@@ -354,30 +357,20 @@ export default function Dashboard() {
     }
   }, [filteredInvoices])
 
-  // Calcolo Imponibile e IVA per la fattura attiva
-  const activeImponibile = activeInvoice
-    ? activeInvoice.imponibile || activeInvoice.amount / 1.22
-    : 0
-  const activeIVA = activeInvoice ? activeInvoice.iva || activeInvoice.amount - activeImponibile : 0
+  // Calcolo incassi e saldo residuo per la fattura attiva
+  const activeInvoicePaid = useMemo(() => {
+    if (!activeInvoice) return 0
+    if (dbInvoices && dbInvoices.length > 0) {
+      const invPayments = (payments || []).filter((p) => p.invoice_id === activeInvoice.id)
+      return invPayments.reduce((sum, p) => sum + p.amount, 0)
+    }
+    return activeInvoice.status === 'paid' ? activeInvoice.amount : 0
+  }, [activeInvoice, payments, dbInvoices])
 
-  // Gestione Sollecito PEC
-  const handleSollecitoPec = () => {
-    if (!activeInvoice) return
-    const text = `Gentile ${activeInvoice.customer_name},\nVi ricordiamo che la fattura ${activeInvoice.id} emessa il ${formatDate(activeInvoice.issue_date)} per un totale di ${formatCurrency(activeInvoice.amount)} risulta scaduta.\nVi invitiamo a procedere al saldo alle seguenti coordinate: ${activeInvoice.bank_account}.\nCordiali saluti,\nAmministrazione BillKeep`
-    navigator.clipboard.writeText(text)
-    setToastMessage('Testo del sollecito copiato negli appunti! Bozza PEC pronta.')
-    setTimeout(() => setToastMessage(null), 3500)
-  }
-
-  // Gestione Invio Email
-  const handleSendEmail = () => {
-    if (!activeInvoice) return
-    const subject = encodeURIComponent(`Fattura ${activeInvoice.id} - BillKeep`)
-    const body = encodeURIComponent(
-      `Gentile ${activeInvoice.customer_name},\nIn allegato trovate la fattura ${activeInvoice.id} di ${formatCurrency(activeInvoice.amount)} con scadenza ${formatDate(activeInvoice.due_date)}.\n\nCordiali saluti.`
-    )
-    window.open(`mailto:${activeInvoice.pec || ''}?subject=${subject}&body=${body}`, '_blank')
-  }
+  const activeInvoiceRemaining = useMemo(() => {
+    if (!activeInvoice) return 0
+    return Math.max(0, activeInvoice.amount - activeInvoicePaid)
+  }, [activeInvoice, activeInvoicePaid])
 
   // Gestione Stampa
   const handlePrint = () => {
@@ -387,49 +380,74 @@ export default function Dashboard() {
   // Registra incasso rapido (F7)
   const handleOpenQuickPayment = useCallback(() => {
     if (!activeInvoice) return
-    setQuickPaymentAmount(activeInvoice.amount.toString())
+    const defaultAmount =
+      activeInvoiceRemaining > 0 ? activeInvoiceRemaining : activeInvoice.amount
+    setQuickPaymentAmount(defaultAmount.toFixed(2))
+    setQuickPaymentDate(new Date().toISOString().split('T')[0])
+    setQuickPaymentMethod('Bonifico')
     setQuickPaymentModalOpen(true)
-  }, [activeInvoice])
+  }, [activeInvoice, activeInvoiceRemaining])
 
-  const handleConfirmQuickPayment = async () => {
-    if (!activeInvoice) return
+  const handleConfirmQuickPayment = async (e) => {
+    if (e) e.preventDefault()
+    if (!activeInvoice || isSubmittingPayment) return
+
     const parsedAmount = parseFloat(quickPaymentAmount)
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      alert('Inserisci un importo valido.')
+      alert('Inserisci un importo valido maggiore di zero.')
       return
     }
 
+    setIsSubmittingPayment(true)
     try {
-      if (dbInvoices && dbInvoices.length > 0) {
-        await addPayment({
-          invoice_id: activeInvoice.id,
-          customer_id: activeInvoice.customer_id,
-          amount: parsedAmount,
-          payment_date: new Date().toISOString().replace('T', ' ').slice(0, 19),
-          method: quickPaymentMethod
-        })
+      if (!dbInvoices || dbInvoices.length === 0) {
+        // Modalità dimostrativa
+        setQuickPaymentModalOpen(false)
+        setToastMessage(
+          `[Demo] Incasso di ${formatCurrency(parsedAmount)} registrato per ${activeInvoice.id}!`
+        )
+        setTimeout(() => setToastMessage(null), 3500)
+        return
       }
-      setQuickPaymentModalOpen(false)
-      setToastMessage(
-        `Incasso di ${formatCurrency(parsedAmount)} registrato per ${activeInvoice.id}!`
-      )
-      setTimeout(() => setToastMessage(null), 3500)
+
+      const res = await addMultiPayment({
+        customerId: activeInvoice.customer_id,
+        totalAmount: parsedAmount,
+        method: quickPaymentMethod,
+        date: quickPaymentDate || new Date().toISOString().split('T')[0],
+        allocations: [{ invoiceId: activeInvoice.id, amount: parsedAmount }],
+        accontoAmount: 0
+      })
+
+      if (res && res.success) {
+        setQuickPaymentModalOpen(false)
+        setToastMessage(
+          `Incasso di ${formatCurrency(parsedAmount)} registrato per ${activeInvoice.id}!`
+        )
+        setTimeout(() => setToastMessage(null), 3500)
+      } else {
+        alert('Errore durante la registrazione dell incasso: ' + (res?.error || 'Operazione non riuscita'))
+      }
     } catch (err) {
       alert('Errore durante la registrazione dell incasso: ' + err.message)
+    } finally {
+      setIsSubmittingPayment(false)
     }
   }
 
-  // Keyboard shortcut F7 per Incasso Rapido
+  // Keyboard shortcut (F7 per aprire incasso rapido, Escape per chiudere modale)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'F7') {
+      if (e.key === 'Escape' && quickPaymentModalOpen) {
+        setQuickPaymentModalOpen(false)
+      } else if (e.key === 'F7' && !quickPaymentModalOpen) {
         e.preventDefault()
         handleOpenQuickPayment()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleOpenQuickPayment])
+  }, [quickPaymentModalOpen, handleOpenQuickPayment])
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden select-none font-sans">
@@ -647,15 +665,6 @@ export default function Dashboard() {
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={handleSendEmail}
-                className="h-6 px-2 rounded bg-white border border-apple-border text-apple-secondary hover:text-apple-text flex items-center text-[12px] transition cursor-pointer"
-                title="Invia copia cortesia via email"
-              >
-                <span className="material-symbols-outlined text-[14px] mr-1">mail</span>
-                <span>Invia</span>
-              </button>
-              <button
-                type="button"
                 onClick={handlePrint}
                 className="h-6 px-2 rounded bg-white border border-apple-border text-apple-secondary hover:text-apple-text flex items-center text-[12px] transition cursor-pointer"
                 title="Stampa PDF"
@@ -707,51 +716,60 @@ export default function Dashboard() {
                       <div className="text-[16px] font-bold font-mono text-apple-text">
                         {formatCurrency(activeInvoice.amount)}
                       </div>
-                      <div className="text-[11px] text-apple-subtle font-mono">IVA 22% inclusa</div>
+                      <div className="text-[11px] text-apple-subtle font-mono">Totale Fattura</div>
                     </div>
                   </div>
 
-                  {/* Breakdown Box */}
+                  {/* Riepilogo Saldo & Incassi */}
                   <div className="mt-2.5 p-2.5 rounded bg-slate-50 border border-black/[0.04] text-[12px] font-mono space-y-1">
                     <div className="flex justify-between text-apple-secondary">
-                      <span>Imponibile Prestazioni:</span>
+                      <span>Importo Totale:</span>
                       <span className="text-apple-text font-medium">
-                        {formatCurrency(activeImponibile)}
+                        {formatCurrency(activeInvoice.amount)}
                       </span>
                     </div>
                     <div className="flex justify-between text-apple-secondary">
-                      <span>IVA Ordinaria (22%):</span>
-                      <span className="text-apple-text font-medium">
-                        {formatCurrency(activeIVA)}
+                      <span>Già Incassato:</span>
+                      <span
+                        className={`font-medium ${
+                          activeInvoicePaid > 0 ? 'text-emerald-700' : 'text-apple-text'
+                        }`}
+                      >
+                        {formatCurrency(activeInvoicePaid)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-apple-secondary truncate">
-                      <span>Coordinate Accredito:</span>
-                      <span className="text-apple-text truncate ml-1">
-                        {activeInvoice.bank_account || 'Banca Unicredit (IT29X02008...)'}
+                    <div className="flex justify-between text-apple-secondary pt-1 border-t border-black/[0.04]">
+                      <span className="font-semibold text-apple-text">Residuo da Saldare:</span>
+                      <span
+                        className={`font-bold ${
+                          activeInvoiceRemaining > 0
+                            ? activeInvoice.status === 'overdue'
+                              ? 'text-rose-600'
+                              : 'text-amber-700'
+                            : 'text-emerald-700'
+                        }`}
+                      >
+                        {formatCurrency(activeInvoiceRemaining)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="mt-2.5 pt-2 border-t border-apple-border/60 flex items-center justify-between gap-1.5">
-                    <button
-                      type="button"
-                      onClick={handleOpenQuickPayment}
-                      className="h-7 px-3 bg-apple-accent hover:bg-apple-accent-hover text-white text-[12px] font-medium rounded flex items-center gap-1.5 transition cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                      <span>Registra Incasso Rapido</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSollecitoPec}
-                      className="h-7 px-2.5 bg-white border border-apple-border text-rose-600 hover:bg-rose-50 text-[12px] font-medium rounded transition flex items-center gap-1 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[13px]">
-                        notification_important
-                      </span>
-                      <span>Sollecito PEC</span>
-                    </button>
+                  <div className="mt-2.5 pt-2 border-t border-apple-border/60 flex items-center justify-between">
+                    {activeInvoice.status === 'paid' || activeInvoiceRemaining <= 0 ? (
+                      <div className="h-7 px-2.5 bg-emerald-50 text-emerald-700 text-[12px] font-medium rounded flex items-center gap-1.5 border border-emerald-200/60">
+                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        <span>Fattura già saldata</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleOpenQuickPayment}
+                        className="h-7 px-3 bg-apple-accent hover:bg-apple-accent-hover text-white text-[12px] font-medium rounded flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        <span>Registra Incasso Rapido</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -907,12 +925,18 @@ export default function Dashboard() {
 
       {/* Quick Payment Modal */}
       {quickPaymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-xl shadow-2xl border border-apple-border w-full max-w-md overflow-hidden animate-scale-in">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4"
+          onClick={() => !isSubmittingPayment && setQuickPaymentModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl border border-apple-border w-full max-w-md overflow-hidden animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="px-4 py-3 bg-slate-50 border-b border-apple-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[20px] text-apple-accent">
-                  check_circle
+                  payments
                 </span>
                 <span className="font-semibold text-[15px] text-apple-text">
                   Registra Incasso Rapido
@@ -920,68 +944,128 @@ export default function Dashboard() {
               </div>
               <button
                 type="button"
-                onClick={() => setQuickPaymentModalOpen(false)}
-                className="text-apple-subtle hover:text-apple-text cursor-pointer"
+                onClick={() => !isSubmittingPayment && setQuickPaymentModalOpen(false)}
+                className="text-apple-subtle hover:text-apple-text cursor-pointer p-1 rounded hover:bg-slate-200/50 transition"
               >
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
-            <div className="p-4 space-y-3.5 text-[14px]">
-              <div>
-                <span className="text-apple-secondary text-[13px]">Fattura:</span>
-                <div className="font-semibold text-apple-text">
-                  {activeInvoice?.id} — {activeInvoice?.customer_name}
+            <form onSubmit={handleConfirmQuickPayment}>
+              <div className="p-4 space-y-3.5 text-[14px]">
+                <div className="p-2.5 rounded bg-slate-50 border border-black/[0.04] space-y-1">
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-apple-secondary">Documento:</span>
+                    <span className="font-bold font-mono text-apple-text">
+                      {activeInvoice?.id}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-apple-secondary">Cliente:</span>
+                    <span className="font-medium text-apple-text truncate ml-2">
+                      {activeInvoice?.customer_name}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-[13px]">
+                    <span className="text-apple-secondary">Importo Fattura:</span>
+                    <span className="font-mono text-apple-text">
+                      {formatCurrency(activeInvoice?.amount)}
+                    </span>
+                  </div>
+                  {activeInvoiceRemaining < (activeInvoice?.amount || 0) && (
+                    <div className="flex justify-between items-center text-[13px] pt-1 border-t border-black/[0.04]">
+                      <span className="text-apple-secondary font-medium">Residuo da saldare:</span>
+                      <span className="font-mono font-bold text-amber-700">
+                        {formatCurrency(activeInvoiceRemaining)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-apple-secondary mb-1">
+                    Data Incasso:
+                  </label>
+                  <input
+                    type="date"
+                    value={quickPaymentDate}
+                    onChange={(e) => setQuickPaymentDate(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded border border-apple-border text-[14px] bg-white focus:outline-none focus:border-apple-accent"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-[13px] font-medium text-apple-secondary">
+                      Importo da Incassare (€):
+                    </label>
+                    {activeInvoiceRemaining > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setQuickPaymentAmount(activeInvoiceRemaining.toFixed(2))}
+                        className="text-[11px] text-apple-accent hover:underline cursor-pointer"
+                      >
+                        Saldo intero ({formatCurrency(activeInvoiceRemaining)})
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={quickPaymentAmount}
+                    onChange={(e) => setQuickPaymentAmount(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 rounded border border-apple-border text-[14px] font-mono focus:outline-none focus:border-apple-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[13px] font-medium text-apple-secondary mb-1">
+                    Metodo di Pagamento:
+                  </label>
+                  <select
+                    value={quickPaymentMethod}
+                    onChange={(e) => setQuickPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 rounded border border-apple-border text-[14px] bg-white focus:outline-none focus:border-apple-accent cursor-pointer"
+                  >
+                    <option value="Bonifico">Bonifico Bancario</option>
+                    <option value="Carta di Credito">Carta di Credito / POS</option>
+                    <option value="Contanti">Contanti</option>
+                    <option value="Assegno">Assegno</option>
+                    <option value="RiBa">RiBa</option>
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[13px] font-medium text-apple-secondary mb-1">
-                  Importo da Incassare (€):
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={quickPaymentAmount}
-                  onChange={(e) => setQuickPaymentAmount(e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-apple-border text-[14px] font-mono focus:outline-none focus:border-apple-accent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[13px] font-medium text-apple-secondary mb-1">
-                  Metodo di Pagamento:
-                </label>
-                <select
-                  value={quickPaymentMethod}
-                  onChange={(e) => setQuickPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 rounded border border-apple-border text-[14px] bg-white focus:outline-none focus:border-apple-accent cursor-pointer"
+              <div className="px-4 py-3 bg-slate-50 border-t border-apple-border flex justify-end gap-2 text-[13px]">
+                <button
+                  type="button"
+                  onClick={() => setQuickPaymentModalOpen(false)}
+                  disabled={isSubmittingPayment}
+                  className="px-3.5 py-1.5 rounded bg-white border border-apple-border text-apple-secondary hover:text-apple-text cursor-pointer disabled:opacity-50"
                 >
-                  <option value="Bonifico">Bonifico Bancario</option>
-                  <option value="Carta di Credito">Carta di Credito / POS</option>
-                  <option value="Contanti">Contanti</option>
-                  <option value="Assegno">Assegno</option>
-                  <option value="RiBa">RiBa</option>
-                </select>
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPayment}
+                  className="px-3.5 py-1.5 rounded bg-apple-accent hover:bg-apple-accent-hover text-white font-medium shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {isSubmittingPayment ? (
+                    <>
+                      <span className="material-symbols-outlined text-[15px] animate-spin">
+                        progress_activity
+                      </span>
+                      <span>Registrazione...</span>
+                    </>
+                  ) : (
+                    <span>Conferma Incasso</span>
+                  )}
+                </button>
               </div>
-            </div>
-
-            <div className="px-4 py-3 bg-slate-50 border-t border-apple-border flex justify-end gap-2 text-[13px]">
-              <button
-                type="button"
-                onClick={() => setQuickPaymentModalOpen(false)}
-                className="px-3.5 py-1.5 rounded bg-white border border-apple-border text-apple-secondary hover:text-apple-text cursor-pointer"
-              >
-                Annulla
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmQuickPayment}
-                className="px-3.5 py-1.5 rounded bg-apple-accent hover:bg-apple-accent-hover text-white font-medium shadow-xs cursor-pointer"
-              >
-                Conferma Incasso
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
