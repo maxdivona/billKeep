@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 export default function Sidebar({ isOpen = false, onNavigate }) {
   const navItems = [
     { to: '/', label: 'Dashboard', icon: 'dashboard' },
+    { to: '/invoices', label: 'Fatture', icon: 'receipt_long' },
     { to: '/clients', label: 'Clienti', icon: 'group' },
     { to: '/payments', label: 'Pagamenti', icon: 'payments' }
   ]
