@@ -460,10 +460,6 @@ export default function Dashboard() {
               receipt_long
             </span>
             <span className="text-apple-text font-semibold">Elenco Fatture</span>
-            <span className="hidden sm:inline">
-              — Esercizio Corrente (1 Gen {new Date().getFullYear()} – 31 Dic{' '}
-              {new Date().getFullYear()})
-            </span>
           </div>
           <div className="h-3.5 w-px bg-apple-border hidden md:block" />
           <div className="flex items-center gap-1.5 text-[12px] text-apple-secondary">
@@ -491,13 +487,6 @@ export default function Dashboard() {
           <span className="text-[12px] text-apple-secondary font-mono bg-slate-100 px-2.5 py-0.5 rounded">
             Totale Imponibile: {formatCurrency(statsSummary.totaleImponibile)}
           </span>
-          <button
-            type="button"
-            className="h-6 px-2.5 rounded bg-white border border-apple-border text-apple-secondary hover:text-apple-text hover:bg-slate-100 flex items-center gap-1 transition shadow-xs cursor-pointer text-[12px]"
-          >
-            <span className="material-symbols-outlined text-[14px]">view_week</span>
-            <span>Colonne</span>
-          </button>
         </div>
       </div>
 
