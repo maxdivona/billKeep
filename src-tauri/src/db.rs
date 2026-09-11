@@ -39,6 +39,7 @@ pub struct Invoice {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Payment {
+    #[serde(default)]
     pub id: String,
     #[serde(default)]
     pub invoice_id: Option<String>,

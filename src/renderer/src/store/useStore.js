@@ -55,8 +55,16 @@ export const useStore = create((set, get) => ({
 
   spotlightOpen: false,
 
+  // Dashboard Redesign State
+  dashboardSearch: '',
+  selectedInvoiceId: null,
+  selectedInvoiceInfo: null,
+
   // Actions
   setSpotlightOpen: (spotlightOpen) => set({ spotlightOpen }),
+  setDashboardSearch: (dashboardSearch) => set({ dashboardSearch }),
+  setSelectedInvoiceId: (selectedInvoiceId) => set({ selectedInvoiceId }),
+  setSelectedInvoiceInfo: (selectedInvoiceInfo) => set({ selectedInvoiceInfo }),
   fetchStats: async () => {
     set({ loading: true, error: null })
     try {

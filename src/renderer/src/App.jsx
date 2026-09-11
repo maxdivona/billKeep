@@ -29,7 +29,7 @@ function PageWrapper({ children }) {
       exit="exit"
       variants={pageVariants}
       transition={pageTransition}
-      className="w-full"
+      className="w-full h-full flex-1 flex flex-col min-h-0"
     >
       {children}
     </motion.div>

@@ -65,7 +65,7 @@ export default function Modal({ isOpen, onClose, title, children }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm transition-opacity cursor-pointer"
+        className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity cursor-pointer"
         onClick={onClose}
       ></div>
 
@@ -75,24 +75,24 @@ export default function Modal({ isOpen, onClose, title, children }) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative bg-surface-container-low border border-outline-variant rounded-xl max-w-[500px] w-full shadow-xl flex flex-col z-10 overflow-hidden"
+        className="relative bg-white border border-apple-border rounded-xl max-w-[500px] w-full shadow-2xl flex flex-col z-10 overflow-hidden animate-scale-in"
       >
         {/* Modal Header */}
-        <div className="px-md py-sm border-b border-outline-variant flex justify-between items-center bg-surface-container">
-          <h3 className="font-headline-md text-headline-md font-semibold text-on-surface">
+        <div className="px-4 py-3 border-b border-apple-border flex justify-between items-center bg-slate-50/90">
+          <h3 className="font-semibold text-[15px] text-apple-text">
             {title}
           </h3>
           <button
-            className="text-on-surface-variant hover:text-on-surface p-sm rounded-full hover:bg-surface-container-high transition-colors cursor-pointer"
+            className="text-apple-subtle hover:text-apple-text p-1 rounded-md hover:bg-slate-200/60 transition cursor-pointer"
             onClick={onClose}
             aria-label="Chiudi"
           >
-            <span className="material-symbols-outlined">close</span>
+            <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-md">{children}</div>
+        <div className="p-4">{children}</div>
       </div>
     </div>
   )
