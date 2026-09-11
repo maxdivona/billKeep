@@ -147,7 +147,7 @@ const PROTOTYPE_INVOICES = [
     issue_date: '2026-09-15',
     due_date: '2026-10-15',
     amount: 980.0,
-    status: 'draft',
+    status: 'pending',
     type: 'emessa',
     bank_account: 'Monte dei Paschi di Siena (IT77P01030...)',
     customer_stats: {
@@ -191,15 +191,6 @@ export default function Dashboard() {
   const formatCurrency = useCallback((val) => {
     if (val === undefined || val === null || isNaN(val)) return '€ 0,00'
     return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(val)
-  }, [])
-
-  // Formatta numero generico con 2 decimali
-  const formatDecimal = useCallback((val) => {
-    if (val === undefined || val === null || isNaN(val)) return '0,00'
-    return new Intl.NumberFormat('it-IT', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(val)
   }, [])
 
   // Formatta data (DD/MM/YYYY)
@@ -520,24 +511,17 @@ export default function Dashboard() {
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-slate-50 border-b border-apple-border text-[12px] uppercase font-semibold text-apple-subtle tracking-wider z-10">
                 <tr>
-                  <th className="py-2 px-3 border-r border-apple-border/70 w-32">Stato</th>
-                  <th className="py-2 px-3 border-r border-apple-border/70 w-24">Data</th>
-                  <th className="py-2 px-3 border-r border-apple-border/70 w-32">N. Documento</th>
-                  <th className="py-2 px-3 border-r border-apple-border/70">Cliente / Fornitore</th>
-                  <th className="py-2 px-3 border-r border-apple-border/70 text-right w-28">
-                    Imponibile
-                  </th>
-                  <th className="py-2 px-3 border-r border-apple-border/70 text-right w-24">
-                    IVA (22%)
-                  </th>
-                  <th className="py-2 px-3 text-right w-28">Totale Doc.</th>
+                  <th className="py-2 px-3 border-r border-apple-border/70 w-28">Data</th>
+                  <th className="py-2 px-3 border-r border-apple-border/70 w-36">Numero Documento</th>
+                  <th className="py-2 px-3 border-r border-apple-border/70">Cliente</th>
+                  <th className="py-2 px-3 border-r border-apple-border/70 text-right w-36">Totale Documento</th>
+                  <th className="py-2 px-3 border-r border-apple-border/70 w-28">Scadenza</th>
+                  <th className="py-2 px-3 text-left w-36">Stato</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-apple-border/50 text-[13px] text-apple-text font-normal font-sans">
                 {filteredInvoices.map((inv) => {
                   const isSelected = activeInvoice?.id === inv.id
-                  const imp = inv.imponibile || inv.amount / 1.22
-                  const iva = inv.iva || inv.amount - imp
 
                   return (
                     <tr
@@ -549,8 +533,47 @@ export default function Dashboard() {
                           : 'hover:bg-slate-50'
                       }`}
                     >
+                      {/* DATA */}
+                      <td className="py-1.5 px-3 border-r border-apple-border/70 text-apple-secondary font-mono text-[12px] whitespace-nowrap">
+                        {formatDate(inv.issue_date)}
+                      </td>
+
+                      {/* NUMERO DOCUMENTO */}
+                      <td
+                        className={`py-1.5 px-3 border-r border-apple-border/70 font-mono text-[12px] whitespace-nowrap ${
+                          isSelected ? 'font-semibold text-apple-text' : 'text-apple-secondary'
+                        }`}
+                      >
+                        {inv.id}
+                      </td>
+
+                      {/* CLIENTE */}
+                      <td className="py-1.5 px-3 border-r border-apple-border/70 truncate">
+                        <span
+                          className={`truncate block ${
+                            isSelected ? 'font-semibold text-apple-text' : 'text-apple-text'
+                          }`}
+                        >
+                          {inv.customer_name}
+                        </span>
+                      </td>
+
+                      {/* TOTALE DOCUMENTO */}
+                      <td
+                        className={`py-1.5 px-3 border-r border-apple-border/70 text-right font-mono whitespace-nowrap ${
+                          isSelected ? 'font-bold text-apple-text' : 'font-semibold text-apple-text'
+                        }`}
+                      >
+                        {formatCurrency(inv.amount)}
+                      </td>
+
+                      {/* SCADENZA */}
+                      <td className="py-1.5 px-3 border-r border-apple-border/70 text-apple-secondary font-mono text-[12px] whitespace-nowrap">
+                        {formatDate(inv.due_date)}
+                      </td>
+
                       {/* STATO */}
-                      <td className="py-1.5 px-3 border-r border-apple-border/70 whitespace-nowrap">
+                      <td className="py-1.5 px-3 whitespace-nowrap">
                         {inv.status === 'overdue' && (
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200/50">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5F56]" />
@@ -572,66 +595,9 @@ export default function Dashboard() {
                         {inv.status === 'pending' && (
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-apple-secondary border border-black/[0.05]">
                             <span className="w-1.5 h-1.5 rounded-full bg-apple-subtle" />
-                            In attesa bonifico
+                            In attesa
                           </span>
                         )}
-                        {inv.status === 'draft' && (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded bg-blue-50 text-apple-accent border border-blue-200/50">
-                            <span className="w-1.5 h-1.5 rounded-full bg-apple-accent" />
-                            Bozza SDI
-                          </span>
-                        )}
-                      </td>
-
-                      {/* DATA */}
-                      <td className="py-1.5 px-3 border-r border-apple-border/70 text-apple-secondary font-mono text-[12px] whitespace-nowrap">
-                        {formatDate(inv.issue_date)}
-                      </td>
-
-                      {/* N. DOCUMENTO */}
-                      <td
-                        className={`py-1.5 px-3 border-r border-apple-border/70 font-mono text-[12px] whitespace-nowrap ${
-                          isSelected ? 'font-semibold text-apple-text' : 'text-apple-secondary'
-                        }`}
-                      >
-                        {inv.id}
-                      </td>
-
-                      {/* CLIENTE / FORNITORE */}
-                      <td className="py-1.5 px-3 border-r border-apple-border/70 truncate">
-                        <div className="flex items-center gap-1.5 truncate">
-                          <span
-                            className={`truncate ${
-                              isSelected ? 'font-semibold text-apple-text' : 'text-apple-text'
-                            }`}
-                          >
-                            {inv.customer_name}
-                          </span>
-                          {inv.vat_number && (
-                            <span className="text-[12px] text-apple-subtle font-mono flex-shrink-0">
-                              • {inv.vat_number}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* IMPONIBILE */}
-                      <td className="py-1.5 px-3 border-r border-apple-border/70 text-right font-mono text-apple-secondary whitespace-nowrap">
-                        {formatDecimal(imp)}
-                      </td>
-
-                      {/* IVA */}
-                      <td className="py-1.5 px-3 border-r border-apple-border/70 text-right font-mono text-apple-subtle whitespace-nowrap">
-                        {formatDecimal(iva)}
-                      </td>
-
-                      {/* TOTALE DOC. */}
-                      <td
-                        className={`py-1.5 px-3 text-right font-mono whitespace-nowrap ${
-                          isSelected ? 'font-bold text-apple-text' : 'font-semibold text-apple-text'
-                        }`}
-                      >
-                        {formatCurrency(inv.amount)}
                       </td>
                     </tr>
                   )
@@ -639,7 +605,7 @@ export default function Dashboard() {
 
                 {filteredInvoices.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-apple-subtle text-[14px]">
+                    <td colSpan={6} className="py-8 text-center text-apple-subtle text-[14px]">
                       Nessuna fattura trovata con i filtri selezionati.
                     </td>
                   </tr>
@@ -729,11 +695,6 @@ export default function Dashboard() {
                         {activeInvoice.status === 'pending' && (
                           <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-slate-100 text-apple-secondary border border-black/[0.05]">
                             In attesa
-                          </span>
-                        )}
-                        {activeInvoice.status === 'draft' && (
-                          <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-blue-50 text-apple-accent border border-blue-200/50">
-                            Bozza SDI
                           </span>
                         )}
                       </div>
