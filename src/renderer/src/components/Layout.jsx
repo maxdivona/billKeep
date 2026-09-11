@@ -8,7 +8,8 @@ import packageInfo from '../../../../package.json'
 export default function Layout({ children }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
-  const isDashboard = location.pathname === '/'
+  const isWorkstationPage =
+    location.pathname === '/' || location.pathname === '/clients' || location.pathname === '/payments'
 
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-apple-canvas text-apple-text antialiased select-none font-sans">
@@ -40,7 +41,7 @@ export default function Layout({ children }) {
             <span className="material-symbols-outlined text-[16px]">menu</span>
           </button>
 
-          {isDashboard ? (
+          {isWorkstationPage ? (
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
               {children}
             </div>

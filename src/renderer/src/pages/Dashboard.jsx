@@ -15,6 +15,8 @@ const PROTOTYPE_INVOICES = [
     issue_date: '2026-09-29',
     due_date: '2026-10-15',
     amount: 3450.0,
+    paid_amount: 0.0,
+    remaining_amount: 3450.0,
     status: 'overdue',
     type: 'emessa',
     bank_account: 'Banca Unicredit (IT29X02008...)',
@@ -42,6 +44,8 @@ const PROTOTYPE_INVOICES = [
     issue_date: '2026-09-26',
     due_date: '2026-10-01',
     amount: 7800.0,
+    paid_amount: 0.0,
+    remaining_amount: 7800.0,
     status: 'due_soon',
     type: 'emessa',
     bank_account: 'Banca Intesa Sanpaolo (IT44Y03069...)',
@@ -69,6 +73,8 @@ const PROTOTYPE_INVOICES = [
     issue_date: '2026-09-24',
     due_date: '2026-10-24',
     amount: 5200.0,
+    paid_amount: 5200.0,
+    remaining_amount: 0.0,
     status: 'paid',
     type: 'emessa',
     bank_account: 'Banca Nazionale del Lavoro (IT02O01005...)',
@@ -95,6 +101,8 @@ const PROTOTYPE_INVOICES = [
     issue_date: '2026-09-21',
     due_date: '2026-10-21',
     amount: 10540.0,
+    paid_amount: 0.0,
+    remaining_amount: 10540.0,
     status: 'pending',
     type: 'emessa',
     bank_account: 'Crédit Agricole (IT88I06230...)',
@@ -121,6 +129,8 @@ const PROTOTYPE_INVOICES = [
     issue_date: '2026-09-18',
     due_date: '2026-09-30',
     amount: 1850.0,
+    paid_amount: 1850.0,
+    remaining_amount: 0.0,
     status: 'paid',
     type: 'emessa',
     bank_account: 'Banca Popolare di Sondrio (IT56A05696...)',
@@ -147,7 +157,9 @@ const PROTOTYPE_INVOICES = [
     issue_date: '2026-09-15',
     due_date: '2026-10-15',
     amount: 980.0,
-    status: 'pending',
+    paid_amount: 400.0,
+    remaining_amount: 580.0,
+    status: 'partial',
     type: 'emessa',
     bank_account: 'Monte dei Paschi di Siena (IT77P01030...)',
     customer_stats: {
@@ -175,7 +187,8 @@ export default function Dashboard() {
     selectedInvoiceId,
     setSelectedInvoiceId,
     setSelectedInvoiceInfo,
-    addMultiPayment
+    addMultiPayment,
+    allocateAcconto
   } = useStore()
 
   const [localStatusFilter, setLocalStatusFilter] = useState('all')
@@ -183,7 +196,7 @@ export default function Dashboard() {
   const [quickPaymentModalOpen, setQuickPaymentModalOpen] = useState(false)
   const [quickPaymentAmount, setQuickPaymentAmount] = useState('')
   const [quickPaymentDate, setQuickPaymentDate] = useState(() => new Date().toISOString().split('T')[0])
-  const [quickPaymentMethod, setQuickPaymentMethod] = useState('Bonifico')
+  const [quickPaymentMethod, setQuickPaymentMethod] = useState('Contanti')
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false)
 
   useEffect(() => {
@@ -216,12 +229,26 @@ export default function Dashboard() {
         const dueDate = new Date(inv.due_date)
         const diffDays = Math.round((today - dueDate) / (1000 * 60 * 60 * 24))
 
+        const invPayments = (payments || []).filter((p) => p.invoice_id === inv.id)
+        const paidAmount = Math.round(invPayments.reduce((sum, p) => sum + p.amount, 0) * 100) / 100
+        const remainingAmount = Math.max(0, Math.round((inv.amount - paidAmount) * 100) / 100)
+
+        const isPaid = inv.status === 'paid' || remainingAmount <= 0.001
+        const isPartial = !isPaid && paidAmount > 0.001
+
         let derivedStatus = inv.status
         let overdueDays = 0
         let dueSoonDays = 0
 
-        if (inv.status === 'paid') {
+        if (isPaid) {
           derivedStatus = 'paid'
+        } else if (isPartial) {
+          derivedStatus = 'partial'
+          if (diffDays > 0) {
+            overdueDays = diffDays
+          } else if (diffDays >= -7 && diffDays <= 0) {
+            dueSoonDays = Math.abs(diffDays)
+          }
         } else if (diffDays > 0) {
           derivedStatus = 'overdue'
           overdueDays = diffDays
@@ -248,6 +275,8 @@ export default function Dashboard() {
           issue_date: inv.issue_date,
           due_date: inv.due_date,
           amount: inv.amount,
+          paid_amount: paidAmount,
+          remaining_amount: remainingAmount,
           imponibile,
           iva,
           status: derivedStatus,
@@ -270,21 +299,28 @@ export default function Dashboard() {
       })
     }
     return PROTOTYPE_INVOICES
-  }, [dbInvoices, customers])
+  }, [dbInvoices, customers, payments])
 
   // Filtro combinato: Ricerca + Filtro stato interno
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter((inv) => {
       // 1. Filtro dropdown locale
       if (localStatusFilter === 'paid' && inv.status !== 'paid') return false
+      if (localStatusFilter === 'partial' && inv.status !== 'partial') return false
       if (
         localStatusFilter === 'unpaid' &&
         inv.status !== 'unpaid' &&
         inv.status !== 'pending' &&
-        inv.status !== 'due_soon'
+        inv.status !== 'due_soon' &&
+        inv.status !== 'partial'
       )
         return false
-      if (localStatusFilter === 'overdue' && inv.status !== 'overdue') return false
+      if (
+        localStatusFilter === 'overdue' &&
+        inv.status !== 'overdue' &&
+        !(inv.status === 'partial' && inv.overdue_days > 0)
+      )
+        return false
 
       // 2. Ricerca full-text
       if (dashboardSearch && dashboardSearch.trim() !== '') {
@@ -339,12 +375,27 @@ export default function Dashboard() {
       const imp = inv.imponibile || inv.amount / 1.22
       totaleImponibile += imp
 
+      const rem =
+        inv.remaining_amount !== undefined
+          ? inv.remaining_amount
+          : inv.status === 'paid'
+            ? 0
+            : inv.amount
+      const paid =
+        inv.paid_amount !== undefined
+          ? inv.paid_amount
+          : inv.status === 'paid'
+            ? inv.amount
+            : 0
+
+      incassate += paid
+
       if (inv.status === 'paid') {
-        incassate += inv.amount
-      } else if (inv.status === 'overdue') {
-        scadute += inv.amount
+        // Già contato in incassate
+      } else if (inv.status === 'overdue' || (inv.status === 'partial' && inv.overdue_days > 0)) {
+        scadute += rem
       } else {
-        inAttesa += inv.amount
+        inAttesa += rem
       }
     })
 
@@ -360,6 +411,7 @@ export default function Dashboard() {
   // Calcolo incassi e saldo residuo per la fattura attiva
   const activeInvoicePaid = useMemo(() => {
     if (!activeInvoice) return 0
+    if (activeInvoice.paid_amount !== undefined) return activeInvoice.paid_amount
     if (dbInvoices && dbInvoices.length > 0) {
       const invPayments = (payments || []).filter((p) => p.invoice_id === activeInvoice.id)
       return invPayments.reduce((sum, p) => sum + p.amount, 0)
@@ -369,8 +421,19 @@ export default function Dashboard() {
 
   const activeInvoiceRemaining = useMemo(() => {
     if (!activeInvoice) return 0
+    if (activeInvoice.remaining_amount !== undefined) return activeInvoice.remaining_amount
     return Math.max(0, activeInvoice.amount - activeInvoicePaid)
   }, [activeInvoice, activeInvoicePaid])
+
+  // Cliente attivo e credito acconto residuo (Punto 2)
+  const activeCustomer = useMemo(() => {
+    if (!activeInvoice || !customers) return null
+    return customers.find((c) => c.id === activeInvoice.customer_id) || null
+  }, [activeInvoice, customers])
+
+  const activeCustomerAcconto = useMemo(() => {
+    return activeCustomer?.total_acconto || 0
+  }, [activeCustomer])
 
   // Gestione Stampa
   const handlePrint = () => {
@@ -384,10 +447,51 @@ export default function Dashboard() {
       activeInvoiceRemaining > 0 ? activeInvoiceRemaining : activeInvoice.amount
     setQuickPaymentAmount(defaultAmount.toFixed(2))
     setQuickPaymentDate(new Date().toISOString().split('T')[0])
-    setQuickPaymentMethod('Bonifico')
+    setQuickPaymentMethod('Contanti')
     setQuickPaymentModalOpen(true)
   }, [activeInvoice, activeInvoiceRemaining])
 
+  // Compensazione con Credito / Acconto del Cliente (Punto 2)
+  const handleCompensateWithCredit = async () => {
+    if (!activeInvoice || isSubmittingPayment || activeCustomerAcconto <= 0) return
+
+    const amountToAllocate = Math.min(activeCustomerAcconto, activeInvoiceRemaining)
+    if (amountToAllocate <= 0) return
+
+    setIsSubmittingPayment(true)
+    try {
+      if (!dbInvoices || dbInvoices.length === 0) {
+        setQuickPaymentModalOpen(false)
+        setToastMessage(
+          `[Demo] Compensati ${formatCurrency(amountToAllocate)} con credito cliente per ${activeInvoice.id}!`
+        )
+        setTimeout(() => setToastMessage(null), 3500)
+        return
+      }
+
+      const res = await allocateAcconto({
+        customerId: activeInvoice.customer_id,
+        amountToAllocate,
+        allocations: [{ invoiceId: activeInvoice.id, amount: amountToAllocate }]
+      })
+
+      if (res && res.success) {
+        setQuickPaymentModalOpen(false)
+        setToastMessage(
+          `Compensati ${formatCurrency(amountToAllocate)} con credito per ${activeInvoice.id}!`
+        )
+        setTimeout(() => setToastMessage(null), 3500)
+      } else {
+        alert('Errore durante la compensazione: ' + (res?.error || 'Operazione non riuscita'))
+      }
+    } catch (err) {
+      alert('Errore durante la compensazione: ' + err.message)
+    } finally {
+      setIsSubmittingPayment(false)
+    }
+  }
+
+  // Conferma Incasso Rapido (con gestione Overpayment - Punto 3)
   const handleConfirmQuickPayment = async (e) => {
     if (e) e.preventDefault()
     if (!activeInvoice || isSubmittingPayment) return
@@ -398,13 +502,18 @@ export default function Dashboard() {
       return
     }
 
+    const allocAmount = Math.min(parsedAmount, activeInvoiceRemaining)
+    const accontoAmount = Math.max(0, Math.round((parsedAmount - allocAmount) * 100) / 100)
+
     setIsSubmittingPayment(true)
     try {
       if (!dbInvoices || dbInvoices.length === 0) {
         // Modalità dimostrativa
         setQuickPaymentModalOpen(false)
         setToastMessage(
-          `[Demo] Incasso di ${formatCurrency(parsedAmount)} registrato per ${activeInvoice.id}!`
+          accontoAmount > 0
+            ? `[Demo] Incasso: ${formatCurrency(allocAmount)} a saldo e ${formatCurrency(accontoAmount)} acconto!`
+            : `[Demo] Incasso di ${formatCurrency(parsedAmount)} registrato per ${activeInvoice.id}!`
         )
         setTimeout(() => setToastMessage(null), 3500)
         return
@@ -415,14 +524,16 @@ export default function Dashboard() {
         totalAmount: parsedAmount,
         method: quickPaymentMethod,
         date: quickPaymentDate || new Date().toISOString().split('T')[0],
-        allocations: [{ invoiceId: activeInvoice.id, amount: parsedAmount }],
-        accontoAmount: 0
+        allocations: [{ invoiceId: activeInvoice.id, amount: allocAmount }],
+        accontoAmount
       })
 
       if (res && res.success) {
         setQuickPaymentModalOpen(false)
         setToastMessage(
-          `Incasso di ${formatCurrency(parsedAmount)} registrato per ${activeInvoice.id}!`
+          accontoAmount > 0
+            ? `Incasso registrato: ${formatCurrency(allocAmount)} a saldo e ${formatCurrency(accontoAmount)} come acconto cliente!`
+            : `Incasso di ${formatCurrency(parsedAmount)} registrato per ${activeInvoice.id}!`
         )
         setTimeout(() => setToastMessage(null), 3500)
       } else {
@@ -479,9 +590,10 @@ export default function Dashboard() {
               className="bg-white px-2 py-0.5 rounded border border-apple-border text-apple-text font-medium cursor-pointer focus:outline-none"
             >
               <option value="all">Tutti gli stati</option>
-              <option value="paid">Saldate</option>
               <option value="unpaid">In attesa</option>
+              <option value="partial">Parziali</option>
               <option value="overdue">Scadute</option>
+              <option value="paid">Saldate</option>
             </select>
 
             <span className="font-medium text-apple-text ml-1 hidden lg:inline">Periodo:</span>
@@ -592,6 +704,21 @@ export default function Dashboard() {
 
                       {/* STATO */}
                       <td className="py-1.5 px-3 whitespace-nowrap">
+                        {inv.status === 'paid' && (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                            <span className="w-1.5 h-1.5 rounded-full bg-apple-green" />
+                            Incassata
+                          </span>
+                        )}
+                        {inv.status === 'partial' && (
+                          <span
+                            className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200/60"
+                            title={`Incassati ${formatCurrency(inv.paid_amount)}, residuo ${formatCurrency(inv.remaining_amount)}`}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                            Parziale ({formatCurrency(inv.remaining_amount)})
+                          </span>
+                        )}
                         {inv.status === 'overdue' && (
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200/50">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#FF5F56]" />
@@ -602,12 +729,6 @@ export default function Dashboard() {
                           <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200/50">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#FFBD2E]" />
                             Scade a {inv.due_soon_days || 4}gg
-                          </span>
-                        )}
-                        {inv.status === 'paid' && (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50">
-                            <span className="w-1.5 h-1.5 rounded-full bg-apple-green" />
-                            Incassata
                           </span>
                         )}
                         {inv.status === 'pending' && (
@@ -686,6 +807,16 @@ export default function Dashboard() {
                         <span className="font-bold text-[14px] text-apple-text">
                           {activeInvoice.id}
                         </span>
+                        {activeInvoice.status === 'paid' && (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                            Incassata
+                          </span>
+                        )}
+                        {activeInvoice.status === 'partial' && (
+                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-sky-50 text-sky-700 border border-sky-200/60">
+                            Parziale ({formatCurrency(activeInvoiceRemaining)} residui)
+                          </span>
+                        )}
                         {activeInvoice.status === 'overdue' && (
                           <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200/50">
                             Scaduta {activeInvoice.overdue_days || 14} gg
@@ -694,11 +825,6 @@ export default function Dashboard() {
                         {activeInvoice.status === 'due_soon' && (
                           <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200/50">
                             Scade a {activeInvoice.due_soon_days || 4} gg
-                          </span>
-                        )}
-                        {activeInvoice.status === 'paid' && (
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50">
-                            Incassata
                           </span>
                         )}
                         {activeInvoice.status === 'pending' && (
@@ -930,10 +1056,11 @@ export default function Dashboard() {
           onClick={() => !isSubmittingPayment && setQuickPaymentModalOpen(false)}
         >
           <div
-            className="bg-white rounded-xl shadow-2xl border border-apple-border w-full max-w-md overflow-hidden animate-scale-in"
+            className="bg-white rounded-xl shadow-2xl border border-apple-border w-full max-w-[485px] overflow-hidden animate-scale-in flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 bg-slate-50 border-b border-apple-border flex items-center justify-between">
+            {/* Modal Header */}
+            <div className="px-4 py-3 bg-slate-50/90 border-b border-apple-border flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[20px] text-apple-accent">
                   payments
@@ -945,7 +1072,7 @@ export default function Dashboard() {
               <button
                 type="button"
                 onClick={() => !isSubmittingPayment && setQuickPaymentModalOpen(false)}
-                className="text-apple-subtle hover:text-apple-text cursor-pointer p-1 rounded hover:bg-slate-200/50 transition"
+                className="text-apple-subtle hover:text-apple-text cursor-pointer p-1 rounded-md hover:bg-slate-200/60 transition"
               >
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
@@ -953,35 +1080,72 @@ export default function Dashboard() {
 
             <form onSubmit={handleConfirmQuickPayment}>
               <div className="p-4 space-y-3.5 text-[14px]">
-                <div className="p-2.5 rounded bg-slate-50 border border-black/[0.04] space-y-1">
+                {/* Document & Client Info Card */}
+                <div className="p-3 rounded-lg bg-slate-50 border border-black/[0.04] space-y-1.5">
                   <div className="flex justify-between items-center text-[13px]">
-                    <span className="text-apple-secondary">Documento:</span>
+                    <span className="text-apple-secondary font-medium">Documento:</span>
                     <span className="font-bold font-mono text-apple-text">
                       {activeInvoice?.id}
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-[13px]">
-                    <span className="text-apple-secondary">Cliente:</span>
-                    <span className="font-medium text-apple-text truncate ml-2">
+                    <span className="text-apple-secondary font-medium">Cliente:</span>
+                    <span className="font-semibold text-apple-text truncate ml-2">
                       {activeInvoice?.customer_name}
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-[13px]">
-                    <span className="text-apple-secondary">Importo Fattura:</span>
-                    <span className="font-mono text-apple-text">
+                    <span className="text-apple-secondary font-medium">Totale Fattura:</span>
+                    <span className="font-mono font-medium text-apple-text">
                       {formatCurrency(activeInvoice?.amount)}
                     </span>
                   </div>
-                  {activeInvoiceRemaining < (activeInvoice?.amount || 0) && (
-                    <div className="flex justify-between items-center text-[13px] pt-1 border-t border-black/[0.04]">
-                      <span className="text-apple-secondary font-medium">Residuo da saldare:</span>
-                      <span className="font-mono font-bold text-amber-700">
-                        {formatCurrency(activeInvoiceRemaining)}
+                  {activeInvoicePaid > 0 && (
+                    <div className="flex justify-between items-center text-[13px] text-emerald-700">
+                      <span>Già Incassato:</span>
+                      <span className="font-mono font-semibold">
+                        {formatCurrency(activeInvoicePaid)}
                       </span>
                     </div>
                   )}
+                  <div className="flex justify-between items-center text-[13px] pt-1.5 border-t border-black/[0.06]">
+                    <span className="font-semibold text-apple-text">Residuo da Saldare:</span>
+                    <span className="font-mono font-bold text-amber-700 text-[14px]">
+                      {formatCurrency(activeInvoiceRemaining)}
+                    </span>
+                  </div>
                 </div>
 
+                {/* Banner Credito Acconto Cliente (Punto 2) */}
+                {activeCustomerAcconto > 0 && (
+                  <div className="p-3 rounded-lg bg-emerald-50/80 border border-emerald-200/70 flex items-center justify-between gap-3 animate-fade-in">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="material-symbols-outlined text-emerald-600 text-[22px] flex-shrink-0">
+                        account_balance_wallet
+                      </span>
+                      <div className="min-w-0">
+                        <div className="text-[12px] font-bold text-emerald-900 truncate">
+                          Credito Acconto Disponibile
+                        </div>
+                        <div className="text-[11px] text-emerald-700 font-mono">
+                          Saldo libero: {formatCurrency(activeCustomerAcconto)}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isSubmittingPayment}
+                      onClick={handleCompensateWithCredit}
+                      className="px-2.5 py-1 text-[11px] font-semibold rounded bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs transition flex-shrink-0 disabled:opacity-50 flex items-center gap-1"
+                      title="Compensa la fattura utilizzando il credito acconto del cliente"
+                    >
+                      <span className="material-symbols-outlined text-[13px]">sync_alt</span>
+                      <span>Compensa ({formatCurrency(Math.min(activeCustomerAcconto, activeInvoiceRemaining))})</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Input Data Incasso */}
                 <div>
                   <label className="block text-[13px] font-medium text-apple-secondary mb-1">
                     Data Incasso:
@@ -991,10 +1155,11 @@ export default function Dashboard() {
                     value={quickPaymentDate}
                     onChange={(e) => setQuickPaymentDate(e.target.value)}
                     required
-                    className="w-full px-3 py-2 rounded border border-apple-border text-[14px] bg-white focus:outline-none focus:border-apple-accent"
+                    className="w-full px-3 py-2 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition"
                   />
                 </div>
 
+                {/* Input Importo da Incassare con scorciatoia Saldo intero */}
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-[13px] font-medium text-apple-secondary">
@@ -1004,7 +1169,7 @@ export default function Dashboard() {
                       <button
                         type="button"
                         onClick={() => setQuickPaymentAmount(activeInvoiceRemaining.toFixed(2))}
-                        className="text-[11px] text-apple-accent hover:underline cursor-pointer"
+                        className="text-[11px] text-apple-accent hover:underline cursor-pointer font-medium"
                       >
                         Saldo intero ({formatCurrency(activeInvoiceRemaining)})
                       </button>
@@ -1017,10 +1182,24 @@ export default function Dashboard() {
                     value={quickPaymentAmount}
                     onChange={(e) => setQuickPaymentAmount(e.target.value)}
                     required
-                    className="w-full px-3 py-2 rounded border border-apple-border text-[14px] font-mono focus:outline-none focus:border-apple-accent"
+                    autoFocus
+                    className="w-full px-3 py-2 rounded-lg border border-apple-border text-[14px] font-mono focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition"
                   />
+
+                  {/* Avviso Overpayment in tempo reale (Punto 3) */}
+                  {parseFloat(quickPaymentAmount) > activeInvoiceRemaining && (
+                    <div className="mt-2 p-2.5 rounded-lg bg-sky-50 border border-sky-200/70 text-[12px] text-sky-900 flex items-start gap-2 animate-fade-in">
+                      <span className="material-symbols-outlined text-[16px] text-sky-600 mt-0.5 flex-shrink-0">
+                        info
+                      </span>
+                      <div className="leading-snug">
+                        L&apos;importo inserito supera il dovuto: <strong>{formatCurrency(activeInvoiceRemaining)}</strong> salderanno la fattura e l&apos;eccedenza di <strong>{formatCurrency(parseFloat(quickPaymentAmount) - activeInvoiceRemaining)}</strong> verrà registrata come <strong>acconto cliente</strong>.
+                      </div>
+                    </div>
+                  )}
                 </div>
 
+                {/* Metodo di Pagamento */}
                 <div>
                   <label className="block text-[13px] font-medium text-apple-secondary mb-1">
                     Metodo di Pagamento:
@@ -1028,30 +1207,31 @@ export default function Dashboard() {
                   <select
                     value={quickPaymentMethod}
                     onChange={(e) => setQuickPaymentMethod(e.target.value)}
-                    className="w-full px-3 py-2 rounded border border-apple-border text-[14px] bg-white focus:outline-none focus:border-apple-accent cursor-pointer"
+                    className="w-full px-3 py-2 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent cursor-pointer transition"
                   >
+                    <option value="Contanti">Contanti</option>
                     <option value="Bonifico">Bonifico Bancario</option>
                     <option value="Carta di Credito">Carta di Credito / POS</option>
-                    <option value="Contanti">Contanti</option>
                     <option value="Assegno">Assegno</option>
                     <option value="RiBa">RiBa</option>
                   </select>
                 </div>
               </div>
 
+              {/* Modal Footer */}
               <div className="px-4 py-3 bg-slate-50 border-t border-apple-border flex justify-end gap-2 text-[13px]">
                 <button
                   type="button"
                   onClick={() => setQuickPaymentModalOpen(false)}
                   disabled={isSubmittingPayment}
-                  className="px-3.5 py-1.5 rounded bg-white border border-apple-border text-apple-secondary hover:text-apple-text cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 rounded-lg bg-white border border-apple-border text-apple-secondary hover:text-apple-text cursor-pointer transition disabled:opacity-50"
                 >
                   Annulla
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingPayment}
-                  className="px-3.5 py-1.5 rounded bg-apple-accent hover:bg-apple-accent-hover text-white font-medium shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-4 py-1.5 rounded-lg bg-apple-accent hover:bg-apple-accent-hover text-white font-medium shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5 transition"
                 >
                   {isSubmittingPayment ? (
                     <>
@@ -1061,7 +1241,10 @@ export default function Dashboard() {
                       <span>Registrazione...</span>
                     </>
                   ) : (
-                    <span>Conferma Incasso</span>
+                    <>
+                      <span className="material-symbols-outlined text-[15px]">check</span>
+                      <span>Conferma Incasso</span>
+                    </>
                   )}
                 </button>
               </div>

@@ -4,9 +4,7 @@ export default function Sidebar({ isOpen = false, onNavigate }) {
   const navItems = [
     { to: '/', label: 'Dashboard', icon: 'dashboard' },
     { to: '/clients', label: 'Clienti', icon: 'group' },
-    { to: '/invoices', label: 'Fatture', icon: 'receipt_long' },
-    { to: '/payments', label: 'Pagamenti', icon: 'payments' },
-    { to: '/journal', label: 'Prima Nota', icon: 'menu_book' }
+    { to: '/payments', label: 'Pagamenti', icon: 'payments' }
   ]
 
   return (
