@@ -808,7 +808,7 @@ export default function Invoices() {
                         <p className="text-[13px] font-medium text-apple-text">
                           Nessun documento trovato con i filtri attuali
                         </p>
-                        <p className="text-[12px] text-apple-secondary max-w-sm">
+                        <p className="text-[12px] text-apple-secondary max-w-[360px]">
                           Utilizza il modulo sulla destra per registrare la prima fattura da tracciare.
                         </p>
                       </div>

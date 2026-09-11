@@ -312,7 +312,7 @@ export default function Settings() {
                       account_balance_wallet
                     </span>
                   </div>
-                  <div className="text-center sm:text-left space-y-1">
+                  <div className="text-center sm:text-left space-y-1.5 flex-1 min-w-0">
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                       <h2 className="text-[20px] font-bold text-apple-text">BillKeep Workstation</h2>
                       <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-apple-accent/10 text-apple-accent border border-apple-accent/20 font-semibold">
@@ -322,7 +322,7 @@ export default function Settings() {
                         Stabile Locale
                       </span>
                     </div>
-                    <p className="text-[13px] text-apple-secondary max-w-xl leading-relaxed">
+                    <p className="text-[13px] text-apple-secondary leading-relaxed">
                       Applicazione desktop per la gestione e tracciamento locale di clienti,
                       fatture contabili, scadenze, incassi e contabilità in partita doppia (Prima
                       Nota).
@@ -332,30 +332,34 @@ export default function Settings() {
 
                 {/* Sviluppatore e Privacy Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl border border-apple-border bg-slate-50/50 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-apple-accent font-semibold text-[13px]">
-                      <span className="material-symbols-outlined text-[17px]">person</span>
-                      <span>Sviluppatore Software</span>
+                  <div className="p-4 rounded-xl border border-apple-border bg-slate-50/50 flex flex-col justify-between h-full">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-apple-accent font-semibold text-[13px] mb-1">
+                        <span className="material-symbols-outlined text-[17px]">person</span>
+                        <span>Sviluppatore Software</span>
+                      </div>
+                      <div className="text-[15px] font-bold text-apple-text">Massimo Di Vona</div>
+                      <p className="text-[12px] text-apple-secondary">
+                        © {new Date().getFullYear()} Massimo Di Vona. Tutti i diritti riservati.
+                      </p>
                     </div>
-                    <div className="text-[15px] font-bold text-apple-text">Massimo Di Vona</div>
-                    <p className="text-[12px] text-apple-secondary">
-                      © {new Date().getFullYear()} Massimo Di Vona. Tutti i diritti riservati.
-                    </p>
-                    <p className="text-[11px] text-apple-subtle pt-1 border-t border-apple-border/50">
+                    <p className="text-[11px] text-apple-subtle pt-2 mt-3 border-t border-apple-border/60">
                       Uso esclusivo per la gestione contabile interna e locale.
                     </p>
                   </div>
 
-                  <div className="p-4 rounded-xl border border-apple-border bg-slate-50/50 space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-[13px]">
-                      <span className="material-symbols-outlined text-[17px]">shield</span>
-                      <span>Privacy &amp; Sovranità Dati</span>
+                  <div className="p-4 rounded-xl border border-apple-border bg-slate-50/50 flex flex-col justify-between h-full">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-[13px] mb-1">
+                        <span className="material-symbols-outlined text-[17px]">shield</span>
+                        <span>Privacy &amp; Sovranità Dati</span>
+                      </div>
+                      <div className="text-[15px] font-bold text-apple-text">Zero Cloud / 100% Locale</div>
+                      <p className="text-[12px] text-apple-secondary">
+                        Tutti i dati risiedono unicamente sul database SQLite locale di questo computer.
+                      </p>
                     </div>
-                    <div className="text-[15px] font-bold text-apple-text">Zero Cloud / 100% Locale</div>
-                    <p className="text-[12px] text-apple-secondary">
-                      Tutti i dati risiedono unicamente sul database SQLite locale di questo computer.
-                    </p>
-                    <p className="text-[11px] text-apple-subtle pt-1 border-t border-apple-border/50">
+                    <p className="text-[11px] text-apple-subtle pt-2 mt-3 border-t border-apple-border/60">
                       Nessuna telemetria invasiva o esportazione non autorizzata.
                     </p>
                   </div>
