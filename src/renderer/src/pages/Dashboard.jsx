@@ -191,6 +191,8 @@ export default function Dashboard() {
   } = useStore()
 
   const [localStatusFilter, setLocalStatusFilter] = useState('all')
+  const [sortColumn, setSortColumn] = useState('issue_date')
+  const [sortDirection, setSortDirection] = useState('desc')
   const [toastMessage, setToastMessage] = useState(null)
   const [quickPaymentModalOpen, setQuickPaymentModalOpen] = useState(false)
   const [quickPaymentAmount, setQuickPaymentAmount] = useState('')
@@ -334,21 +336,129 @@ export default function Dashboard() {
     })
   }, [allInvoices, localStatusFilter, dashboardSearch])
 
+  // Gestione ordinamento colonne
+  const handleSort = useCallback((columnKey) => {
+    if (sortColumn === columnKey) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortColumn(columnKey)
+      if (columnKey === 'issue_date' || columnKey === 'due_date' || columnKey === 'amount') {
+        setSortDirection('desc')
+      } else {
+        setSortDirection('asc')
+      }
+    }
+  }, [sortColumn])
+
+  // Lista ordinata delle fatture filtrate
+  const sortedInvoices = useMemo(() => {
+    const list = [...filteredInvoices]
+    list.sort((a, b) => {
+      let valA, valB
+      switch (sortColumn) {
+        case 'issue_date':
+          valA = a.issue_date ? new Date(a.issue_date).getTime() : 0
+          valB = b.issue_date ? new Date(b.issue_date).getTime() : 0
+          break
+        case 'due_date':
+          valA = a.due_date ? new Date(a.due_date).getTime() : 0
+          valB = b.due_date ? new Date(b.due_date).getTime() : 0
+          break
+        case 'id':
+          valA = a.id || ''
+          valB = b.id || ''
+          return sortDirection === 'asc'
+            ? valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' })
+            : valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' })
+        case 'customer_name':
+          valA = a.customer_name || ''
+          valB = b.customer_name || ''
+          return sortDirection === 'asc'
+            ? valA.localeCompare(valB, undefined, { sensitivity: 'base' })
+            : valB.localeCompare(valA, undefined, { sensitivity: 'base' })
+        case 'amount':
+          valA = a.amount || 0
+          valB = b.amount || 0
+          break
+        case 'status': {
+          const statusWeight = {
+            overdue: 1,
+            due_soon: 2,
+            partial: 3,
+            pending: 4,
+            paid: 5
+          }
+          valA = statusWeight[a.status] || 99
+          valB = statusWeight[b.status] || 99
+          break
+        }
+        default:
+          valA = a.issue_date ? new Date(a.issue_date).getTime() : 0
+          valB = b.issue_date ? new Date(b.issue_date).getTime() : 0
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+    return list
+  }, [filteredInvoices, sortColumn, sortDirection])
+
+  // Etichetta leggibile dell'ordinamento attivo per il footer
+  const currentSortLabel = useMemo(() => {
+    const dir = sortDirection === 'asc' ? 'Crescente' : 'Decrescente'
+    switch (sortColumn) {
+      case 'issue_date':
+        return `Data ${dir === 'Crescente' ? 'Crescente' : 'Decrescente'}`
+      case 'due_date':
+        return `Scadenza ${dir === 'Crescente' ? 'Crescente' : 'Decrescente'}`
+      case 'id':
+        return `Numero Doc. (${dir === 'Crescente' ? 'A-Z' : 'Z-A'})`
+      case 'customer_name':
+        return `Cliente (${dir === 'Crescente' ? 'A-Z' : 'Z-A'})`
+      case 'amount':
+        return `Importo (${dir === 'Crescente' ? 'Min - Max' : 'Max - Min'})`
+      case 'status':
+        return `Stato (${dir === 'Crescente' ? 'Critiche prima' : 'Saldate prima'})`
+      default:
+        return 'Data Decrescente'
+    }
+  }, [sortColumn, sortDirection])
+
+  // Icona dinamica per le intestazioni ordinabili
+  const renderSortIcon = useCallback(
+    (columnKey) => {
+      const isActive = sortColumn === columnKey
+      return (
+        <span
+          className={`material-symbols-outlined text-[13px] transition select-none ${
+            isActive
+              ? 'text-apple-accent font-bold opacity-100'
+              : 'text-apple-subtle/50 opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          {isActive ? (sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}
+        </span>
+      )
+    },
+    [sortColumn, sortDirection]
+  )
+
   // Selezione della fattura attiva (predefinita la prima trovata)
   const activeInvoice = useMemo(() => {
     if (selectedInvoiceId) {
-      const found = filteredInvoices.find((i) => i.id === selectedInvoiceId)
+      const found = sortedInvoices.find((i) => i.id === selectedInvoiceId)
       if (found) return found
     }
-    return filteredInvoices[0] || null
-  }, [filteredInvoices, selectedInvoiceId])
+    return sortedInvoices[0] || null
+  }, [sortedInvoices, selectedInvoiceId])
 
   // Aggiorna la selezione se cambia la lista o non è impostata
   useEffect(() => {
-    if (!selectedInvoiceId && filteredInvoices.length > 0) {
-      setSelectedInvoiceId(filteredInvoices[0].id)
+    if (!selectedInvoiceId && sortedInvoices.length > 0) {
+      setSelectedInvoiceId(sortedInvoices[0].id)
     }
-  }, [selectedInvoiceId, filteredInvoices, setSelectedInvoiceId])
+  }, [selectedInvoiceId, sortedInvoices, setSelectedInvoiceId])
 
   // Totali KPI
   const statsSummary = useMemo(() => {
@@ -617,18 +727,72 @@ export default function Dashboard() {
           {/* Dense Desktop Invoices Table */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-slate-50 border-b border-apple-border text-[12px] uppercase font-semibold text-apple-subtle tracking-wider z-10">
+              <thead className="sticky top-0 bg-slate-50 border-b border-apple-border text-[12px] uppercase font-semibold text-apple-subtle tracking-wider z-10 select-none">
                 <tr>
-                  <th className="py-2 px-3 border-r border-apple-border/70 w-28">Data</th>
-                  <th className="py-2 px-3 border-r border-apple-border/70 w-36">Numero Documento</th>
-                  <th className="py-2 px-3 border-r border-apple-border/70">Cliente</th>
-                  <th className="py-2 px-3 border-r border-apple-border/70 text-right w-36">Totale Documento</th>
-                  <th className="py-2 px-3 border-r border-apple-border/70 w-28">Scadenza</th>
-                  <th className="py-2 px-3 text-left w-36">Stato</th>
+                  <th
+                    onClick={() => handleSort('issue_date')}
+                    className="py-2 px-3 border-r border-apple-border/70 w-28 cursor-pointer hover:bg-slate-100/80 transition group"
+                    title="Ordina per Data Emissione"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span>Data</span>
+                      {renderSortIcon('issue_date')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('id')}
+                    className="py-2 px-3 border-r border-apple-border/70 w-36 cursor-pointer hover:bg-slate-100/80 transition group"
+                    title="Ordina per Numero Documento"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span>Numero Documento</span>
+                      {renderSortIcon('id')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('customer_name')}
+                    className="py-2 px-3 border-r border-apple-border/70 cursor-pointer hover:bg-slate-100/80 transition group"
+                    title="Ordina per Cliente"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span>Cliente</span>
+                      {renderSortIcon('customer_name')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('amount')}
+                    className="py-2 px-3 border-r border-apple-border/70 text-right w-36 cursor-pointer hover:bg-slate-100/80 transition group"
+                    title="Ordina per Importo Totale"
+                  >
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>Totale Documento</span>
+                      {renderSortIcon('amount')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('due_date')}
+                    className="py-2 px-3 border-r border-apple-border/70 w-28 cursor-pointer hover:bg-slate-100/80 transition group"
+                    title="Ordina per Data di Scadenza"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span>Scadenza</span>
+                      {renderSortIcon('due_date')}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('status')}
+                    className="py-2 px-3 text-left w-36 cursor-pointer hover:bg-slate-100/80 transition group"
+                    title="Ordina per Stato Pagamento"
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span>Stato</span>
+                      {renderSortIcon('status')}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-apple-border/50 text-[13px] text-apple-text font-normal font-sans">
-                {filteredInvoices.map((inv) => {
+                {sortedInvoices.map((inv) => {
                   const isSelected = activeInvoice?.id === inv.id
 
                   return (
@@ -720,7 +884,7 @@ export default function Dashboard() {
                   )
                 })}
 
-                {filteredInvoices.length === 0 && (
+                {sortedInvoices.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-apple-subtle text-[14px]">
                       Nessuna fattura trovata con i filtri selezionati.
@@ -735,10 +899,10 @@ export default function Dashboard() {
           <div className="h-8 px-3 bg-slate-50 border-t border-apple-border flex items-center justify-between text-[12px] text-apple-secondary font-mono flex-shrink-0">
             <div className="flex items-center gap-3">
               <span>
-                {filteredInvoices.length} fatture visibili di {allInvoices.length}
+                {sortedInvoices.length} fatture visibili di {allInvoices.length}
               </span>
               <span className="text-apple-subtle">|</span>
-              <span>Ordinamento: Data Decrescente</span>
+              <span>Ordinamento: {currentSortLabel}</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-apple-text font-sans font-medium text-[13px]">
