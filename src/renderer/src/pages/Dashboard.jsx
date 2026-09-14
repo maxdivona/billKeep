@@ -915,56 +915,61 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Live Client Statistics */}
+                  {/* Live Client Statistics in Rows */}
                   <div className="mt-2.5 pt-2 border-t border-apple-border/50">
                     <div className="text-[11px] font-semibold uppercase tracking-wider text-apple-subtle mb-1.5">
                       Statistiche Cliente ({new Date().getFullYear()})
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-[12px]">
-                      <div className="p-2 rounded bg-slate-50 border border-black/[0.04]">
-                        <div className="text-apple-subtle text-[11px]">Fatturato Anno</div>
-                        <div className="font-mono font-bold text-apple-text text-[13px]">
-                          {formatCurrency(activeInvoice.customer_stats?.yearly_turnover || 42800)}
-                        </div>
-                        <div className="text-[10px] text-apple-subtle">
-                          {activeInvoice.customer_stats?.invoices_count || 8} fatture emesse
-                        </div>
-                      </div>
-
-                      <div className="p-2 rounded bg-slate-50 border border-black/[0.04]">
-                        <div className="text-apple-subtle text-[11px]">Tempo Medio Pag.</div>
-                        <div className="font-mono font-bold text-apple-text text-[13px]">
-                          {activeInvoice.customer_stats?.avg_payment_days || 34} giorni
-                        </div>
-                        <div className="text-[10px] text-emerald-600">
-                          {activeInvoice.customer_stats?.dso_status || 'DSO regolare'}
+                    <div className="space-y-1.5 text-[12px]">
+                      <div className="flex justify-between items-center py-1 px-2 rounded bg-rose-50/60 border border-rose-200/40">
+                        <span className="text-rose-600 font-medium">Insoluto Attuale</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-rose-600">
+                            {formatCurrency(activeInvoice.customer_stats?.current_overdue || 3450)}
+                          </span>
+                          <span className="text-[10px] text-rose-500">
+                            ({activeInvoice.customer_stats?.open_invoices || 1} aperta)
+                          </span>
                         </div>
                       </div>
 
-                      <div className="p-2 rounded bg-slate-50 border border-black/[0.04]">
-                        <div className="text-apple-subtle text-[11px]">Fatture Saldate</div>
-                        <div className="font-mono font-bold text-emerald-700 text-[13px]">
-                          {activeInvoice.customer_stats?.paid_invoices || 7} di{' '}
-                          {activeInvoice.customer_stats?.total_invoices || 8} (
-                          {Math.round(
-                            ((activeInvoice.customer_stats?.paid_invoices || 7) /
-                              (activeInvoice.customer_stats?.total_invoices || 8)) *
-                              100
-                          )}
-                          %)
+                      <div className="flex justify-between items-center py-1 px-2 rounded bg-slate-50 border border-black/[0.03]">
+                        <span className="text-apple-secondary">Fatturato Anno</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-apple-text">
+                            {formatCurrency(activeInvoice.customer_stats?.yearly_turnover || 42800)}
+                          </span>
+                          <span className="text-[10px] text-apple-subtle">
+                            ({activeInvoice.customer_stats?.invoices_count || 8} fatture)
+                          </span>
                         </div>
-                        <div className="text-[10px] text-apple-subtle">Storico affidabile</div>
                       </div>
 
-                      <div className="p-2 rounded bg-rose-50/70 border border-rose-200/50">
-                        <div className="text-rose-600 text-[11px] font-medium">
-                          Insoluto Attuale
+                      <div className="flex justify-between items-center py-1 px-2 rounded bg-slate-50 border border-black/[0.03]">
+                        <span className="text-apple-secondary">Tempo Medio Pag.</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-apple-text">
+                            {activeInvoice.customer_stats?.avg_payment_days || 34} gg
+                          </span>
+                          <span className="text-[10px] text-emerald-600 font-medium">
+                            ({activeInvoice.customer_stats?.dso_status || 'DSO regolare'})
+                          </span>
                         </div>
-                        <div className="font-mono font-bold text-rose-600 text-[13px]">
-                          {formatCurrency(activeInvoice.customer_stats?.current_overdue || 3450)}
-                        </div>
-                        <div className="text-[10px] text-rose-600">
-                          {activeInvoice.customer_stats?.open_invoices || 1} fattura aperta
+                      </div>
+
+                      <div className="flex justify-between items-center py-1 px-2 rounded bg-slate-50 border border-black/[0.03]">
+                        <span className="text-apple-secondary">Fatture Saldate</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-emerald-700">
+                            {activeInvoice.customer_stats?.paid_invoices || 7} / {activeInvoice.customer_stats?.total_invoices || 8}
+                          </span>
+                          <span className="text-[10px] text-apple-subtle">
+                            ({Math.round(
+                              ((activeInvoice.customer_stats?.paid_invoices || 7) /
+                                (activeInvoice.customer_stats?.total_invoices || 8)) *
+                                100
+                            )}%)
+                          </span>
                         </div>
                       </div>
                     </div>
