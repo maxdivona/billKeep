@@ -186,7 +186,6 @@ export default function Dashboard() {
     dashboardSearch,
     selectedInvoiceId,
     setSelectedInvoiceId,
-    setSelectedInvoiceInfo,
     addMultiPayment,
     allocateAcconto
   } = useStore()
@@ -351,20 +350,8 @@ export default function Dashboard() {
     }
   }, [selectedInvoiceId, filteredInvoices, setSelectedInvoiceId])
 
-  // Aggiorna la barra di stato inferiore con la fattura selezionata
-  useEffect(() => {
-    if (activeInvoice) {
-      setSelectedInvoiceInfo(
-        `Fattura ${activeInvoice.id} selezionata (${activeInvoice.customer_name} • ${formatCurrency(activeInvoice.amount)})`
-      )
-    } else {
-      setSelectedInvoiceInfo('Nessuna fattura selezionata')
-    }
-  }, [activeInvoice, formatCurrency, setSelectedInvoiceInfo])
-
   // Totali KPI
   const statsSummary = useMemo(() => {
-    let totaleImponibile = 0
     let scadute = 0
     let inAttesa = 0
     let incassate = 0
@@ -372,8 +359,6 @@ export default function Dashboard() {
 
     filteredInvoices.forEach((inv) => {
       totaleVisualizzato += inv.amount
-      const imp = inv.imponibile || inv.amount / 1.22
-      totaleImponibile += imp
 
       const rem =
         inv.remaining_amount !== undefined
@@ -400,7 +385,6 @@ export default function Dashboard() {
     })
 
     return {
-      totaleImponibile,
       scadute,
       inAttesa,
       incassate,
@@ -602,12 +586,6 @@ export default function Dashboard() {
               <span className="material-symbols-outlined text-[12px]">calendar_month</span>
             </span>
           </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] text-apple-secondary font-mono bg-slate-100 px-2.5 py-0.5 rounded">
-            Totale Imponibile: {formatCurrency(statsSummary.totaleImponibile)}
-          </span>
         </div>
       </div>
 
@@ -847,13 +825,7 @@ export default function Dashboard() {
                   </div>
 
                   {/* Riepilogo Saldo & Incassi */}
-                  <div className="mt-2.5 p-2.5 rounded bg-slate-50 border border-black/[0.04] text-[12px] font-mono space-y-1">
-                    <div className="flex justify-between text-apple-secondary">
-                      <span>Importo Totale:</span>
-                      <span className="text-apple-text font-medium">
-                        {formatCurrency(activeInvoice.amount)}
-                      </span>
-                    </div>
+                  <div className="mt-2.5 p-2.5 rounded bg-slate-50 border border-black/[0.04] text-[12px] font-mono space-y-1.5">
                     <div className="flex justify-between text-apple-secondary">
                       <span>Già Incassato:</span>
                       <span
@@ -864,7 +836,7 @@ export default function Dashboard() {
                         {formatCurrency(activeInvoicePaid)}
                       </span>
                     </div>
-                    <div className="flex justify-between text-apple-secondary pt-1 border-t border-black/[0.04]">
+                    <div className="flex justify-between text-apple-secondary pt-1.5 border-t border-black/[0.04]">
                       <span className="font-semibold text-apple-text">Residuo da Saldare:</span>
                       <span
                         className={`font-bold ${
@@ -1023,28 +995,6 @@ export default function Dashboard() {
                 Nessuna fattura selezionata. Clicca su una riga per visualizzare i dettagli.
               </div>
             )}
-          </div>
-
-          {/* Inspector Bottom Quick Summary */}
-          <div className="p-2.5 bg-slate-50 border-t border-apple-border text-[12px] text-apple-secondary space-y-1 flex-shrink-0">
-            <div className="flex justify-between font-mono">
-              <span>Esposizione Totale Crediti:</span>
-              <span className="font-semibold text-rose-600">
-                {formatCurrency(
-                  activeInvoice?.customer_stats?.current_overdue || statsSummary.scadute
-                )}
-              </span>
-            </div>
-            <div className="flex justify-between font-mono">
-              <span>Volume d&apos;Affari Q3 Cliente:</span>
-              <span className="font-semibold text-apple-text">
-                {formatCurrency(
-                  activeInvoice?.customer_stats?.period_turnover ||
-                    activeInvoice?.customer_stats?.yearly_turnover ||
-                    12600
-                )}
-              </span>
-            </div>
           </div>
         </div>
       </div>
