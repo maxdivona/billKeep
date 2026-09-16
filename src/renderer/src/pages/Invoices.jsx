@@ -470,7 +470,7 @@ export default function Invoices() {
               type="submit"
               className="px-4 py-2 rounded-md font-label-md text-label-md bg-primary hover:bg-primary/90 text-on-primary transition-colors shadow-sm cursor-pointer"
             >
-              Emetti
+              Registra
             </button>
           </div>
         </form>

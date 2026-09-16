@@ -292,10 +292,6 @@ export default function Payments() {
                 </button>
               )}
             </div>
-
-            <div className="text-body-sm font-label-sm text-on-surface-variant/80 bg-surface-container-high px-2.5 py-1.5 rounded-md whitespace-nowrap">
-              Trovate: <strong className="text-on-surface">{paymentsPagination.totalCount}</strong>
-            </div>
           </div>
         </div>
 

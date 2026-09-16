@@ -490,8 +490,6 @@ export default function Customers() {
   // LIST VIEW: If no customer is selected
   if (!selectedCustomer) {
     const totalClients = customers.length
-    const totalInvoiced = customers.reduce((sum, c) => sum + (c.total_invoiced || 0), 0)
-    const totalBalance = customers.reduce((sum, c) => sum + (c.balance || 0), 0)
 
     return (
       <div>
@@ -528,8 +526,8 @@ export default function Customers() {
           </div>
         </div>
 
-        {/* Bento Grid Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Stat Card */}
+        <div className="max-w-xs mb-8">
           <div className="bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-2">
               <span className="material-symbols-outlined text-primary">group</span>
@@ -539,30 +537,6 @@ export default function Customers() {
             </div>
             <p className="font-headline-lg text-headline-lg text-on-surface font-bold tabular-nums">
               {totalClients}
-            </p>
-          </div>
-          <div className="bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="material-symbols-outlined text-secondary">
-                account_balance_wallet
-              </span>
-              <h3 className="font-label-md text-label-md text-on-surface-variant">
-                Fatturato Totale
-              </h3>
-            </div>
-            <p className="font-headline-lg text-headline-lg text-on-surface font-bold tabular-nums">
-              {formatCurrency(totalInvoiced)}
-            </p>
-          </div>
-          <div className="bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="material-symbols-outlined text-error">payments</span>
-              <h3 className="font-label-md text-label-md text-on-surface-variant">
-                Saldo da Ricevere
-              </h3>
-            </div>
-            <p className="font-headline-lg text-headline-lg text-on-surface font-bold tabular-nums">
-              {formatCurrency(totalBalance)}
             </p>
           </div>
         </div>
@@ -727,9 +701,6 @@ export default function Customers() {
               <h2 className="font-headline-lg text-headline-lg text-on-surface font-semibold">
                 {selectedCustomer.name}
               </h2>
-              <p className="text-on-surface-variant font-body-sm text-body-sm">
-                {selectedCustomer.email || 'Nessuna email'}
-              </p>
             </div>
           </div>
         </div>
