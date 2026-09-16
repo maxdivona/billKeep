@@ -1,10 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { getVersion } from '@tauri-apps/api/app'
 import Modal from '../components/Modal'
 import { useStore } from '../store/useStore'
 
 export default function Settings() {
   const theme = useStore((state) => state.theme)
   const setTheme = useStore((state) => state.setTheme)
+  const updateStatus = useStore((state) => state.updateStatus)
+  const updateInfo = useStore((state) => state.updateInfo)
+  const updateError = useStore((state) => state.updateError)
+  const updateDownloadProgress = useStore((state) => state.updateDownloadProgress)
+  const checkForUpdates = useStore((state) => state.checkForUpdates)
+  const installUpdate = useStore((state) => state.installUpdate)
+  const [appVersion, setAppVersion] = useState('')
   const [activeTab, setActiveTab] = useState('info')
   const [logs, setLogs] = useState([])
   const [actionLoading, setActionLoading] = useState(false)
@@ -13,6 +21,12 @@ export default function Settings() {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [clearConfirmText, setClearConfirmText] = useState('')
   const [showSeedConfirm, setShowSeedConfirm] = useState(false)
+
+  useEffect(() => {
+    getVersion()
+      .then(setAppVersion)
+      .catch(() => setAppVersion(''))
+  }, [])
 
   const fetchLogs = async () => {
     try {
@@ -207,7 +221,7 @@ export default function Settings() {
                   </p>
                   <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                      Versione 1.1.1
+                      Versione {appVersion || '—'}
                     </span>
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container">
                       Stato: Stabile
@@ -662,6 +676,85 @@ export default function Settings() {
                     </div>
                   </button>
                 </div>
+              </div>
+
+              {/* Updates Settings Card */}
+              <div className="bg-surface border border-outline-variant rounded-xl p-md space-y-md">
+                <div className="flex items-center gap-md">
+                  <span className="material-symbols-outlined text-[32px] text-primary">
+                    system_update
+                  </span>
+                  <div>
+                    <h4 className="font-label-md text-label-md font-bold text-on-surface">
+                      Aggiornamenti
+                    </h4>
+                    <p className="text-body-sm text-on-surface-variant">
+                      Versione installata: {appVersion || '—'}. All&apos;avvio l&apos;app controlla
+                      automaticamente la presenza di nuove versioni.
+                    </p>
+                  </div>
+                </div>
+
+                {updateStatus === 'up-to-date' && (
+                  <p className="text-body-sm text-secondary flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                    Stai usando l&apos;ultima versione disponibile.
+                  </p>
+                )}
+
+                {updateStatus === 'error' && (
+                  <p className="text-body-sm text-error flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[18px]">error</span>
+                    {'Controllo aggiornamenti fallito: '}
+                    {updateError || 'riprova più tardi.'}
+                  </p>
+                )}
+
+                {updateStatus === 'available' && updateInfo && (
+                  <div className="p-sm bg-primary/10 border border-primary/20 rounded-lg space-y-2">
+                    <p className="text-body-sm text-on-surface">
+                      È disponibile la versione{' '}
+                      <strong className="text-primary">{updateInfo.version}</strong>.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={installUpdate}
+                      className="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+                    >
+                      Installa ora
+                    </button>
+                  </div>
+                )}
+
+                {(updateStatus === 'downloading' || updateStatus === 'installing') && (
+                  <div className="space-y-2">
+                    <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+                      <div
+                        className="bg-primary h-2 transition-all"
+                        style={{ width: `${updateDownloadProgress}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-body-sm text-on-surface-variant">
+                      {updateStatus === 'installing'
+                        ? 'Installazione in corso, riavvio imminente...'
+                        : `Download in corso... ${updateDownloadProgress}%`}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+                  onClick={checkForUpdates}
+                  className="bg-surface-container hover:bg-surface-container-high disabled:opacity-50 text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5"
+                >
+                  {updateStatus === 'checking' ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-surface"></div>
+                  ) : (
+                    <span className="material-symbols-outlined text-[18px]">refresh</span>
+                  )}
+                  Controlla aggiornamenti
+                </button>
               </div>
             </div>
           )}

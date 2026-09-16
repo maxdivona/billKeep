@@ -1,4 +1,8 @@
 import { create } from 'zustand'
+import { check as checkUpdate } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/plugin-process'
+
+const UPDATE_DISMISSED_VERSION_KEY = 'billkeep_update_dismissed_version'
 
 // Inizializza il tema al caricamento per evitare flash luminosi all'avvio
 const initialTheme = localStorage.getItem('theme') || 'light'
@@ -55,8 +59,78 @@ export const useStore = create((set, get) => ({
 
   spotlightOpen: false,
 
+  // Aggiornamenti applicazione (Tauri Updater)
+  updateStatus: 'idle', // idle | checking | available | up-to-date | downloading | installing | error
+  updateInfo: null, // { version, currentVersion, body, date, _update }
+  updateError: null,
+  updateDownloadProgress: 0,
+
   // Actions
   setSpotlightOpen: (spotlightOpen) => set({ spotlightOpen }),
+
+  checkForUpdates: async () => {
+    set({ updateStatus: 'checking', updateError: null })
+    try {
+      const update = await checkUpdate()
+      if (update) {
+        set({
+          updateStatus: 'available',
+          updateInfo: {
+            version: update.version,
+            currentVersion: update.currentVersion,
+            body: update.body,
+            date: update.date,
+            _update: update
+          }
+        })
+      } else {
+        set({ updateStatus: 'up-to-date', updateInfo: null })
+      }
+      return update
+    } catch (err) {
+      console.error('Errore durante il controllo aggiornamenti:', err)
+      set({ updateStatus: 'error', updateError: err?.message || String(err) })
+      return null
+    }
+  },
+
+  installUpdate: async () => {
+    const update = get().updateInfo?._update
+    if (!update) return { success: false, error: 'Nessun aggiornamento disponibile.' }
+
+    set({ updateStatus: 'downloading', updateDownloadProgress: 0, updateError: null })
+    try {
+      let downloaded = 0
+      let total = 0
+      await update.downloadAndInstall((event) => {
+        if (event.event === 'Started') {
+          total = event.data.contentLength || 0
+        } else if (event.event === 'Progress') {
+          downloaded += event.data.chunkLength
+          set({ updateDownloadProgress: total ? Math.round((downloaded / total) * 100) : 0 })
+        } else if (event.event === 'Finished') {
+          set({ updateStatus: 'installing', updateDownloadProgress: 100 })
+        }
+      })
+      await relaunch()
+      return { success: true }
+    } catch (err) {
+      console.error("Errore durante l'installazione dell'aggiornamento:", err)
+      set({ updateStatus: 'error', updateError: err?.message || String(err) })
+      return { success: false, error: err?.message || String(err) }
+    }
+  },
+
+  dismissUpdate: () => {
+    const version = get().updateInfo?.version
+    if (version) {
+      try {
+        localStorage.setItem(UPDATE_DISMISSED_VERSION_KEY, version)
+      } catch {
+        // localStorage non disponibile: la preferenza non verrà ricordata
+      }
+    }
+  },
   fetchStats: async () => {
     set({ loading: true, error: null })
     try {

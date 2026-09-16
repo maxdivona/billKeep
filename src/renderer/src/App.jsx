@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import Layout from './components/Layout'
+import UpdateManager from './components/UpdateManager'
 
 // Static imports for instant page changes
 import Dashboard from './pages/Dashboard'
@@ -101,6 +102,7 @@ function App() {
       <Layout>
         <AnimatedRoutes />
       </Layout>
+      <UpdateManager />
     </HashRouter>
   )
 }
