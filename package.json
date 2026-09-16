@@ -1,6 +1,6 @@
 {
   "name": "billkeep",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Applicazione desktop locale per la gestione di fatture, pagamenti e contabilità in partita doppia (Prima Nota).",
   "main": "index.html",
   "author": "Massimo Di Vona",
