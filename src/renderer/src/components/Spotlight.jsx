@@ -14,8 +14,8 @@ const getDefaultActions = (theme) => [
   {
     category: 'action',
     id: 'new_invoice',
-    title: '📄 Emetti Nuova Fattura',
-    subtitle: 'Emetti una nuova fattura per un cliente',
+    title: '📄 Registra Nuova Fattura',
+    subtitle: 'Registra un nuovo documento contabile per un cliente',
     route: '/invoices',
     actionKey: 'action:new_invoice'
   },
@@ -161,7 +161,7 @@ export default function Spotlight() {
       } else if (item.actionKey === 'action:new_customer') {
         navigate('/clients', { state: { openNewCustomerModal: true } })
       } else if (item.actionKey === 'action:new_invoice') {
-        navigate('/invoices', { state: { openNewInvoiceModal: true } })
+        navigate('/invoices', { state: { focusNewInvoice: true } })
       } else if (item.actionKey === 'action:new_payment') {
         navigate('/payments', { state: { focusPaymentForm: true } })
       }

@@ -59,6 +59,10 @@ export const useStore = create((set, get) => ({
 
   spotlightOpen: false,
 
+  // Dashboard Redesign State
+  dashboardSearch: '',
+  selectedInvoiceId: null,
+
   // Aggiornamenti applicazione (Tauri Updater)
   updateStatus: 'idle', // idle | checking | available | up-to-date | downloading | installing | error
   updateInfo: null, // { version, currentVersion, body, date, _update }
@@ -67,6 +71,8 @@ export const useStore = create((set, get) => ({
 
   // Actions
   setSpotlightOpen: (spotlightOpen) => set({ spotlightOpen }),
+  setDashboardSearch: (dashboardSearch) => set({ dashboardSearch }),
+  setSelectedInvoiceId: (selectedInvoiceId) => set({ selectedInvoiceId }),
 
   checkForUpdates: async () => {
     set({ updateStatus: 'checking', updateError: null })
@@ -131,6 +137,7 @@ export const useStore = create((set, get) => ({
       }
     }
   },
+
   fetchStats: async () => {
     set({ loading: true, error: null })
     try {

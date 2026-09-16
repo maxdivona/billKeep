@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import { getVersion } from '@tauri-apps/api/app'
+import { useState } from 'react'
 import Modal from '../components/Modal'
 import { useStore } from '../store/useStore'
+import packageInfo from '../../../../package.json'
 
 export default function Settings() {
   const theme = useStore((state) => state.theme)
@@ -12,30 +12,29 @@ export default function Settings() {
   const updateDownloadProgress = useStore((state) => state.updateDownloadProgress)
   const checkForUpdates = useStore((state) => state.checkForUpdates)
   const installUpdate = useStore((state) => state.installUpdate)
-  const [appVersion, setAppVersion] = useState('')
-  const [activeTab, setActiveTab] = useState('info')
+
+  const [activeTab, setActiveTab] = useState('info') // 'info' | 'backup' | 'logs' | 'preferences'
   const [logs, setLogs] = useState([])
+  const [logFilter, setLogFilter] = useState('all') // 'all' | 'error' | 'warning' | 'info'
   const [actionLoading, setActionLoading] = useState(false)
   const [statusMessage, setStatusMessage] = useState(null)
+
+  // Confirm Modals State
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const [clearConfirmText, setClearConfirmText] = useState('')
   const [showSeedConfirm, setShowSeedConfirm] = useState(false)
-
-  useEffect(() => {
-    getVersion()
-      .then(setAppVersion)
-      .catch(() => setAppVersion(''))
-  }, [])
+  const [copiedLogs, setCopiedLogs] = useState(false)
 
   const fetchLogs = async () => {
     try {
       const systemLogs = await window.api.getLogs()
-      setLogs(systemLogs.reverse()) // Show newest first
+      setLogs((systemLogs || []).reverse())
     } catch (err) {
       console.error('Errore durante il caricamento dei log:', err)
     }
   }
+
 
   const handleBackup = async () => {
     setActionLoading(true)
@@ -128,667 +127,870 @@ export default function Settings() {
     }
   }
 
+  const handleCopyLogs = () => {
+    if (logs.length === 0) return
+    const text = logs
+      .map((l) => `[${formatDate(l.timestamp)}] [${l.level?.toUpperCase()}] [${l.context}] ${l.message}`)
+      .join('\n')
+    navigator.clipboard.writeText(text)
+    setCopiedLogs(true)
+    setTimeout(() => setCopiedLogs(false), 2000)
+  }
+
   const formatDate = (dateStr) => {
     const d = new Date(dateStr)
-    if (isNaN(d)) return dateStr
+    if (isNaN(d.getTime())) return dateStr
     return d.toLocaleString('it-IT')
   }
 
+  // Filtra log in base al livello selezionato
+  const filteredLogs = logs.filter((l) => {
+    if (logFilter === 'all') return true
+    return l.level === logFilter
+  })
+
   return (
-    <div>
-      {/* Page Header */}
-      <div className="mb-6">
-        <h2 className="font-headline-xl text-headline-xl text-on-surface mb-xs">Impostazioni</h2>
-        <p className="text-on-surface-variant font-body-md text-body-md">
-          Gestisci le preferenze dell&apos;applicazione, i backup e visualizza i log di sistema.
-        </p>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left Submenu Navigation */}
-        <div className="w-full lg:w-64 shrink-0 bg-surface-container-low border border-outline-variant rounded-xl p-sm flex flex-col gap-1.5 h-fit">
-          <button
-            onClick={() => setActiveTab('info')}
-            className={`flex items-center gap-md px-sm py-sm rounded-lg text-left transition-all duration-150 cursor-pointer font-label-md text-label-md ${
-              activeTab === 'info'
-                ? 'bg-primary text-on-primary font-semibold shadow-sm'
-                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined">info</span>
-            Info Applicazione
-          </button>
-
-          <button
-            onClick={() => setActiveTab('backup')}
-            className={`flex items-center gap-md px-sm py-sm rounded-lg text-left transition-all duration-150 cursor-pointer font-label-md text-label-md ${
-              activeTab === 'backup'
-                ? 'bg-primary text-on-primary font-semibold shadow-sm'
-                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined">database</span>
-            Database & Backup
-          </button>
-
-          <button
-            onClick={() => {
-              setActiveTab('logs')
-              fetchLogs()
-            }}
-            className={`flex items-center gap-md px-sm py-sm rounded-lg text-left transition-all duration-150 cursor-pointer font-label-md text-label-md ${
-              activeTab === 'logs'
-                ? 'bg-primary text-on-primary font-semibold shadow-sm'
-                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined">description</span>
-            Log di Sistema
-          </button>
-
-          <button
-            onClick={() => setActiveTab('preferences')}
-            className={`flex items-center gap-md px-sm py-sm rounded-lg text-left transition-all duration-150 cursor-pointer font-label-md text-label-md ${
-              activeTab === 'preferences'
-                ? 'bg-primary text-on-primary font-semibold shadow-sm'
-                : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
-            }`}
-          >
-            <span className="material-symbols-outlined">tune</span>
-            Preferenze Generali
-          </button>
+    <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden select-none font-sans">
+      {/* 1. Workstation Top Toolbar */}
+      <div className="h-10 bg-slate-50/70 border-b border-apple-border px-4 flex items-center justify-between text-[13px] flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-apple-secondary font-medium">
+            <span className="material-symbols-outlined text-[16px] text-apple-accent">settings</span>
+            <span className="text-apple-text font-semibold">Impostazioni di Sistema</span>
+          </div>
+          <div className="h-3.5 w-px bg-apple-border hidden md:block" />
+          <span className="text-[12px] text-apple-secondary hidden md:inline">
+            Preferenze dell&apos;applicazione, manutenzione database e diagnostica
+          </span>
         </div>
 
-        {/* Right Content Panel */}
-        <div className="flex-1 bg-surface-container-low border border-outline-variant rounded-xl p-lg shadow-sm">
-          {/* TAB: INFO */}
-          {activeTab === 'info' && (
-            <div className="space-y-6">
-              {/* App Identity Card */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-6 border-b border-outline-variant">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-primary to-primary-container flex items-center justify-center text-on-primary shadow-md shrink-0">
-                  <span className="material-symbols-outlined text-[48px]">
-                    account_balance_wallet
-                  </span>
-                </div>
-                <div className="text-center sm:text-left space-y-1">
-                  <h3 className="font-headline-lg text-headline-lg text-on-surface font-bold">
-                    BillKeep
-                  </h3>
-                  <p className="text-body-md text-on-surface-variant">
-                    Applicazione desktop locale per la gestione di fatture, pagamenti e contabilità
-                    in partita doppia.
-                  </p>
-                  <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
-                      Versione {appVersion || '—'}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container">
-                      Stato: Stabile
-                    </span>
-                  </div>
-                </div>
-              </div>
+        <div className="flex items-center gap-2.5">
+          <span className="text-[11px] font-mono text-apple-secondary bg-slate-100 px-2 py-0.5 rounded border border-apple-border/50">
+            v{packageInfo.version}
+          </span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/50">
+            <span className="w-1.5 h-1.5 rounded-full bg-apple-green" />
+            SQLite Attivo
+          </span>
+        </div>
+      </div>
 
-              {/* Developer Info */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-surface-container p-md border border-outline-variant/60 rounded-xl space-y-2">
-                  <h4 className="font-label-md text-label-md font-semibold text-primary flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[20px]">person</span>
-                    Sviluppatore
-                  </h4>
-                  <p className="font-headline-sm text-headline-sm text-on-surface font-medium">
-                    Massimo Di Vona
-                  </p>
-                  <p className="text-body-sm text-on-surface-variant">
-                    © 2026 Massimo Di Vona. Tutti i diritti riservati.
-                  </p>
-                </div>
-
-                <div className="bg-surface-container p-md border border-outline-variant/60 rounded-xl space-y-2">
-                  <h4 className="font-label-md text-label-md font-semibold text-primary flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[20px]">copyright</span>
-                    Dettagli Legali & Licenza
-                  </h4>
-                  <p className="text-body-md text-on-surface">
-                    Uso esclusivo e locale per la gestione contabile interna.
-                  </p>
-                  <p className="text-body-sm text-on-surface-variant">
-                    Tutti i diritti sono riservati all&apos;autore del software.
-                  </p>
-                </div>
-              </div>
-
-              {/* Technical Stack Section */}
-              <div className="space-y-3">
-                <h4 className="font-label-lg text-label-lg font-bold text-on-surface flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[20px]">widgets</span>
-                  Struttura Tecnica (Tech Stack)
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="border border-outline-variant rounded-lg p-sm bg-surface flex items-center gap-md">
-                    <span className="material-symbols-outlined text-primary text-[28px] shrink-0">
-                      terminal
-                    </span>
-                    <div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant">
-                        Runtime
-                      </div>
-                      <div className="font-body-md text-body-md font-semibold text-on-surface">
-                        Tauri + Rust
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border border-outline-variant rounded-lg p-sm bg-surface flex items-center gap-md">
-                    <span className="material-symbols-outlined text-primary text-[28px] shrink-0">
-                      token
-                    </span>
-                    <div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant">
-                        Frontend
-                      </div>
-                      <div className="font-body-md text-body-md font-semibold text-on-surface">
-                        React + Vite
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border border-outline-variant rounded-lg p-sm bg-surface flex items-center gap-md">
-                    <span className="material-symbols-outlined text-primary text-[28px] shrink-0">
-                      database
-                    </span>
-                    <div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant">
-                        Database Engine
-                      </div>
-                      <div className="font-body-md text-body-md font-semibold text-on-surface">
-                        SQLite (rusqlite)
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border border-outline-variant rounded-lg p-sm bg-surface flex items-center gap-md">
-                    <span className="material-symbols-outlined text-primary text-[28px] shrink-0">
-                      css
-                    </span>
-                    <div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant">
-                        Styling CSS
-                      </div>
-                      <div className="font-body-md text-body-md font-semibold text-on-surface">
-                        Tailwind CSS
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border border-outline-variant rounded-lg p-sm bg-surface flex items-center gap-md">
-                    <span className="material-symbols-outlined text-primary text-[28px] shrink-0">
-                      account_tree
-                    </span>
-                    <div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant">
-                        Stato Globale
-                      </div>
-                      <div className="font-body-md text-body-md font-semibold text-on-surface">
-                        Zustand
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border border-outline-variant rounded-lg p-sm bg-surface flex items-center gap-md">
-                    <span className="material-symbols-outlined text-primary text-[28px] shrink-0">
-                      security
-                    </span>
-                    <div>
-                      <div className="font-label-sm text-label-sm text-on-surface-variant">
-                        Architettura
-                      </div>
-                      <div className="font-body-md text-body-md font-semibold text-on-surface">
-                        Context Isolation & IPC
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      {/* 2. macOS System Settings 2-Pane View */}
+      <div className="flex-1 grid grid-cols-12 min-h-0 divide-x divide-apple-border bg-[#F9F9FA]">
+        {/* Left Submenu Navigation Pane */}
+        <div className="col-span-12 md:col-span-4 lg:col-span-3 xl:col-span-3 bg-slate-50/70 p-3 flex flex-col justify-between overflow-y-auto min-h-0">
+          <div className="space-y-1">
+            <div className="px-2 py-1 text-[10px] uppercase font-bold tracking-wider text-apple-subtle">
+              Preferenze BillKeep
             </div>
-          )}
 
-          {/* TAB: BACKUP */}
-          {activeTab === 'backup' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-headline-md text-headline-md text-on-surface font-semibold flex items-center gap-2">
-                  <span className="material-symbols-outlined">database</span>
-                  Gestione Dati & Backup
-                </h3>
-                <p className="text-body-md text-on-surface-variant mt-xs">
-                  Gestisci copie di sicurezza o esegui il ripristino e la pulizia totale dei dati di
-                  BillKeep.
-                </p>
+            {/* TAB: INFO */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('info')}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
+                activeTab === 'info'
+                  ? 'bg-white text-apple-text shadow-xs font-semibold border border-apple-border'
+                  : 'text-apple-secondary hover:bg-slate-200/60 hover:text-apple-text'
+              }`}
+            >
+              <div className="w-6 h-6 rounded-md bg-blue-500 text-white flex items-center justify-center shadow-2xs shrink-0">
+                <span className="material-symbols-outlined text-[15px]">info</span>
               </div>
+              <div className="truncate">
+                <div className="text-[13px] leading-tight">Info &amp; Licenza</div>
+                <div className="text-[11px] text-apple-subtle font-normal truncate">
+                  Versione, autore e dettagli
+                </div>
+              </div>
+            </button>
 
-              {/* Status Banner */}
-              {statusMessage && (
-                <div
-                  className={`p-md rounded-lg flex items-center gap-md border ${
-                    statusMessage.type === 'success'
-                      ? 'bg-secondary-container text-on-secondary-container border-secondary/20'
-                      : 'bg-error-container text-on-error-container border-error/20'
-                  }`}
-                >
-                  <span className="material-symbols-outlined">
+            {/* TAB: BACKUP */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('backup')}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
+                activeTab === 'backup'
+                  ? 'bg-white text-apple-text shadow-xs font-semibold border border-apple-border'
+                  : 'text-apple-secondary hover:bg-slate-200/60 hover:text-apple-text'
+              }`}
+            >
+              <div className="w-6 h-6 rounded-md bg-emerald-500 text-white flex items-center justify-center shadow-2xs shrink-0">
+                <span className="material-symbols-outlined text-[15px]">database</span>
+              </div>
+              <div className="truncate">
+                <div className="text-[13px] leading-tight">Database &amp; Backup</div>
+                <div className="text-[11px] text-apple-subtle font-normal truncate">
+                  Salvataggio, ripristino ed esportazione
+                </div>
+              </div>
+            </button>
+
+            {/* TAB: LOGS */}
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('logs')
+                fetchLogs()
+              }}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
+                activeTab === 'logs'
+                  ? 'bg-white text-apple-text shadow-xs font-semibold border border-apple-border'
+                  : 'text-apple-secondary hover:bg-slate-200/60 hover:text-apple-text'
+              }`}
+            >
+              <div className="w-6 h-6 rounded-md bg-amber-500 text-white flex items-center justify-center shadow-2xs shrink-0">
+                <span className="material-symbols-outlined text-[15px]">terminal</span>
+              </div>
+              <div className="truncate">
+                <div className="text-[13px] leading-tight">Log &amp; Diagnostica</div>
+                <div className="text-[11px] text-apple-subtle font-normal truncate">
+                  Registro eventi e anomalie
+                </div>
+              </div>
+            </button>
+
+            {/* TAB: PREFERENCES */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('preferences')}
+              className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition cursor-pointer ${
+                activeTab === 'preferences'
+                  ? 'bg-white text-apple-text shadow-xs font-semibold border border-apple-border'
+                  : 'text-apple-secondary hover:bg-slate-200/60 hover:text-apple-text'
+              }`}
+            >
+              <div className="w-6 h-6 rounded-md bg-indigo-500 text-white flex items-center justify-center shadow-2xs shrink-0">
+                <span className="material-symbols-outlined text-[15px]">palette</span>
+              </div>
+              <div className="truncate">
+                <div className="text-[13px] leading-tight">Aspetto &amp; Preferenze</div>
+                <div className="text-[11px] text-apple-subtle font-normal truncate">
+                  Tema grafico e impostazioni
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* Developer Card at bottom of sidebar */}
+          <div className="p-2.5 rounded-lg bg-white/70 border border-apple-border/70 text-[11px] text-apple-secondary space-y-0.5">
+            <div className="font-semibold text-apple-text">BillKeep Accounting</div>
+            <div>© {new Date().getFullYear()} Massimo Di Vona</div>
+            <div className="text-apple-subtle">Architettura locale Tauri + Rust</div>
+          </div>
+        </div>
+
+        {/* Right Detail Panel */}
+        <div className="col-span-12 md:col-span-8 lg:col-span-9 xl:col-span-9 bg-white overflow-y-auto min-h-0 p-6">
+          <div className="max-w-3xl mx-auto space-y-6">
+            {/* Status Feedback Banner */}
+            {statusMessage && (
+              <div
+                className={`p-3 rounded-lg flex items-center justify-between text-[13px] border ${
+                  statusMessage.type === 'success'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-rose-50 text-rose-800 border-rose-200'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px]">
                     {statusMessage.type === 'success' ? 'check_circle' : 'error'}
                   </span>
-                  <span className="font-body-md text-body-md">{statusMessage.text}</span>
+                  <span className="font-medium">{statusMessage.text}</span>
                 </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Export Card */}
-                <div className="bg-surface-container border border-outline-variant/60 rounded-xl p-md flex flex-col justify-between">
-                  <div className="space-y-sm mb-lg">
-                    <div className="flex items-center gap-md text-primary">
-                      <span className="material-symbols-outlined text-[32px]">upload</span>
-                      <h4 className="font-label-lg text-label-lg font-bold text-on-surface">
-                        Esporta Backup
-                      </h4>
-                    </div>
-                    <p className="text-body-md text-on-surface-variant">
-                      Salva una copia completa del database SQLite sul tuo computer.
-                      L&apos;esportazione è sicura e coerente in qualsiasi momento.
-                    </p>
-                  </div>
-                  <button
-                    disabled={actionLoading}
-                    onClick={handleBackup}
-                    className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    {actionLoading ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-primary"></div>
-                    ) : (
-                      <span className="material-symbols-outlined text-[20px]">save</span>
-                    )}
-                    Salva Backup Database
-                  </button>
-                </div>
-
-                {/* Import/Restore Card */}
-                <div className="bg-surface-container border border-outline-variant/60 rounded-xl p-md flex flex-col justify-between">
-                  <div className="space-y-sm mb-lg">
-                    <div className="flex items-center gap-md text-error">
-                      <span className="material-symbols-outlined text-[32px]">download</span>
-                      <h4 className="font-label-lg text-label-lg font-bold text-on-surface">
-                        Ripristina Backup
-                      </h4>
-                    </div>
-                    <p className="text-body-md text-on-surface-variant">
-                      Seleziona un file `.db` salvato in precedenza per ripristinare lo stato dei
-                      dati. Il database verrà allineato e migrato automaticamente.
-                    </p>
-                  </div>
-                  <button
-                    disabled={actionLoading}
-                    onClick={() => setShowRestoreConfirm(true)}
-                    className="w-full bg-error hover:bg-error/90 disabled:opacity-50 text-on-error font-label-md text-label-md px-6 py-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    {actionLoading ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-error"></div>
-                    ) : (
-                      <span className="material-symbols-outlined text-[20px]">restore</span>
-                    )}
-                    Ripristina Database
-                  </button>
-                </div>
-
-                {/* Clear Database Card */}
-                <div className="bg-surface-container border border-outline-variant/60 rounded-xl p-md flex flex-col justify-between">
-                  <div className="space-y-sm mb-lg">
-                    <div className="flex items-center gap-md text-error">
-                      <span className="material-symbols-outlined text-[32px]">delete_sweep</span>
-                      <h4 className="font-label-lg text-label-lg font-bold text-on-surface">
-                        Ripulisci Database
-                      </h4>
-                    </div>
-                    <p className="text-body-md text-on-surface-variant">
-                      Elimina definitivamente tutti i dati (clienti, fatture, pagamenti e prima
-                      nota) per ricominciare da zero. Richiede doppia conferma di sicurezza.
-                    </p>
-                  </div>
-                  <button
-                    disabled={actionLoading}
-                    onClick={() => setShowClearConfirm(true)}
-                    className="w-full bg-error hover:bg-error/90 disabled:opacity-50 text-on-error font-label-md text-label-md px-6 py-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    {actionLoading ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-error"></div>
-                    ) : (
-                      <span className="material-symbols-outlined text-[20px]">delete_forever</span>
-                    )}
-                    Ripulisci Tutti i Dati
-                  </button>
-                </div>
-
-                {/* Seed Demo Data Card */}
-                <div className="bg-surface-container border border-outline-variant/60 rounded-xl p-md flex flex-col justify-between">
-                  <div className="space-y-sm mb-lg">
-                    <div className="flex items-center gap-md text-primary">
-                      <span className="material-symbols-outlined text-[32px]">extension</span>
-                      <h4 className="font-label-lg text-label-lg font-bold text-on-surface">
-                        Carica Dati Demo
-                      </h4>
-                    </div>
-                    <p className="text-body-md text-on-surface-variant">
-                      Popola l&apos;applicazione con dati fittizi (clienti, fatture, incassi e prima
-                      nota) per scopi di test e dimostrazione.
-                    </p>
-                  </div>
-                  <button
-                    disabled={actionLoading}
-                    onClick={() => setShowSeedConfirm(true)}
-                    className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
-                  >
-                    {actionLoading ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-primary"></div>
-                    ) : (
-                      <span className="material-symbols-outlined text-[20px]">science</span>
-                    )}
-                    Carica Dati Demo
-                  </button>
-                </div>
-              </div>
-
-              {/* Warning Alert */}
-              <div className="p-md bg-error-container/30 border border-error/20 rounded-xl flex items-start gap-md text-on-error-container">
-                <span className="material-symbols-outlined text-error shrink-0">warning</span>
-                <div className="space-y-xs">
-                  <h5 className="font-label-md text-label-md font-bold text-error">
-                    Sicurezza e Protezione Dati
-                  </h5>
-                  <p className="text-body-sm text-on-surface-variant">
-                    Le operazioni di ripristino e pulizia database sono irreversibili. Il
-                    caricamento dei dati demo aggiungerà record fittizi ma manterrà quelli esistenti
-                    se non si ripulisce prima.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB: LOGS */}
-          {activeTab === 'logs' && (
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h3 className="font-headline-md text-headline-md text-on-surface font-semibold flex items-center gap-2">
-                    <span className="material-symbols-outlined">description</span>
-                    Log ed Errori di Sistema
-                  </h3>
-                  <p className="text-body-md text-on-surface-variant mt-xs">
-                    Visualizza il log cronologico degli eventi e gli errori relativi a backup e
-                    ripristini.
-                  </p>
-                </div>
-                <button
-                  onClick={fetchLogs}
-                  className="bg-surface hover:bg-surface-container-high border border-outline-variant font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5"
-                >
-                  <span className="material-symbols-outlined text-[18px]">refresh</span>
-                  Aggiorna
-                </button>
-              </div>
-
-              {/* Log Viewer Container */}
-              <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-inner flex flex-col h-[500px]">
-                <div className="bg-surface px-md py-sm border-b border-outline-variant flex items-center justify-between text-label-sm font-semibold text-on-surface-variant">
-                  <span>Registro Eventi</span>
-                  <span>{logs.length} record trovati</span>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-md space-y-sm font-mono text-xs">
-                  {logs.length === 0 ? (
-                    <div className="text-center py-12 text-on-surface-variant/60 font-sans text-body-md">
-                      Nessun log registrato nel sistema.
-                    </div>
-                  ) : (
-                    logs.map((log, idx) => (
-                      <div
-                        key={idx}
-                        className="p-sm bg-surface border border-outline-variant/40 rounded-lg hover:border-outline transition-colors flex flex-col md:flex-row items-start md:items-center gap-md"
-                      >
-                        {/* Timestamp */}
-                        <span className="text-on-surface-variant shrink-0 select-none">
-                          [{formatDate(log.timestamp)}]
-                        </span>
-
-                        {/* Level badge */}
-                        <span
-                          className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${
-                            log.level === 'error'
-                              ? 'bg-error-container text-on-error-container'
-                              : log.level === 'warning'
-                                ? 'bg-error/10 text-error'
-                                : 'bg-secondary-container text-on-secondary-container'
-                          }`}
-                        >
-                          {log.level}
-                        </span>
-
-                        {/* Context badge */}
-                        <span className="px-2 py-0.5 rounded bg-surface-container border border-outline-variant/60 text-[10px] font-semibold uppercase text-primary shrink-0 select-none">
-                          {log.context}
-                        </span>
-
-                        {/* Message */}
-                        <span className="text-on-surface font-sans text-body-md break-all">
-                          {log.message}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB: PREFERENCES */}
-          {activeTab === 'preferences' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-headline-md text-headline-md text-on-surface font-semibold flex items-center gap-2">
-                  <span className="material-symbols-outlined">tune</span>
-                  Preferenze Generali
-                </h3>
-                <p className="text-body-md text-on-surface-variant mt-xs">
-                  Personalizza il comportamento e l&apos;aspetto visivo dell&apos;applicazione.
-                </p>
-              </div>
-
-              {/* Theme Settings Card */}
-              <div className="bg-surface border border-outline-variant rounded-xl p-md space-y-md">
-                <div className="flex items-center gap-md">
-                  <span className="material-symbols-outlined text-[32px] text-primary">
-                    palette
-                  </span>
-                  <div>
-                    <h4 className="font-label-md text-label-md font-bold text-on-surface">
-                      Tema dell&apos;Applicazione
-                    </h4>
-                    <p className="text-body-sm text-on-surface-variant">
-                      Seleziona la modalità di visualizzazione dell&apos;applicazione.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-sm">
-                  {/* Light Theme Button */}
-                  <button
-                    onClick={() => setTheme('light')}
-                    className={`flex items-center gap-md p-md rounded-xl border text-left cursor-pointer transition-all duration-200 ${
-                      theme === 'light'
-                        ? 'border-primary bg-primary/5 text-primary font-bold shadow-sm'
-                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[24px]">light_mode</span>
-                    <div>
-                      <div className="font-label-md text-label-md">Tema Chiaro</div>
-                      <div className="text-[12px] font-normal text-on-surface-variant/80">
-                        Tonalità calde riposanti per ambienti illuminati
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Dark Theme Button */}
-                  <button
-                    onClick={() => setTheme('dark')}
-                    className={`flex items-center gap-md p-md rounded-xl border text-left cursor-pointer transition-all duration-200 ${
-                      theme === 'dark'
-                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-sm'
-                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[24px]">dark_mode</span>
-                    <div>
-                      <div className="font-label-md text-label-md">Tema Oscuro</div>
-                      <div className="text-[12px] font-normal text-on-surface-variant/80">
-                        Contrasto ottimizzato per affaticare meno la vista
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Minimal Theme Button */}
-                  <button
-                    onClick={() => setTheme('minimal')}
-                    className={`flex items-center gap-md p-md rounded-xl border text-left cursor-pointer transition-all duration-200 ${
-                      theme === 'minimal'
-                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-sm'
-                        : 'border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[24px]">contrast</span>
-                    <div>
-                      <div className="font-label-md text-label-md">Tema Minimal</div>
-                      <div className="text-[12px] font-normal text-on-surface-variant/80">
-                        Bianco e nero essenziale per massima leggibilità
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Updates Settings Card */}
-              <div className="bg-surface border border-outline-variant rounded-xl p-md space-y-md">
-                <div className="flex items-center gap-md">
-                  <span className="material-symbols-outlined text-[32px] text-primary">
-                    system_update
-                  </span>
-                  <div>
-                    <h4 className="font-label-md text-label-md font-bold text-on-surface">
-                      Aggiornamenti
-                    </h4>
-                    <p className="text-body-sm text-on-surface-variant">
-                      Versione installata: {appVersion || '—'}. All&apos;avvio l&apos;app controlla
-                      automaticamente la presenza di nuove versioni.
-                    </p>
-                  </div>
-                </div>
-
-                {updateStatus === 'up-to-date' && (
-                  <p className="text-body-sm text-secondary flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                    Stai usando l&apos;ultima versione disponibile.
-                  </p>
-                )}
-
-                {updateStatus === 'error' && (
-                  <p className="text-body-sm text-error flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[18px]">error</span>
-                    {'Controllo aggiornamenti fallito: '}
-                    {updateError || 'riprova più tardi.'}
-                  </p>
-                )}
-
-                {updateStatus === 'available' && updateInfo && (
-                  <div className="p-sm bg-primary/10 border border-primary/20 rounded-lg space-y-2">
-                    <p className="text-body-sm text-on-surface">
-                      È disponibile la versione{' '}
-                      <strong className="text-primary">{updateInfo.version}</strong>.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={installUpdate}
-                      className="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
-                    >
-                      Installa ora
-                    </button>
-                  </div>
-                )}
-
-                {(updateStatus === 'downloading' || updateStatus === 'installing') && (
-                  <div className="space-y-2">
-                    <div className="w-full bg-surface-container rounded-full h-2 overflow-hidden">
-                      <div
-                        className="bg-primary h-2 transition-all"
-                        style={{ width: `${updateDownloadProgress}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-body-sm text-on-surface-variant">
-                      {updateStatus === 'installing'
-                        ? 'Installazione in corso, riavvio imminente...'
-                        : `Download in corso... ${updateDownloadProgress}%`}
-                    </p>
-                  </div>
-                )}
-
                 <button
                   type="button"
-                  disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
-                  onClick={checkForUpdates}
-                  className="bg-surface-container hover:bg-surface-container-high disabled:opacity-50 text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1.5"
+                  onClick={() => setStatusMessage(null)}
+                  className="text-apple-subtle hover:text-apple-text cursor-pointer"
                 >
-                  {updateStatus === 'checking' ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-on-surface"></div>
-                  ) : (
-                    <span className="material-symbols-outlined text-[18px]">refresh</span>
-                  )}
-                  Controlla aggiornamenti
+                  ✕
                 </button>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* TAB 1: INFO & LICENZA */}
+            {activeTab === 'info' && (
+              <div className="space-y-5">
+                {/* Hero App Identity */}
+                <div className="p-5 rounded-xl border border-apple-border bg-gradient-to-br from-slate-50 to-white shadow-xs flex flex-col sm:flex-row items-center sm:items-start gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-apple-accent text-white flex items-center justify-center shadow-md shrink-0">
+                    <span className="material-symbols-outlined text-[36px]">
+                      account_balance_wallet
+                    </span>
+                  </div>
+                  <div className="text-center sm:text-left space-y-1.5 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                      <h2 className="text-[20px] font-bold text-apple-text">BillKeep Workstation</h2>
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-apple-accent/10 text-apple-accent border border-apple-accent/20 font-semibold">
+                        v{packageInfo.version}
+                      </span>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/50 font-medium">
+                        Stabile Locale
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-apple-secondary leading-relaxed">
+                      Applicazione desktop per la gestione e tracciamento locale di clienti,
+                      fatture contabili, scadenze, incassi e contabilità in partita doppia (Prima
+                      Nota).
+                    </p>
+                  </div>
+                </div>
+
+                {/* Sviluppatore e Privacy Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl border border-apple-border bg-slate-50/50 flex flex-col justify-between h-full">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-apple-accent font-semibold text-[13px] mb-1">
+                        <span className="material-symbols-outlined text-[17px]">person</span>
+                        <span>Sviluppatore Software</span>
+                      </div>
+                      <div className="text-[15px] font-bold text-apple-text">Massimo Di Vona</div>
+                      <p className="text-[12px] text-apple-secondary">
+                        © {new Date().getFullYear()} Massimo Di Vona. Tutti i diritti riservati.
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-apple-subtle pt-2 mt-3 border-t border-apple-border/60">
+                      Uso esclusivo per la gestione contabile interna e locale.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-apple-border bg-slate-50/50 flex flex-col justify-between h-full">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-[13px] mb-1">
+                        <span className="material-symbols-outlined text-[17px]">shield</span>
+                        <span>Privacy &amp; Sovranità Dati</span>
+                      </div>
+                      <div className="text-[15px] font-bold text-apple-text">Zero Cloud / 100% Locale</div>
+                      <p className="text-[12px] text-apple-secondary">
+                        Tutti i dati risiedono unicamente sul database SQLite locale di questo computer.
+                      </p>
+                    </div>
+                    <p className="text-[11px] text-apple-subtle pt-2 mt-3 border-t border-apple-border/60">
+                      Nessuna telemetria invasiva o esportazione non autorizzata.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Struttura Tecnica (Tech Stack) */}
+                <div className="space-y-2.5">
+                  <div className="text-[12px] uppercase font-bold tracking-wider text-apple-subtle flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px]">widgets</span>
+                    <span>Stack Tecnologico &amp; Architettura</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    <div className="p-3 rounded-lg border border-apple-border bg-white flex items-center gap-2.5 shadow-2xs">
+                      <span className="material-symbols-outlined text-[22px] text-apple-accent">
+                        terminal
+                      </span>
+                      <div>
+                        <div className="text-[10px] text-apple-subtle font-medium uppercase">
+                          Runtime
+                        </div>
+                        <div className="text-[13px] font-semibold text-apple-text">Tauri + Rust</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-apple-border bg-white flex items-center gap-2.5 shadow-2xs">
+                      <span className="material-symbols-outlined text-[22px] text-apple-accent">
+                        database
+                      </span>
+                      <div>
+                        <div className="text-[10px] text-apple-subtle font-medium uppercase">
+                          Database
+                        </div>
+                        <div className="text-[13px] font-semibold text-apple-text">
+                          SQLite (rusqlite)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-apple-border bg-white flex items-center gap-2.5 shadow-2xs">
+                      <span className="material-symbols-outlined text-[22px] text-apple-accent">
+                        token
+                      </span>
+                      <div>
+                        <div className="text-[10px] text-apple-subtle font-medium uppercase">
+                          Frontend
+                        </div>
+                        <div className="text-[13px] font-semibold text-apple-text">React + Vite</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-apple-border bg-white flex items-center gap-2.5 shadow-2xs">
+                      <span className="material-symbols-outlined text-[22px] text-apple-accent">
+                        css
+                      </span>
+                      <div>
+                        <div className="text-[10px] text-apple-subtle font-medium uppercase">
+                          Design System
+                        </div>
+                        <div className="text-[13px] font-semibold text-apple-text">
+                          Apple Style (Tailwind)
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-apple-border bg-white flex items-center gap-2.5 shadow-2xs">
+                      <span className="material-symbols-outlined text-[22px] text-apple-accent">
+                        account_tree
+                      </span>
+                      <div>
+                        <div className="text-[10px] text-apple-subtle font-medium uppercase">
+                          Stato Globale
+                        </div>
+                        <div className="text-[13px] font-semibold text-apple-text">Zustand Store</div>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-apple-border bg-white flex items-center gap-2.5 shadow-2xs">
+                      <span className="material-symbols-outlined text-[22px] text-apple-accent">
+                        security
+                      </span>
+                      <div>
+                        <div className="text-[10px] text-apple-subtle font-medium uppercase">
+                          Sicurezza
+                        </div>
+                        <div className="text-[13px] font-semibold text-apple-text">IPC Isolated Bridge</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: DATABASE & BACKUP */}
+            {activeTab === 'backup' && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="text-[16px] font-bold text-apple-text">
+                    Gestione Dati &amp; Copie di Sicurezza
+                  </h3>
+                  <p className="text-[13px] text-apple-secondary mt-0.5">
+                    Esporta copie di sicurezza, ripristina salvataggi o gestisci la manutenzione
+                    dell&apos;archivio locale SQLite.
+                  </p>
+                </div>
+
+                {/* 4 Action Cards in Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Export Card */}
+                  <div className="p-4 rounded-xl border border-apple-border bg-white shadow-2xs flex flex-col justify-between space-y-3">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-apple-accent font-semibold text-[13px]">
+                        <span className="material-symbols-outlined text-[20px]">upload_file</span>
+                        <span>Esporta Backup</span>
+                      </div>
+                      <p className="text-[12px] text-apple-secondary leading-relaxed">
+                        Salva una copia completa e coerente del database SQLite locale (.db) sul tuo
+                        computer.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={handleBackup}
+                      className="w-full h-8 bg-apple-accent hover:bg-apple-accent-hover text-white text-[12px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                      {actionLoading ? (
+                        <span className="material-symbols-outlined text-[15px] animate-spin">
+                          progress_activity
+                        </span>
+                      ) : (
+                        <span className="material-symbols-outlined text-[16px]">save</span>
+                      )}
+                      <span>Salva Backup Database</span>
+                    </button>
+                  </div>
+
+                  {/* Restore Card */}
+                  <div className="p-4 rounded-xl border border-apple-border bg-white shadow-2xs flex flex-col justify-between space-y-3">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-amber-700 font-semibold text-[13px]">
+                        <span className="material-symbols-outlined text-[20px]">restore_page</span>
+                        <span>Ripristina Backup</span>
+                      </div>
+                      <p className="text-[12px] text-apple-secondary leading-relaxed">
+                        Seleziona un file `.db` salvato in precedenza per allineare e ripristinare
+                        l&apos;archivio dati.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => setShowRestoreConfirm(true)}
+                      className="w-full h-8 bg-white border border-apple-border hover:bg-slate-50 text-apple-text text-[12px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-amber-600">
+                        restore
+                      </span>
+                      <span>Ripristina da File...</span>
+                    </button>
+                  </div>
+
+                  {/* Seed Demo Data Card */}
+                  <div className="p-4 rounded-xl border border-apple-border bg-white shadow-2xs flex flex-col justify-between space-y-3">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-indigo-700 font-semibold text-[13px]">
+                        <span className="material-symbols-outlined text-[20px]">science</span>
+                        <span>Carica Dati Demo</span>
+                      </div>
+                      <p className="text-[12px] text-apple-secondary leading-relaxed">
+                        Popola l&apos;applicazione con registrazioni fittizie di clienti, fatture e
+                        pagamenti per collaudo.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => setShowSeedConfirm(true)}
+                      className="w-full h-8 bg-white border border-apple-border hover:bg-slate-50 text-apple-text text-[12px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-indigo-600">
+                        extension
+                      </span>
+                      <span>Carica Dati di Prova...</span>
+                    </button>
+                  </div>
+
+                  {/* Clear Database Card */}
+                  <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/30 shadow-2xs flex flex-col justify-between space-y-3">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-rose-700 font-semibold text-[13px]">
+                        <span className="material-symbols-outlined text-[20px]">delete_sweep</span>
+                        <span>Azzera Database</span>
+                      </div>
+                      <p className="text-[12px] text-rose-700/80 leading-relaxed">
+                        Elimina permanentemente tutte le registrazioni per ripartire con
+                        un&apos;applicazione vergine.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => setShowClearConfirm(true)}
+                      className="w-full h-8 bg-rose-600 hover:bg-rose-700 text-white text-[12px] font-semibold rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete_forever</span>
+                      <span>Ripulisci Tutti i Dati...</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Safety Notice */}
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[12px] flex items-start gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-amber-600 shrink-0 mt-0.5">
+                    warning
+                  </span>
+                  <div className="leading-snug">
+                    <span className="font-semibold">Sicurezza dei dati contabili:</span> Si consiglia
+                    di eseguire regolarmente un backup prima di operazioni di ripristino o
+                    pulizia. Le cancellazioni irreversibili non sono recuperabili senza backup.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: LOG & DIAGNOSTICA */}
+            {activeTab === 'logs' && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-[16px] font-bold text-apple-text">
+                      Registro Eventi e Diagnostica
+                    </h3>
+                    <p className="text-[13px] text-apple-secondary mt-0.5">
+                      Visualizza lo storico cronologico di sistema, operazioni di database ed
+                      eventuali errori.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyLogs}
+                      className="h-7 px-2.5 bg-white border border-apple-border hover:bg-slate-50 text-apple-text text-[12px] font-medium rounded flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">
+                        {copiedLogs ? 'done' : 'content_copy'}
+                      </span>
+                      <span>{copiedLogs ? 'Copiati!' : 'Copia'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={fetchLogs}
+                      className="h-7 px-2.5 bg-white border border-apple-border hover:bg-slate-50 text-apple-text text-[12px] font-medium rounded flex items-center gap-1 transition cursor-pointer shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">refresh</span>
+                      <span>Aggiorna</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Filter buttons */}
+                <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded text-[11px] font-medium w-fit">
+                  {[
+                    { id: 'all', label: `Tutti (${logs.length})` },
+                    { id: 'error', label: `Errori (${logs.filter((l) => l.level === 'error').length})` },
+                    {
+                      id: 'warning',
+                      label: `Avvisi (${logs.filter((l) => l.level === 'warning').length})`
+                    },
+                    { id: 'info', label: `Info (${logs.filter((l) => l.level === 'info').length})` }
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setLogFilter(f.id)}
+                      className={`px-2 py-0.5 rounded transition cursor-pointer ${
+                        logFilter === f.id
+                          ? 'bg-white text-apple-text shadow-xs font-semibold'
+                          : 'text-apple-secondary hover:text-apple-text'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* macOS Console Style Log Box */}
+                <div className="rounded-xl border border-slate-800 bg-slate-900 text-slate-100 font-mono text-[12px] h-[460px] flex flex-col overflow-hidden shadow-inner">
+                  <div className="h-8 bg-slate-950/80 px-3 border-b border-slate-800 flex items-center justify-between text-[11px] text-slate-400 select-none">
+                    <span>Console di Sistema (SQLite &amp; Rust IPC)</span>
+                    <span>{filteredLogs.length} eventi visualizzati</span>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+                    {filteredLogs.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-slate-500 font-sans text-[13px]">
+                        <span className="material-symbols-outlined text-[28px] mb-1">
+                          check_circle
+                        </span>
+                        <span>Nessun log registrato per questa categoria.</span>
+                      </div>
+                    ) : (
+                      filteredLogs.map((log, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-2.5 p-1.5 rounded hover:bg-slate-800/60 transition"
+                        >
+                          <span className="text-slate-500 shrink-0 select-none text-[11px]">
+                            {formatDate(log.timestamp)}
+                          </span>
+
+                          <span
+                            className={`inline-flex px-1.5 py-0.2 rounded text-[10px] font-bold uppercase shrink-0 ${
+                              log.level === 'error'
+                                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                : log.level === 'warning'
+                                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                  : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                            }`}
+                          >
+                            {log.level}
+                          </span>
+
+                          {log.context && (
+                            <span className="text-emerald-400 shrink-0 select-none text-[11px]">
+                              [{log.context}]
+                            </span>
+                          )}
+
+                          <span className="text-slate-200 font-sans text-[12px] break-all">
+                            {log.message}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: ASPETTO & PREFERENZE */}
+            {activeTab === 'preferences' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-[16px] font-bold text-apple-text">
+                    Aspetto &amp; Preferenze Visive
+                  </h3>
+                  <p className="text-[13px] text-apple-secondary mt-0.5">
+                    Personalizza l&apos;esperienza visiva della workstation e le opzioni
+                    predefinite di compilazione contabile.
+                  </p>
+                </div>
+
+                {/* Theme Selector Cards */}
+                <div className="space-y-3">
+                  <label className="block text-[12px] uppercase font-bold tracking-wider text-apple-subtle">
+                    Tema dell&apos;Interfaccia
+                  </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Light Mode */}
+                    <button
+                      type="button"
+                      onClick={() => setTheme('light')}
+                      className={`p-3.5 rounded-xl border text-left cursor-pointer transition flex flex-col justify-between ${
+                        theme === 'light'
+                          ? 'border-apple-accent bg-blue-50/40 ring-2 ring-apple-accent shadow-xs'
+                          : 'border-apple-border bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between pb-3">
+                        <span className="material-symbols-outlined text-[24px] text-amber-500">
+                          light_mode
+                        </span>
+                        {theme === 'light' && (
+                          <span className="material-symbols-outlined text-[18px] text-apple-accent">
+                            check_circle
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-bold text-apple-text">Tema Chiaro</div>
+                        <div className="text-[11px] text-apple-secondary mt-0.5">
+                          Tonalità calde, leggibilità ottimale per ambienti illuminati.
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Dark Mode */}
+                    <button
+                      type="button"
+                      onClick={() => setTheme('dark')}
+                      className={`p-3.5 rounded-xl border text-left cursor-pointer transition flex flex-col justify-between ${
+                        theme === 'dark'
+                          ? 'border-apple-accent bg-blue-50/40 ring-2 ring-apple-accent shadow-xs'
+                          : 'border-apple-border bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between pb-3">
+                        <span className="material-symbols-outlined text-[24px] text-indigo-500">
+                          dark_mode
+                        </span>
+                        {theme === 'dark' && (
+                          <span className="material-symbols-outlined text-[18px] text-apple-accent">
+                            check_circle
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-bold text-apple-text">Tema Oscuro</div>
+                        <div className="text-[11px] text-apple-secondary mt-0.5">
+                          Tonalità scure riposanti per minore affaticamento visivo.
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Minimal Mode */}
+                    <button
+                      type="button"
+                      onClick={() => setTheme('minimal')}
+                      className={`p-3.5 rounded-xl border text-left cursor-pointer transition flex flex-col justify-between ${
+                        theme === 'minimal'
+                          ? 'border-apple-accent bg-blue-50/40 ring-2 ring-apple-accent shadow-xs'
+                          : 'border-apple-border bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between pb-3">
+                        <span className="material-symbols-outlined text-[24px] text-slate-700">
+                          contrast
+                        </span>
+                        {theme === 'minimal' && (
+                          <span className="material-symbols-outlined text-[18px] text-apple-accent">
+                            check_circle
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-[13px] font-bold text-apple-text">Tema Minimal</div>
+                        <div className="text-[11px] text-apple-secondary mt-0.5">
+                          Bianco e nero essenziale ad alto contrasto per massima nitidezza.
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Default Accounting Preferences */}
+                <div className="space-y-3 pt-2">
+                  <label className="block text-[12px] uppercase font-bold tracking-wider text-apple-subtle">
+                    Parametri Contabili Predefiniti
+                  </label>
+
+                  <div className="rounded-xl border border-apple-border bg-white divide-y divide-apple-border/60 shadow-2xs">
+                    <div className="p-3.5 flex items-center justify-between">
+                      <div>
+                        <div className="text-[13px] font-semibold text-apple-text">
+                          Valuta Operativa
+                        </div>
+                        <div className="text-[11px] text-apple-secondary">
+                          Tutti i conteggi e le transazioni sono espresse in valuta europea.
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-1 bg-slate-100 rounded border border-apple-border text-[12px] font-mono font-medium text-apple-text">
+                        Euro (€ - EUR)
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 flex items-center justify-between">
+                      <div>
+                        <div className="text-[13px] font-semibold text-apple-text">
+                          Scadenza Predefinita Documenti
+                        </div>
+                        <div className="text-[11px] text-apple-secondary">
+                          Intervallo automatico proposto alla registrazione di una nuova fattura.
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-1 bg-slate-100 rounded border border-apple-border text-[12px] font-medium text-apple-text">
+                        +30 Giorni Data Fattura
+                      </span>
+                    </div>
+
+                    <div className="p-3.5 flex items-center justify-between">
+                      <div>
+                        <div className="text-[13px] font-semibold text-apple-text">
+                          Modalità Tracciamento SDI
+                        </div>
+                        <div className="text-[11px] text-apple-secondary">
+                          Registrazione interna senza interscambio telematico esterno.
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200/50 rounded text-[11px] font-semibold">
+                        Gestione Interna Locale
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Aggiornamenti Applicazione */}
+                <div className="space-y-3 pt-2">
+                  <label className="block text-[12px] uppercase font-bold tracking-wider text-apple-subtle">
+                    Aggiornamenti
+                  </label>
+
+                  <div className="rounded-xl border border-apple-border bg-white p-3.5 space-y-3 shadow-2xs">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[13px] font-semibold text-apple-text">
+                          Versione Installata
+                        </div>
+                        <div className="text-[11px] text-apple-secondary">
+                          Controllo automatico eseguito all&apos;avvio dell&apos;app.
+                        </div>
+                      </div>
+                      <span className="px-2.5 py-1 bg-slate-100 rounded border border-apple-border text-[12px] font-mono font-medium text-apple-text">
+                        v{packageInfo.version}
+                      </span>
+                    </div>
+
+                    {updateStatus === 'up-to-date' && (
+                      <div className="flex items-center gap-1.5 text-[12px] text-emerald-700 font-medium">
+                        <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                        Stai usando l&apos;ultima versione disponibile.
+                      </div>
+                    )}
+
+                    {updateStatus === 'error' && (
+                      <div className="flex items-center gap-1.5 text-[12px] text-rose-600 font-medium">
+                        <span className="material-symbols-outlined text-[16px]">error</span>
+                        {'Controllo fallito: '}
+                        {updateError || 'riprova più tardi.'}
+                      </div>
+                    )}
+
+                    {updateStatus === 'available' && updateInfo && (
+                      <div className="p-2.5 bg-sky-50 border border-sky-200/60 rounded-lg space-y-2">
+                        <p className="text-[12px] text-apple-text">
+                          È disponibile la versione{' '}
+                          <strong className="text-apple-accent">{updateInfo.version}</strong>.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={installUpdate}
+                          className="h-7 px-3 bg-apple-accent hover:bg-apple-accent-hover text-white text-[12px] font-medium rounded cursor-pointer"
+                        >
+                          Installa ora
+                        </button>
+                      </div>
+                    )}
+
+                    {(updateStatus === 'downloading' || updateStatus === 'installing') && (
+                      <div className="space-y-1.5">
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-apple-accent h-1.5 transition-all"
+                            style={{ width: `${updateDownloadProgress}%` }}
+                          ></div>
+                        </div>
+                        <p className="text-[11px] text-apple-secondary">
+                          {updateStatus === 'installing'
+                            ? 'Installazione in corso, riavvio imminente...'
+                            : `Download in corso... ${updateDownloadProgress}%`}
+                        </p>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={updateStatus === 'checking' || updateStatus === 'downloading'}
+                      onClick={checkForUpdates}
+                      className="h-7 px-3 rounded-md bg-white border border-apple-border hover:bg-slate-50 text-[12px] font-medium text-apple-secondary transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      {updateStatus === 'checking' ? (
+                        <span className="material-symbols-outlined text-[14px] animate-spin">
+                          progress_activity
+                        </span>
+                      ) : (
+                        <span className="material-symbols-outlined text-[14px]">refresh</span>
+                      )}
+                      Controlla aggiornamenti
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* CONFIRM RESTORE MODAL */}
+      {/* MODAL: CONFERMA RIPRISTINO DATABASE */}
       <Modal
         isOpen={showRestoreConfirm}
         onClose={() => setShowRestoreConfirm(false)}
-        title="Ripristina Database"
+        title="Ripristina Backup Database"
       >
-        <div className="space-y-4">
-          <p className="text-body-md text-on-surface">
-            Sei sicuro di voler ripristinare il database?
+        <div className="space-y-3">
+          <p className="text-[13px] text-apple-text">
+            Sei sicuro di voler ripristinare il database da un file salvato in precedenza?
           </p>
-          <div className="p-md bg-error-container text-on-error-container rounded-lg border border-error/20 flex gap-sm">
-            <span className="material-symbols-outlined shrink-0 text-[20px]">warning</span>
-            <p className="text-body-sm">
-              Questa azione sovrascriverà in modo irreversibile tutti i dati correnti con quelli del
-              backup selezionato. L&apos;applicazione si riavvierà automaticamente al termine
-              dell&apos;operazione.
+
+          <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-[12px] space-y-1">
+            <div className="font-semibold flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px] text-amber-600">warning</span>
+              <span>Azione sovrascrittiva irreversibile:</span>
+            </div>
+            <p>
+              I dati attuali verranno sostituiti integralmente con quelli presenti nel backup
+              selezionato. L&apos;applicazione si riavvierà automaticamente al termine del
+              ripristino.
             </p>
           </div>
-          <div className="flex justify-end gap-sm pt-sm border-t border-outline-variant">
+
+          <div className="pt-3 border-t border-apple-border flex justify-end gap-2">
             <button
+              type="button"
               onClick={() => setShowRestoreConfirm(false)}
-              className="bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+              className="h-8 px-3 rounded-md bg-white border border-apple-border text-apple-secondary text-[12px] hover:bg-slate-50 cursor-pointer"
             >
               Annulla
             </button>
             <button
+              type="button"
               onClick={handleRestore}
-              className="bg-error hover:bg-error/90 text-on-error font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+              className="h-8 px-4 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-[12px] font-semibold cursor-pointer shadow-xs"
             >
               Conferma e Ripristina
             </button>
@@ -796,7 +998,7 @@ export default function Settings() {
         </div>
       </Modal>
 
-      {/* CONFIRM CLEAR MODAL (DOUBLE SECURITY) */}
+      {/* MODAL: CONFERMA CANCELLAZIONE TOTALE (DOPPIA SICUREZZA CANCELLA) */}
       <Modal
         isOpen={showClearConfirm}
         onClose={() => {
@@ -805,80 +1007,91 @@ export default function Settings() {
         }}
         title="Ripulitura Completa Database"
       >
-        <div className="space-y-4">
-          <p className="text-body-md text-on-surface">
-            Questa operazione eliminerà permanentemente tutti i dati. Per procedere, digita la
-            parola <strong className="text-error">CANCELLA</strong> nel campo sottostante per
-            sbloccare la conferma.
+        <div className="space-y-3">
+          <p className="text-[13px] text-apple-text">
+            Questa operazione eliminerà permanentemente tutti i dati (clienti, fatture, pagamenti e
+            prima nota). Per sbloccare la conferma, digita la parola{' '}
+            <strong className="text-rose-600 font-mono">CANCELLA</strong> nel campo qui sotto:
           </p>
 
           <input
             type="text"
-            className="w-full bg-surface border border-outline-variant rounded-lg px-md py-sm font-mono text-body-md text-on-surface focus:outline-none focus:ring-1 focus:ring-error"
-            placeholder="Scrivi CANCELLA"
             value={clearConfirmText}
             onChange={(e) => setClearConfirmText(e.target.value)}
+            placeholder="Scrivi CANCELLA"
+            className="w-full h-9 px-3 bg-white border border-rose-300 rounded-md font-mono text-[13px] text-rose-700 focus:outline-none focus:ring-1 focus:ring-rose-500"
           />
 
-          <div className="p-md bg-error-container text-on-error-container rounded-lg border border-error/20 flex gap-sm">
-            <span className="material-symbols-outlined shrink-0 text-[20px]">warning</span>
-            <p className="text-body-sm">
-              Non sarà possibile recuperare i dati una volta cancellati, a meno che tu non abbia un
-              file di backup salvato in precedenza.
+          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-[12px] space-y-1">
+            <div className="font-semibold flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px]">error</span>
+              <span>Attenzione: Azione distruttiva</span>
+            </div>
+            <p>
+              Non sarà possibile recuperare le registrazioni una volta azzerate se non si possiede
+              un file di backup salvato in precedenza.
             </p>
           </div>
 
-          <div className="flex justify-end gap-sm pt-sm border-t border-outline-variant">
+          <div className="pt-3 border-t border-apple-border flex justify-end gap-2">
             <button
+              type="button"
               onClick={() => {
                 setShowClearConfirm(false)
                 setClearConfirmText('')
               }}
-              className="bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+              className="h-8 px-3 rounded-md bg-white border border-apple-border text-apple-secondary text-[12px] hover:bg-slate-50 cursor-pointer"
             >
               Annulla
             </button>
             <button
+              type="button"
               disabled={clearConfirmText !== 'CANCELLA'}
               onClick={handleClear}
-              className="bg-error hover:bg-error/90 disabled:opacity-50 text-on-error font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer transition-opacity"
+              className="h-8 px-4 rounded-md bg-rose-600 hover:bg-rose-700 disabled:opacity-40 text-white text-[12px] font-semibold cursor-pointer shadow-xs"
             >
-              Elimina Tutti i Dati
+              Elimina Definitivamente
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* CONFIRM SEED MODAL */}
+      {/* MODAL: CONFERMA DATI DEMO */}
       <Modal
         isOpen={showSeedConfirm}
         onClose={() => setShowSeedConfirm(false)}
-        title="Carica Dati Demo"
+        title="Carica Dati Demo di Prova"
       >
-        <div className="space-y-4">
-          <p className="text-body-md text-on-surface">
-            Sei sicuro di voler caricare i dati demo di prova?
+        <div className="space-y-3">
+          <p className="text-[13px] text-apple-text">
+            Vuoi caricare un set dimostrativo completo di clienti, fatture e pagamenti?
           </p>
-          <div className="p-md bg-secondary-container text-on-secondary-container rounded-lg border border-secondary/20 flex gap-sm">
-            <span className="material-symbols-outlined shrink-0 text-[20px]">info</span>
-            <p className="text-body-sm">
-              Questa azione aggiungerà clienti, fatture e pagamenti fittizi per consentirti di
-              esplorare le funzionalità dell&apos;applicazione. Si consiglia di eseguire questa
-              operazione su un database vuoto.
+
+          <div className="p-3 bg-slate-50 border border-apple-border text-apple-secondary rounded-lg text-[12px] space-y-1">
+            <div className="font-semibold text-apple-text flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px] text-apple-accent">info</span>
+              <span>Scopo di prova e collaudo:</span>
+            </div>
+            <p>
+              Verranno aggiunti record di prova per consentirti di esplorare grafici, scadenze e
+              incassi. L&apos;applicazione si riavvierà al termine dell&apos;operazione.
             </p>
           </div>
-          <div className="flex justify-end gap-sm pt-sm border-t border-outline-variant">
+
+          <div className="pt-3 border-t border-apple-border flex justify-end gap-2">
             <button
+              type="button"
               onClick={() => setShowSeedConfirm(false)}
-              className="bg-surface-container hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+              className="h-8 px-3 rounded-md bg-white border border-apple-border text-apple-secondary text-[12px] hover:bg-slate-50 cursor-pointer"
             >
               Annulla
             </button>
             <button
+              type="button"
               onClick={handleSeed}
-              className="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md px-4 py-2 rounded-lg cursor-pointer"
+              className="h-8 px-4 rounded-md bg-apple-accent hover:bg-apple-accent-hover text-white text-[12px] font-semibold cursor-pointer shadow-xs"
             >
-              Conferma e Carica
+              Conferma e Popola
             </button>
           </div>
         </div>

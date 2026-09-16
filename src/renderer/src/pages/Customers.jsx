@@ -1,7 +1,6 @@
 import { useEffect, useState, Fragment, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useStore } from '../store/useStore'
-import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import SearchableSelect from '../components/SearchableSelect'
 import {
@@ -54,7 +53,7 @@ export default function Customers() {
   // Advanced Receipt Modal States
   const [receiptModalOpen, setReceiptModalOpen] = useState(false)
   const [receiptAmount, setReceiptAmount] = useState('')
-  const [receiptMethod, setReceiptMethod] = useState('Bonifico')
+  const [receiptMethod, setReceiptMethod] = useState('Contanti')
   const [receiptDate, setReceiptDate] = useState(() => new Date().toISOString().split('T')[0])
   const [allocType, setAllocType] = useState('auto') // 'auto' | 'manual' | 'acconto'
   const [manualAllocations, setManualAllocations] = useState({}) // { invoiceId: amount }
@@ -445,7 +444,7 @@ export default function Customers() {
     setReceiptAmount('')
     setReceiptError('')
     setReceiptDate(new Date().toISOString().split('T')[0])
-    setReceiptMethod('Bonifico')
+    setReceiptMethod('Contanti')
     if (unpaidInvoices.length === 0) {
       setAllocType('acconto')
     } else {
@@ -490,165 +489,280 @@ export default function Customers() {
   // LIST VIEW: If no customer is selected
   if (!selectedCustomer) {
     const totalClients = customers.length
+    const totalInvoiced = customers.reduce((sum, c) => sum + (c.total_invoiced || 0), 0)
+    const totalBalance = customers.reduce((sum, c) => sum + (c.balance || 0), 0)
 
     return (
-      <div>
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div>
-            <h2 className="font-headline-xl text-headline-xl text-on-surface mb-xs">
-              Anagrafica Clienti
-            </h2>
-            <p className="text-on-surface-variant font-body-md text-body-md">
-              Gestisci la tua rubrica clienti e monitora i saldi contabili.
-            </p>
-          </div>
-          <button
-            className="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md px-6 py-3 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
-            onClick={() => setModalOpen(true)}
-          >
-            <span className="material-symbols-outlined">add</span>
-            Nuovo Cliente
-          </button>
-        </div>
-
-        {/* Search Input */}
-        <div className="mb-6 max-w-[400px]">
-          <div className="flex items-center bg-surface-container-low rounded-full px-md py-sm border border-outline-variant focus-within:border-primary transition-colors">
-            <span className="material-symbols-outlined text-on-surface-variant mr-sm">search</span>
-            <input
-              className="bg-transparent border-none outline-none w-full text-body-md text-on-surface placeholder:text-on-surface-variant/70 focus:ring-0 p-0"
-              placeholder="Cerca cliente per nome o email..."
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Stat Card */}
-        <div className="max-w-xs mb-8">
-          <div className="bg-surface-container-low border border-outline-variant rounded-xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="material-symbols-outlined text-primary">group</span>
-              <h3 className="font-label-md text-label-md text-on-surface-variant">
-                Totale Clienti
-              </h3>
+      <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden select-none font-sans">
+        {/* 1. Desktop Workstation Toolbar */}
+        <div className="h-10 bg-slate-50/70 border-b border-apple-border px-4 flex items-center justify-between text-[13px] flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 text-apple-secondary font-medium">
+              <span className="material-symbols-outlined text-[16px] text-apple-accent">
+                group
+              </span>
+              <span className="text-apple-text font-semibold">Anagrafica Clienti</span>
             </div>
-            <p className="font-headline-lg text-headline-lg text-on-surface font-bold tabular-nums">
-              {totalClients}
-            </p>
+            <div className="h-3.5 w-px bg-apple-border hidden md:block" />
+            <div className="flex items-center gap-1.5 bg-white px-2.5 py-0.5 rounded border border-apple-border text-[12px] text-apple-text focus-within:border-apple-accent">
+              <span className="material-symbols-outlined text-[14px] text-apple-secondary">search</span>
+              <input
+                type="text"
+                placeholder="Cerca per nome o email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-transparent border-none outline-none text-[12px] text-apple-text placeholder:text-apple-subtle w-48 focus:ring-0 p-0"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  className="text-apple-subtle hover:text-apple-text cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[13px]">close</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <span className="text-[12px] text-apple-secondary font-mono bg-slate-100 px-2.5 py-0.5 rounded hidden lg:inline">
+              Fatturato: {formatCurrency(totalInvoiced)}
+            </span>
+            <span
+              className={`text-[12px] font-mono px-2.5 py-0.5 rounded font-medium border ${
+                totalBalance > 0
+                  ? 'bg-rose-50 text-rose-600 border-rose-200/50'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200/50'
+              }`}
+            >
+              Crediti: {formatCurrency(totalBalance)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="h-7 px-3 bg-apple-accent hover:bg-apple-accent-hover text-white text-[12px] font-medium rounded flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[14px]">person_add</span>
+              <span>Nuovo Cliente</span>
+            </button>
           </div>
         </div>
 
-        {/* Client Table */}
-        <div className="bg-surface-container-low border border-outline-variant rounded-xl shadow-sm overflow-hidden">
-          <DataTable
-            data={filteredCustomers}
-            emptyMessage="Nessun cliente trovato."
-            headers={[
-              'Nome / Ragione Sociale',
-              'Email',
-              { align: 'right', text: 'Fatturato Totale' },
-              { align: 'right', text: 'Saldo Corrente' }
-            ]}
-            loading={loading}
-            renderRow={(c) => (
-              <tr
-                key={c.id}
-                className="hover:bg-surface-container-high transition-colors cursor-pointer"
-                onClick={() => {
-                  if (
-                    selectedCustomer &&
-                    selectedCustomer.id !== c.id &&
-                    allocType === 'manual' &&
-                    Object.values(manualAllocations).some((v) => parseFloat(v) > 0)
-                  ) {
-                    const confirmed = window.confirm(
-                      'Hai inserito allocazioni manuali per il cliente corrente. Cambiando cliente perderai questi dati non salvati. Continuare?'
-                    )
-                    if (!confirmed) return
-                  }
-                  setSelectedCustomer(c)
-                  loadCustomerDetail(c.id)
-                }}
-              >
-                <td className="py-sm px-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-xs">
-                      {getInitials(c.name)}
-                    </div>
-                    <span className="font-medium text-on-surface">{c.name}</span>
-                  </div>
-                </td>
-                <td className="py-sm px-sm text-on-surface-variant">{c.email || '-'}</td>
-                <td className="py-sm px-sm text-right font-medium tabular-nums">
-                  {formatCurrency(c.total_invoiced)}
-                </td>
-                <td className="py-sm px-sm text-right">
-                  {c.balance <= 0 ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container tabular-nums">
-                      {formatCurrency(c.balance)}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-error-container text-on-error-container tabular-nums">
-                      - {formatCurrency(c.balance)}
-                    </span>
-                  )}
-                </td>
+        {/* 2. Top Summary KPI Cards Strip */}
+        <div className="grid grid-cols-3 gap-3 p-3 bg-[#FAFAFA] border-b border-apple-border flex-shrink-0">
+          <div className="bg-white border border-apple-border rounded-lg p-3 shadow-xs">
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-apple-subtle">
+                Totale Clienti
+              </span>
+              <span className="material-symbols-outlined text-[18px] text-apple-accent">group</span>
+            </div>
+            <div className="font-mono font-bold text-[18px] text-apple-text">
+              {totalClients}
+            </div>
+            <div className="text-[11px] text-apple-subtle mt-0.5">
+              {filteredCustomers.length} anagrafiche filtrate
+            </div>
+          </div>
+
+          <div className="bg-white border border-apple-border rounded-lg p-3 shadow-xs">
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-apple-subtle">
+                Volume d&apos;Affari
+              </span>
+              <span className="material-symbols-outlined text-[18px] text-emerald-600">
+                trending_up
+              </span>
+            </div>
+            <div className="font-mono font-bold text-[18px] text-apple-text">
+              {formatCurrency(totalInvoiced)}
+            </div>
+            <div className="text-[11px] text-emerald-700 font-medium mt-0.5">
+              Fatturato complessivo emesso
+            </div>
+          </div>
+
+          <div className="bg-white border border-rose-200/60 rounded-lg p-3 shadow-xs bg-rose-50/30">
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-rose-600">
+                Crediti da Riscuotere
+              </span>
+              <span className="material-symbols-outlined text-[18px] text-rose-600">
+                pending
+              </span>
+            </div>
+            <div className="font-mono font-bold text-[18px] text-rose-600">
+              {formatCurrency(totalBalance)}
+            </div>
+            <div className="text-[11px] text-rose-600 mt-0.5">
+              Insoluto totale dei clienti
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Sub-strip */}
+        <div className="h-8 px-3 bg-white border-b border-apple-border flex items-center justify-between text-[13px] text-apple-secondary flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-apple-text">Rubrica Clienti</span>
+            <span className="text-apple-subtle font-mono text-[12px]">
+              ({filteredCustomers.length} anagrafiche trovate)
+            </span>
+          </div>
+          <span className="text-[11px] text-apple-subtle font-mono">
+            Ordinamento: Alfabetico (A-Z)
+          </span>
+        </div>
+
+        {/* 4. Dense High-Performance Desktop Table Grid */}
+        <div className="flex-1 overflow-y-auto min-h-0 bg-white">
+          <table className="w-full text-left border-collapse">
+            <thead className="sticky top-0 bg-slate-50 border-b border-apple-border text-[12px] uppercase font-semibold text-apple-subtle tracking-wider z-10">
+              <tr>
+                <th className="py-2 px-3 border-r border-apple-border/70">Ragione Sociale / Nome</th>
+                <th className="py-2 px-3 border-r border-apple-border/70 w-56">Email Principale</th>
+                <th className="py-2 px-3 border-r border-apple-border/70 text-right w-40">Fatturato Totale</th>
+                <th className="py-2 px-3 border-r border-apple-border/70 text-right w-36">Acconto Libero</th>
+                <th className="py-2 px-3 border-r border-apple-border/70 text-right w-40">Saldo da Ricevere</th>
+                <th className="py-2 px-3 text-center w-28">Scheda</th>
               </tr>
-            )}
-            renderSkeletonRow={(n) => (
-              <tr key={n}>
-                <td className="py-sm px-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-surface-container animate-pulse"></div>
-                    <div className="h-4 w-32 bg-surface-container rounded animate-pulse"></div>
-                  </div>
-                </td>
-                <td className="py-sm px-sm">
-                  <div className="h-4 w-48 bg-surface-container rounded animate-pulse"></div>
-                </td>
-                <td className="py-sm px-sm">
-                  <div className="h-4 w-24 bg-surface-container rounded ml-auto animate-pulse"></div>
-                </td>
-                <td className="py-sm px-sm">
-                  <div className="h-6 w-20 bg-surface-container rounded-full ml-auto animate-pulse"></div>
-                </td>
-              </tr>
-            )}
-          />
+            </thead>
+            <tbody className="divide-y divide-apple-border/50 text-[13px] text-apple-text font-normal font-sans">
+              {loading && customers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-apple-subtle">
+                    <span className="material-symbols-outlined text-[24px] animate-spin mb-1 block mx-auto text-apple-accent">
+                      progress_activity
+                    </span>
+                    Caricamento anagrafiche...
+                  </td>
+                </tr>
+              ) : filteredCustomers.map((c) => {
+                const availableAcc = c.total_acconto || 0
+                return (
+                  <tr
+                    key={c.id}
+                    onClick={() => {
+                      if (
+                        selectedCustomer &&
+                        selectedCustomer.id !== c.id &&
+                        allocType === 'manual' &&
+                        Object.values(manualAllocations).some((v) => parseFloat(v) > 0)
+                      ) {
+                        const confirmed = window.confirm(
+                          'Hai inserito allocazioni manuali per il cliente corrente. Cambiando cliente perderai questi dati non salvati. Continuare?'
+                        )
+                        if (!confirmed) return
+                      }
+                      setSelectedCustomer(c)
+                      loadCustomerDetail(c.id)
+                    }}
+                    className="hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    <td className="py-2 px-3 border-r border-apple-border/70">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-apple-accent/10 text-apple-accent font-bold text-[11px] flex items-center justify-center border border-apple-accent/20 flex-shrink-0">
+                          {getInitials(c.name)}
+                        </div>
+                        <span className="font-semibold text-apple-text truncate">
+                          {c.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-3 border-r border-apple-border/70 font-mono text-[12px] text-apple-secondary truncate">
+                      {c.email || '-'}
+                    </td>
+                    <td className="py-2 px-3 border-r border-apple-border/70 text-right font-mono font-medium text-apple-text whitespace-nowrap">
+                      {formatCurrency(c.total_invoiced)}
+                    </td>
+                    <td className="py-2 px-3 border-r border-apple-border/70 text-right font-mono whitespace-nowrap">
+                      {availableAcc > 0 ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[11px] border border-emerald-200/50">
+                          {formatCurrency(availableAcc)}
+                        </span>
+                      ) : (
+                        <span className="text-apple-subtle">-</span>
+                      )}
+                    </td>
+                    <td className="py-2 px-3 border-r border-apple-border/70 text-right font-mono whitespace-nowrap">
+                      {c.balance <= 0 ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                          <span className="w-1.5 h-1.5 rounded-full bg-apple-green" />
+                          In regola
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200/50">
+                          <span className="w-1.5 h-1.5 rounded-full bg-apple-red" />
+                          {formatCurrency(c.balance)}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-2 px-3 text-center whitespace-nowrap">
+                      <button
+                        type="button"
+                        className="h-6 px-2.5 rounded bg-white border border-apple-border text-apple-secondary hover:text-apple-text text-[11px] font-medium flex items-center justify-center gap-1 mx-auto transition cursor-pointer shadow-xs"
+                      >
+                        <span>Apri</span>
+                        <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+
+              {!loading && filteredCustomers.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-apple-subtle text-[13px]">
+                    Nessun cliente trovato con i criteri di ricerca specificati.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 5. Bottom Table Summary Bar */}
+        <div className="h-8 px-3 bg-slate-50 border-t border-apple-border flex items-center justify-between text-[12px] text-apple-secondary font-mono flex-shrink-0">
+          <span>{filteredCustomers.length} clienti visualizzati su {totalClients}</span>
+          <span className="font-semibold text-apple-text">
+            Totale Crediti da Ricevere: {formatCurrency(totalBalance)}
+          </span>
         </div>
 
         {/* Modal: Nuovo Cliente */}
         <Modal
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
-          title="Aggiungi Nuovo Cliente"
+          title="Nuova Anagrafica Cliente"
         >
-          <form onSubmit={handleSave} className="flex flex-col gap-5">
-            {formError && <p className="text-error font-label-md text-label-md">{formError}</p>}
+          <form onSubmit={handleSave} className="space-y-4">
+            {formError && (
+              <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200/60 text-[12px] text-rose-600 font-medium">
+                {formError}
+              </div>
+            )}
 
             <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-1">
-                Ragione Sociale / Nome <span className="text-error">*</span>
+              <label className="block text-[13px] font-medium text-apple-secondary mb-1">
+                Ragione Sociale / Nome <span className="text-rose-600">*</span>
               </label>
               <input
-                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+                className="w-full px-3 py-2 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text"
                 placeholder="es. Acme Corp S.p.A."
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                autoFocus
               />
             </div>
 
             <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-1">
+              <label className="block text-[13px] font-medium text-apple-secondary mb-1">
                 Indirizzo Email Principale
               </label>
               <input
-                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+                className="w-full px-3 py-2 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text font-mono"
                 placeholder="amministrazione@azienda.it"
                 type="email"
                 value={email}
@@ -656,17 +770,17 @@ export default function Customers() {
               />
             </div>
 
-            <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-outline-variant">
+            <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-apple-border">
               <button
                 type="button"
-                className="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg bg-white border border-apple-border text-apple-secondary hover:text-apple-text text-[13px] transition cursor-pointer"
                 onClick={() => setModalOpen(false)}
               >
                 Annulla
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-md font-label-md text-label-md bg-primary hover:bg-primary/90 text-on-primary transition-colors shadow-sm cursor-pointer"
+                className="px-4 py-1.5 rounded-lg bg-apple-accent hover:bg-apple-accent-hover text-white font-medium text-[13px] shadow-xs transition cursor-pointer"
               >
                 Salva Cliente
               </button>
@@ -682,52 +796,56 @@ export default function Customers() {
   const groupedClientPayments = groupPaymentsByReceipt(clientPayments)
 
   return (
-    <div>
-      {/* Back Button and Client Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <div className="space-y-1">
+    <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden select-none font-sans">
+      {/* 1. Desktop Workstation Toolbar */}
+      <div className="h-10 bg-slate-50/70 border-b border-apple-border px-4 flex items-center justify-between text-[13px] flex-shrink-0">
+        <div className="flex items-center gap-2.5">
           <button
-            className="flex items-center gap-1 text-primary hover:text-primary/80 font-label-md text-label-md transition-colors cursor-pointer"
+            type="button"
             onClick={() => setSelectedCustomer(null)}
+            className="h-7 px-2.5 bg-white hover:bg-slate-100 border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium rounded flex items-center gap-1 transition cursor-pointer shadow-xs"
           >
-            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-            {"Torna all'elenco clienti"}
+            <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+            <span>Tutti i Clienti</span>
           </button>
-          <div className="flex items-center gap-3 mt-2">
-            <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold text-sm">
+          <div className="h-4 w-px bg-apple-border" />
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-apple-accent/10 text-apple-accent font-bold text-[10px] flex items-center justify-center border border-apple-accent/20 flex-shrink-0">
               {getInitials(selectedCustomer.name)}
             </div>
-            <div>
-              <h2 className="font-headline-lg text-headline-lg text-on-surface font-semibold">
-                {selectedCustomer.name}
-              </h2>
-            </div>
+            <span className="font-bold text-apple-text text-[13px] truncate max-w-[200px] sm:max-w-xs">
+              {selectedCustomer.name}
+            </span>
           </div>
         </div>
 
         {/* Action Panel Buttons */}
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2">
           <button
-            className="flex-1 sm:flex-initial bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            type="button"
+            className="h-7 px-3 bg-apple-accent hover:bg-apple-accent-hover text-white text-[12px] font-medium rounded flex items-center gap-1.5 transition cursor-pointer shadow-xs"
             onClick={openReceiptModal}
           >
-            <span className="material-symbols-outlined text-[20px]">add_card</span>
-            Registra Incasso
+            <span className="material-symbols-outlined text-[15px]">add_card</span>
+            <span>Registra Incasso</span>
           </button>
           <button
-            className={`flex-1 sm:flex-initial font-label-md text-label-md px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer border ${
+            type="button"
+            className={`h-7 px-2.5 rounded text-[12px] font-medium flex items-center gap-1.5 transition shadow-xs ${
               availableCredit > 0
-                ? 'bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container border-secondary-container'
-                : 'bg-surface-container-low text-on-surface-variant/40 border-outline-variant/30 cursor-not-allowed'
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                : 'bg-slate-100 text-apple-subtle border border-apple-border/50 cursor-not-allowed opacity-60'
             }`}
             onClick={() => availableCredit > 0 && setAllocateModalOpen(true)}
             disabled={availableCredit <= 0}
+            title={availableCredit > 0 ? 'Alloca credito acconto esistente su fatture' : 'Nessun acconto disponibile'}
           >
-            <span className="material-symbols-outlined text-[20px]">swap_horiz</span>
-            Alloca Acconto
+            <span className="material-symbols-outlined text-[15px]">swap_horiz</span>
+            <span>Alloca Acconto</span>
           </button>
           <button
-            className="flex-1 sm:flex-initial bg-surface-container-low border border-outline hover:bg-surface-container-high text-on-surface font-label-md text-label-md px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            type="button"
+            className="h-7 px-2.5 bg-white hover:bg-slate-100 border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium rounded flex items-center gap-1 transition cursor-pointer shadow-xs"
             onClick={() => {
               setEditName(selectedCustomer.name)
               setEditEmail(selectedCustomer.email || '')
@@ -735,385 +853,564 @@ export default function Customers() {
               setEditCustomerModalOpen(true)
             }}
           >
-            <span className="material-symbols-outlined text-[20px]">edit</span>
-            Modifica
+            <span className="material-symbols-outlined text-[15px]">edit</span>
+            <span className="hidden sm:inline">Modifica</span>
           </button>
           <button
-            className="flex-1 sm:flex-initial bg-surface-container-low border border-error hover:bg-error-container/10 text-error font-label-md text-label-md px-5 py-2.5 rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer"
+            type="button"
+            className="h-7 px-2 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 text-[12px] font-medium rounded flex items-center gap-1 transition cursor-pointer shadow-xs"
             onClick={() => {
               setDeleteError('')
               setDeleteConfirmOpen(true)
             }}
+            title="Elimina anagrafica cliente"
           >
-            <span className="material-symbols-outlined text-[20px]">delete</span>
-            Elimina
+            <span className="material-symbols-outlined text-[15px]">delete</span>
+            <span className="hidden sm:inline">Elimina</span>
           </button>
         </div>
       </div>
 
-      {/* Customer Financial Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-surface-container-low border border-outline-variant rounded-xl p-md shadow-sm">
-          <span className="text-on-surface-variant font-label-sm text-label-sm block mb-1">
-            Fatturato Totale
-          </span>
-          <span className="text-headline-sm text-headline-sm font-bold tabular-nums">
+      {/* 2. Top Summary KPI Cards Strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-3 bg-[#FAFAFA] border-b border-apple-border flex-shrink-0">
+        <div className="bg-white border border-apple-border rounded-lg p-3 shadow-xs">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-apple-subtle">
+              Fatturato Storico
+            </span>
+            <span className="material-symbols-outlined text-[18px] text-apple-accent">receipt_long</span>
+          </div>
+          <div className="font-mono font-bold text-[18px] text-apple-text">
             {formatCurrency(selectedCustomer.total_invoiced)}
-          </span>
+          </div>
+          <div className="text-[11px] text-apple-subtle mt-0.5">
+            Totale documenti emessi
+          </div>
         </div>
-        <div className="bg-surface-container-low border border-outline-variant rounded-xl p-md shadow-sm">
-          <span className="text-on-surface-variant font-label-sm text-label-sm block mb-1">
-            Totale Incassato
-          </span>
-          <span className="text-headline-sm text-headline-sm font-bold tabular-nums text-secondary">
+
+        <div className="bg-white border border-apple-border rounded-lg p-3 shadow-xs">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-apple-subtle">
+              Totale Incassato
+            </span>
+            <span className="material-symbols-outlined text-[18px] text-emerald-600">payments</span>
+          </div>
+          <div className="font-mono font-bold text-[18px] text-emerald-700">
             {formatCurrency(selectedCustomer.total_paid)}
-          </span>
+          </div>
+          <div className="text-[11px] text-apple-subtle mt-0.5">
+            Pagamenti ricevuti e saldati
+          </div>
         </div>
-        <div className="bg-surface-container-low border border-outline-variant rounded-xl p-md shadow-sm">
-          <span className="text-on-surface-variant font-label-sm text-label-sm block mb-1">
-            Saldo da Ricevere
-          </span>
-          <span className="text-headline-sm text-headline-sm font-bold tabular-nums text-error">
+
+        <div className="bg-white border border-apple-border rounded-lg p-3 shadow-xs">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-apple-subtle">
+              Saldo da Ricevere
+            </span>
+            <span
+              className={`material-symbols-outlined text-[18px] ${
+                selectedCustomer.balance > 0 ? 'text-rose-600' : 'text-emerald-600'
+              }`}
+            >
+              hourglass_bottom
+            </span>
+          </div>
+          <div
+            className={`font-mono font-bold text-[18px] ${
+              selectedCustomer.balance > 0 ? 'text-rose-600' : 'text-apple-text'
+            }`}
+          >
             {formatCurrency(selectedCustomer.balance)}
-          </span>
+          </div>
+          <div className="text-[11px] text-apple-subtle mt-0.5">
+            {selectedCustomer.balance > 0 ? 'Credito residuo da incassare' : 'Nessun debito pendente'}
+          </div>
         </div>
-        <div className="bg-surface-container-low border border-outline-variant rounded-xl p-md shadow-sm">
-          <span className="text-on-surface-variant font-label-sm text-label-sm block mb-1">
-            Credito / Acconto Libero
-          </span>
-          <span
-            className={`text-headline-sm text-headline-sm font-bold tabular-nums ${availableCredit > 0 ? 'text-primary' : 'text-on-surface-variant/60'}`}
+
+        <div className="bg-white border border-apple-border rounded-lg p-3 shadow-xs">
+          <div className="flex items-center justify-between pb-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-apple-subtle">
+              Acconto / Credito Libero
+            </span>
+            <span
+              className={`material-symbols-outlined text-[18px] ${
+                availableCredit > 0 ? 'text-emerald-600' : 'text-apple-subtle'
+              }`}
+            >
+              account_balance_wallet
+            </span>
+          </div>
+          <div
+            className={`font-mono font-bold text-[18px] ${
+              availableCredit > 0 ? 'text-emerald-700' : 'text-apple-subtle'
+            }`}
           >
             {formatCurrency(availableCredit)}
-          </span>
+          </div>
+          <div className="text-[11px] text-apple-subtle mt-0.5">
+            {availableCredit > 0 ? 'Disponibile per compensazioni' : 'Nessun acconto non allocato'}
+          </div>
         </div>
       </div>
 
-      {/* Detail Tabs */}
-      <div className="border-b border-outline-variant flex gap-4 mb-6">
+      {/* 3. Segmented Tabs Header Bar */}
+      <div className="h-9 bg-slate-50 border-b border-apple-border px-3 flex items-center justify-between text-[12px] flex-shrink-0">
+        <div className="inline-flex items-center bg-slate-200/80 p-0.5 rounded-md text-[12px] font-medium">
+          <button
+            type="button"
+            onClick={() => setDetailTab('unpaid')}
+            className={`px-3 py-0.5 rounded transition cursor-pointer ${
+              detailTab === 'unpaid'
+                ? 'bg-white text-apple-text shadow-xs font-semibold'
+                : 'text-apple-secondary hover:text-apple-text'
+            }`}
+          >
+            Fatture Scoperte ({unpaidInvoices.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setDetailTab('payments')}
+            className={`px-3 py-0.5 rounded transition cursor-pointer ${
+              detailTab === 'payments'
+                ? 'bg-white text-apple-text shadow-xs font-semibold'
+                : 'text-apple-secondary hover:text-apple-text'
+            }`}
+          >
+            Storico Incassi ({groupedClientPayments.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setDetailTab('accounting')}
+            className={`px-3 py-0.5 rounded transition cursor-pointer ${
+              detailTab === 'accounting'
+                ? 'bg-white text-apple-text shadow-xs font-semibold'
+                : 'text-apple-secondary hover:text-apple-text'
+            }`}
+          >
+            Mastrino Contabile ({clientJournal.length})
+          </button>
+        </div>
+
         <button
-          className={`pb-sm font-label-md text-label-md transition-colors cursor-pointer border-b-2 px-1 ${
-            detailTab === 'unpaid'
-              ? 'border-primary text-primary font-semibold'
-              : 'border-transparent text-on-surface-variant hover:text-on-surface'
-          }`}
-          onClick={() => setDetailTab('unpaid')}
+          type="button"
+          onClick={() => loadCustomerDetail(selectedCustomer.id)}
+          className="h-6 px-2 bg-white hover:bg-slate-100 border border-apple-border text-apple-secondary hover:text-apple-text rounded text-[11px] font-medium flex items-center gap-1 shadow-xs transition cursor-pointer"
+          title="Ricarica dati cliente"
         >
-          Fatture Scoperte ({unpaidInvoices.length})
-        </button>
-        <button
-          className={`pb-sm font-label-md text-label-md transition-colors cursor-pointer border-b-2 px-1 ${
-            detailTab === 'payments'
-              ? 'border-primary text-primary font-semibold'
-              : 'border-transparent text-on-surface-variant hover:text-on-surface'
-          }`}
-          onClick={() => setDetailTab('payments')}
-        >
-          Storico Pagamenti ({clientPayments.length})
-        </button>
-        <button
-          className={`pb-sm font-label-md text-label-md transition-colors cursor-pointer border-b-2 px-1 ${
-            detailTab === 'accounting'
-              ? 'border-primary text-primary font-semibold'
-              : 'border-transparent text-on-surface-variant hover:text-on-surface'
-          }`}
-          onClick={() => setDetailTab('accounting')}
-        >
-          Prima Nota Cliente ({clientJournal.length})
+          <span className="material-symbols-outlined text-[13px]">sync</span>
+          <span className="hidden sm:inline">Aggiorna</span>
         </button>
       </div>
 
-      {/* TAB CONTENTS */}
-      <div className="bg-surface-container-low border border-outline-variant rounded-xl shadow-sm overflow-hidden min-h-[250px]">
+      {/* 4. Tab Content Container */}
+      <div className="flex-1 overflow-y-auto min-h-0 bg-white flex flex-col">
         {detailLoading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-on-surface-variant text-body-md">Caricamento in corso...</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-apple-subtle">
+            <span className="material-symbols-outlined text-[28px] animate-spin mb-2 text-apple-accent">
+              progress_activity
+            </span>
+            <p className="text-[13px]">Caricamento dati cliente in corso...</p>
           </div>
         ) : detailError ? (
-          <div className="p-8 text-center">
-            <p className="text-error text-body-md mb-sm">{detailError}</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <span className="material-symbols-outlined text-[32px] text-rose-500 mb-2">
+              error
+            </span>
+            <p className="text-rose-600 font-medium text-[13px] mb-2">{detailError}</p>
             <button
               type="button"
               onClick={() => loadCustomerDetail(selectedCustomer.id)}
-              className="text-primary font-label-md text-label-md hover:underline cursor-pointer"
+              className="h-7 px-3 rounded bg-white border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium shadow-xs cursor-pointer"
             >
               Riprova
             </button>
           </div>
         ) : detailTab === 'unpaid' ? (
-          <DataTable
-            headers={[
-              'N° Fattura',
-              'Data Emissione',
-              'Scadenza',
-              { text: 'Importo', align: 'right' },
-              { text: 'Incassato', align: 'right' },
-              { text: 'Saldo Residuo', align: 'right' },
-              { text: 'Azione', align: 'center' }
-            ]}
-            data={unpaidInvoices}
-            emptyMessage="Nessuna fattura scoperta trovata per questo cliente."
-            renderRow={(inv) => (
-              <tr key={inv.id} className="hover:bg-surface-container-high transition-colors">
-                <td className="py-xs px-sm font-medium">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenInvoiceEdit(inv)}
-                    className="text-primary hover:underline cursor-pointer font-semibold text-left focus:outline-none"
-                  >
-                    #{inv.id}
-                  </button>
-                </td>
-                <td className="py-xs px-sm text-on-surface-variant">
-                  {formatDate(inv.issue_date)}
-                </td>
-                <td className="py-xs px-sm text-on-surface-variant">{formatDate(inv.due_date)}</td>
-                <td className="py-xs px-sm text-right tabular-nums">
-                  {formatCurrency(inv.amount)}
-                </td>
-                <td className="py-xs px-sm text-right text-secondary tabular-nums">
-                  {formatCurrency(inv.total_paid)}
-                </td>
-                <td className="py-xs px-sm text-right font-medium text-error tabular-nums">
-                  {formatCurrency(inv.remaining_amount)}
-                </td>
-                <td className="py-xs px-sm text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      className="bg-primary-container text-on-primary-container hover:bg-primary-container/80 font-label-sm text-label-sm px-3 py-1.5 rounded transition-colors cursor-pointer"
-                      onClick={() => handleQuickPay(inv)}
-                    >
-                      Salda
-                    </button>
-                    <button
-                      className="p-1 hover:text-primary transition-colors cursor-pointer flex items-center"
-                      onClick={() => handleOpenInvoiceEdit(inv)}
-                      title="Dettaglio e Modifica"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">edit</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )}
-          />
-        ) : detailTab === 'payments' ? (
-          <DataTable
-            headers={['Data Incasso', 'Importo', 'Metodo', 'Destinazione Contabile']}
-            data={groupedClientPayments}
-            emptyMessage="Nessun pagamento registrato per questo cliente."
-            renderRow={(group) => {
-              if (group.items.length === 1) {
-                const pay = group.items[0]
-                return (
-                  <tr key={group.id} className="hover:bg-surface-container-high transition-colors">
-                    <td className="py-xs px-sm text-on-surface-variant">
-                      {formatDateTime(pay.payment_date)}
-                    </td>
-                    <td className="py-xs px-sm text-secondary font-medium tabular-nums">
-                      + {formatCurrency(pay.amount)}
-                    </td>
-                    <td className="py-xs px-sm">{pay.method}</td>
-                    <td className="py-xs px-sm font-medium">
-                      {pay.invoice_id ? (
-                        <span className="text-primary">Fattura #{pay.invoice_id}</span>
-                      ) : (
-                        <span className="inline-flex px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[11px] font-bold rounded-full">
-                          Acconto / Credito Libero
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              }
-
-              const isExpanded = !!expandedReceipts[group.id]
-              return (
-                <Fragment key={group.id}>
-                  <tr
-                    className="hover:bg-surface-container-high transition-colors cursor-pointer"
-                    onClick={() =>
-                      setExpandedReceipts((prev) => ({ ...prev, [group.id]: !prev[group.id] }))
-                    }
-                  >
-                    <td className="py-xs px-sm text-on-surface-variant">
-                      {formatDateTime(group.payment_date)}
-                    </td>
-                    <td className="py-xs px-sm text-secondary font-bold tabular-nums">
-                      + {formatCurrency(group.total)}
-                    </td>
-                    <td className="py-xs px-sm">{group.method}</td>
-                    <td className="py-xs px-sm font-medium">
-                      <span className="inline-flex items-center gap-1 text-on-surface-variant">
-                        <span className="material-symbols-outlined text-[18px]">
-                          {isExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
-                        </span>
-                        Split su {group.items.length} operazioni
-                      </span>
-                    </td>
-                  </tr>
-                  {isExpanded && (
-                    <tr className="bg-surface-container-lowest/30">
-                      <td colSpan="4" className="p-sm">
-                        <div className="ml-8 max-w-[420px] border border-outline-variant rounded-lg overflow-hidden bg-surface-container-lowest shadow-sm">
-                          <table className="w-full border-collapse text-left text-xs">
-                            <tbody>
-                              {group.items.map((pay) => (
-                                <tr key={pay.id} className="border-b border-outline-variant/30 last:border-b-0">
-                                  <td className="py-xs px-sm font-medium">
-                                    {pay.invoice_id ? (
-                                      <span className="text-primary">Fattura #{pay.invoice_id}</span>
-                                    ) : (
-                                      <span className="inline-flex px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[10px] font-bold rounded-full">
-                                        Acconto / Credito Libero
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="py-xs px-sm text-right font-semibold text-secondary tabular-nums">
-                                    + {formatCurrency(pay.amount)}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              )
-            }}
-          />
-        ) : (
-          /* ACCOUNTING PRIMA NOTA */
-          <div className="p-0">
-            {clientJournal.length === 0 ? (
-              <div className="p-8 text-center text-on-surface-variant text-body-md">
-                Nessuna registrazione contabile trovata.
-              </div>
-            ) : (
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-surface-container border-b border-outline-variant text-left">
-                    <th className="w-10"></th>
-                    <th className="py-xs px-sm font-label-sm text-label-sm text-on-surface-variant">
-                      Data
-                    </th>
-                    <th className="py-xs px-sm font-label-sm text-label-sm text-on-surface-variant">
-                      Descrizione
-                    </th>
-                    <th className="py-xs px-sm font-label-sm text-label-sm text-on-surface-variant">
-                      Rif. Tipo
-                    </th>
-                    <th className="py-xs px-sm font-label-sm text-label-sm text-on-surface-variant text-right">
-                      Valore
-                    </th>
-                    <th className="py-xs px-sm font-label-sm text-label-sm text-on-surface-variant text-center">
-                      Stato
-                    </th>
+          /* TAB: FATTURE SCOPERTE */
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 bg-slate-50 border-b border-apple-border text-[12px] uppercase font-semibold text-apple-subtle tracking-wider z-10">
+                  <tr>
+                    <th className="py-2 px-3 border-r border-apple-border/70 w-32">N° Fattura</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 w-32">Data Emissione</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 w-32">Scadenza</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 text-right w-36">Importo Totale</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 text-right w-36">Già Incassato</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 text-right w-40">Saldo Residuo</th>
+                    <th className="py-2 px-3 text-center w-36">Azioni</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {clientJournal.map((entry) => {
-                    const isExpanded = !!expandedJournal[entry.id]
-                    const totalAmount = entry.lines
-                      .filter((l) => l.type === 'debit')
-                      .reduce((sum, l) => sum + l.amount, 0)
-                    const totalCredit = entry.lines
-                      .filter((l) => l.type === 'credit')
-                      .reduce((sum, l) => sum + l.amount, 0)
-                    const isBalanced = Math.abs(totalAmount - totalCredit) < 0.01
-
-                    return (
-                      <Fragment key={entry.id}>
-                        <tr
-                          className="hover:bg-surface-container-high transition-colors cursor-pointer border-b border-outline-variant/60"
-                          onClick={() =>
-                            setExpandedJournal((prev) => ({ ...prev, [entry.id]: !prev[entry.id] }))
-                          }
-                        >
-                          <td className="py-xs px-sm text-center">
-                            <span className="material-symbols-outlined text-[20px] text-on-surface-variant">
-                              {isExpanded ? 'keyboard_arrow_up' : 'keyboard_arrow_down'}
-                            </span>
-                          </td>
-                          <td className="py-xs px-sm text-on-surface-variant tabular-nums">
-                            {formatDate(entry.entry_date)}
-                          </td>
-                          <td className="py-xs px-sm font-medium">{entry.description}</td>
-                          <td className="py-xs px-sm text-on-surface-variant capitalize">
-                            {entry.reference_type}
-                          </td>
-                          <td className="py-xs px-sm text-right font-medium tabular-nums">
-                            {formatCurrency(totalAmount)}
-                          </td>
-                          <td className="py-xs px-sm text-center">
-                            {isBalanced ? (
-                              <span className="inline-flex px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[11px] rounded-full">
-                                Bilanciato
-                              </span>
-                            ) : (
-                              <span className="inline-flex px-2 py-0.5 bg-error-container text-on-error-container text-[11px] rounded-full">
-                                Sbilanciato
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                        {isExpanded && (
-                          <tr className="bg-surface-container-lowest/30 border-b border-outline-variant">
-                            <td colSpan="6" className="p-sm">
-                              <div className="ml-8 max-w-[600px] border border-outline-variant rounded-lg overflow-hidden bg-surface-container-lowest shadow-sm">
-                                <table className="w-full border-collapse text-left">
-                                  <thead>
-                                    <tr className="bg-surface-container-low border-b border-outline-variant text-[11px] text-on-surface-variant">
-                                      <th className="py-xs px-sm">Conto Contabile</th>
-                                      <th className="py-xs px-sm text-right">Dare</th>
-                                      <th className="py-xs px-sm text-right">Avere</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {entry.lines.map((line) => (
-                                      <tr
-                                        key={line.id}
-                                        className="border-b border-outline-variant/30 text-xs"
-                                      >
-                                        <td className="py-xs px-sm font-medium">
-                                          {line.account_name}
-                                        </td>
-                                        <td className="py-xs px-sm text-right font-semibold text-on-surface tabular-nums">
-                                          {line.type === 'debit'
-                                            ? formatCurrency(line.amount)
-                                            : '-'}
-                                        </td>
-                                        <td className="py-xs px-sm text-right font-semibold text-on-surface tabular-nums">
-                                          {line.type === 'credit'
-                                            ? formatCurrency(line.amount)
-                                            : '-'}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                    <tr className="bg-surface-container-low font-bold text-xs border-t border-outline-variant">
-                                      <td className="py-xs px-sm">Totale (Doppio Controllo)</td>
-                                      <td className="py-xs px-sm text-right tabular-nums">
-                                        {formatCurrency(totalAmount)}
-                                      </td>
-                                      <td className="py-xs px-sm text-right tabular-nums">
-                                        {formatCurrency(totalAmount)}
-                                      </td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    )
-                  })}
+                <tbody className="divide-y divide-apple-border/50 text-[13px] text-apple-text font-normal font-sans">
+                  {unpaidInvoices.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-apple-subtle">
+                        <span className="material-symbols-outlined text-[32px] text-emerald-500 mb-1 block mx-auto">
+                          check_circle
+                        </span>
+                        <span className="text-[13px] font-medium text-apple-text block">
+                          Tutte le fatture risultano saldate
+                        </span>
+                        <span className="text-[12px] text-apple-subtle">
+                          Nessuna partita aperta o scaduta pendente per questo cliente.
+                        </span>
+                      </td>
+                    </tr>
+                  ) : (
+                    unpaidInvoices.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-slate-50 transition">
+                        <td className="py-1.5 px-3 border-r border-apple-border/70 font-mono text-[12px]">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenInvoiceEdit(inv)}
+                            className="text-apple-accent hover:underline font-semibold cursor-pointer"
+                          >
+                            #{inv.id}
+                          </button>
+                        </td>
+                        <td className="py-1.5 px-3 border-r border-apple-border/70 font-mono text-[12px] text-apple-secondary">
+                          {formatDate(inv.issue_date)}
+                        </td>
+                        <td className="py-1.5 px-3 border-r border-apple-border/70 font-mono text-[12px] text-apple-secondary">
+                          {formatDate(inv.due_date)}
+                        </td>
+                        <td className="py-1.5 px-3 border-r border-apple-border/70 text-right font-mono text-apple-text">
+                          {formatCurrency(inv.amount)}
+                        </td>
+                        <td className="py-1.5 px-3 border-r border-apple-border/70 text-right font-mono text-emerald-700">
+                          {formatCurrency(inv.total_paid)}
+                        </td>
+                        <td className="py-1.5 px-3 border-r border-apple-border/70 text-right font-mono font-semibold text-rose-600">
+                          {formatCurrency(inv.remaining_amount)}
+                        </td>
+                        <td className="py-1.5 px-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              className="h-6 px-2.5 rounded bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-[11px] font-semibold flex items-center gap-1 transition cursor-pointer shadow-xs"
+                              onClick={() => handleQuickPay(inv)}
+                              title="Salda questa fattura"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">payments</span>
+                              <span>Salda</span>
+                            </button>
+                            <button
+                              type="button"
+                              className="h-6 w-6 rounded bg-white hover:bg-slate-100 border border-apple-border text-apple-secondary hover:text-apple-text flex items-center justify-center transition cursor-pointer shadow-xs"
+                              onClick={() => handleOpenInvoiceEdit(inv)}
+                              title="Dettaglio e Modifica"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">edit</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
-            )}
+            </div>
+            {/* Bottom bar */}
+            <div className="h-8 px-3 bg-slate-50 border-t border-apple-border flex items-center justify-between text-[12px] text-apple-secondary font-mono flex-shrink-0">
+              <span>{unpaidInvoices.length} fatture scoperte</span>
+              <span className="font-semibold text-apple-text">
+                Totale Residuo da Saldare:{' '}
+                {formatCurrency(
+                  unpaidInvoices.reduce((sum, i) => sum + (i.remaining_amount ?? i.amount), 0)
+                )}
+              </span>
+            </div>
+          </div>
+        ) : detailTab === 'payments' ? (
+          /* TAB: STORICO INCASSI */
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 bg-slate-50 border-b border-apple-border text-[12px] uppercase font-semibold text-apple-subtle tracking-wider z-10">
+                  <tr>
+                    <th className="py-2 px-3 border-r border-apple-border/70 w-36">Data Incasso</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 text-right w-36">
+                      Importo Incassato
+                    </th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 w-36">Metodo</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70">Destinazione Contabile</th>
+                    <th className="py-2 px-3 text-center w-24">Dettagli</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-apple-border/50 text-[13px] text-apple-text font-normal font-sans">
+                  {groupedClientPayments.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-apple-subtle">
+                        <span className="material-symbols-outlined text-[32px] text-apple-subtle mb-1 block mx-auto">
+                          receipt_long
+                        </span>
+                        <span className="text-[13px] font-medium text-apple-text block">
+                          Nessun incasso registrato
+                        </span>
+                        <span className="text-[12px] text-apple-subtle">
+                          Non sono ancora presenti movimenti di cassa per questo cliente.
+                        </span>
+                      </td>
+                    </tr>
+                  ) : (
+                    groupedClientPayments.map((group) => {
+                      if (group.items.length === 1) {
+                        const pay = group.items[0]
+                        return (
+                          <tr key={group.id} className="hover:bg-slate-50 transition">
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 font-mono text-[12px] text-apple-secondary">
+                              {formatDateTime(pay.payment_date)}
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 text-right font-mono font-semibold text-emerald-700">
+                              + {formatCurrency(pay.amount)}
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 font-medium text-apple-text">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-apple-secondary text-[11px]">
+                                {pay.method}
+                              </span>
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 font-medium">
+                              {pay.invoice_id ? (
+                                <span className="text-apple-accent font-mono text-[12px]">
+                                  Fattura #{pay.invoice_id}
+                                </span>
+                              ) : (
+                                <span className="inline-flex px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/50 text-[11px] font-bold rounded">
+                                  Acconto / Credito Libero
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-1.5 px-3 text-center text-apple-subtle text-[12px]">
+                              -
+                            </td>
+                          </tr>
+                        )
+                      }
+
+                      const isExpanded = !!expandedReceipts[group.id]
+                      return (
+                        <Fragment key={group.id}>
+                          <tr
+                            className="hover:bg-slate-50 transition cursor-pointer"
+                            onClick={() =>
+                              setExpandedReceipts((prev) => ({ ...prev, [group.id]: !prev[group.id] }))
+                            }
+                          >
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 font-mono text-[12px] text-apple-secondary">
+                              {formatDateTime(group.payment_date)}
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 text-right font-mono font-bold text-emerald-700">
+                              + {formatCurrency(group.total)}
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 font-medium text-apple-text">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-apple-secondary text-[11px]">
+                                {group.method}
+                              </span>
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 font-medium">
+                              <span className="inline-flex items-center gap-1.5 text-apple-accent text-[12px]">
+                                <span className="material-symbols-outlined text-[16px]">
+                                  {isExpanded ? 'expand_less' : 'expand_more'}
+                                </span>
+                                Split su {group.items.length} operazioni
+                              </span>
+                            </td>
+                            <td className="py-1.5 px-3 text-center">
+                              <span className="material-symbols-outlined text-[16px] text-apple-secondary">
+                                {isExpanded ? 'expand_less' : 'expand_more'}
+                              </span>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="bg-slate-50/70">
+                              <td colSpan={5} className="py-2.5 px-6">
+                                <div className="max-w-[480px] bg-white border border-apple-border rounded-lg shadow-xs overflow-hidden">
+                                  <div className="h-7 px-3 bg-slate-50 border-b border-apple-border flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-apple-subtle">
+                                    <span>Ripartizione Incasso</span>
+                                    <span>Importo</span>
+                                  </div>
+                                  <table className="w-full text-left border-collapse text-[12px]">
+                                    <tbody className="divide-y divide-apple-border/40 font-mono">
+                                      {group.items.map((pay) => (
+                                        <tr key={pay.id} className="hover:bg-slate-50/50">
+                                          <td className="py-1.5 px-3 font-medium">
+                                            {pay.invoice_id ? (
+                                              <span className="text-apple-accent">
+                                                Fattura #{pay.invoice_id}
+                                              </span>
+                                            ) : (
+                                              <span className="inline-flex px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200/50 text-[10px] font-bold rounded">
+                                                Acconto / Credito Libero
+                                              </span>
+                                            )}
+                                          </td>
+                                          <td className="py-1.5 px-3 text-right font-semibold text-emerald-700">
+                                            + {formatCurrency(pay.amount)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* Bottom bar */}
+            <div className="h-8 px-3 bg-slate-50 border-t border-apple-border flex items-center justify-between text-[12px] text-apple-secondary font-mono flex-shrink-0">
+              <span>{groupedClientPayments.length} operazioni registrate</span>
+              <span className="font-semibold text-apple-text">
+                Totale Incassi:{' '}
+                {formatCurrency(groupedClientPayments.reduce((sum, g) => sum + g.total, 0))}
+              </span>
+            </div>
+          </div>
+        ) : (
+          /* TAB: MASTRINO PRIMA NOTA */
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 bg-slate-50 border-b border-apple-border text-[12px] uppercase font-semibold text-apple-subtle tracking-wider z-10">
+                  <tr>
+                    <th className="py-2 px-3 border-r border-apple-border/70 w-10 text-center"></th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 w-32">Data</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70">Descrizione Movimento</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 w-32">Registro</th>
+                    <th className="py-2 px-3 border-r border-apple-border/70 text-right w-36">Valore (€)</th>
+                    <th className="py-2 px-3 text-center w-32">Quadratura</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-apple-border/50 text-[13px] text-apple-text font-normal font-sans">
+                  {clientJournal.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-apple-subtle">
+                        <span className="material-symbols-outlined text-[32px] text-apple-subtle mb-1 block mx-auto">
+                          account_tree
+                        </span>
+                        <span className="text-[13px] font-medium text-apple-text block">
+                          Nessuna scrittura contabile
+                        </span>
+                        <span className="text-[12px] text-apple-subtle">
+                          Nessun movimento in Prima Nota registrato per questo cliente.
+                        </span>
+                      </td>
+                    </tr>
+                  ) : (
+                    clientJournal.map((entry) => {
+                      const isExpanded = !!expandedJournal[entry.id]
+                      const totalAmount = entry.lines
+                        .filter((l) => l.type === 'debit')
+                        .reduce((sum, l) => sum + l.amount, 0)
+                      const totalCredit = entry.lines
+                        .filter((l) => l.type === 'credit')
+                        .reduce((sum, l) => sum + l.amount, 0)
+                      const isBalanced = Math.abs(totalAmount - totalCredit) < 0.01
+
+                      return (
+                        <Fragment key={entry.id}>
+                          <tr
+                            className="hover:bg-slate-50 transition cursor-pointer"
+                            onClick={() =>
+                              setExpandedJournal((prev) => ({ ...prev, [entry.id]: !prev[entry.id] }))
+                            }
+                          >
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 text-center">
+                              <span className="material-symbols-outlined text-[16px] text-apple-secondary">
+                                {isExpanded ? 'expand_less' : 'expand_more'}
+                              </span>
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 text-apple-secondary font-mono text-[12px]">
+                              {formatDate(entry.entry_date)}
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 font-medium text-apple-text">
+                              {entry.description}
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 text-apple-secondary capitalize font-mono text-[12px]">
+                              {entry.reference_type}
+                            </td>
+                            <td className="py-1.5 px-3 border-r border-apple-border/70 text-right font-mono font-medium text-apple-text">
+                              {formatCurrency(totalAmount)}
+                            </td>
+                            <td className="py-1.5 px-3 text-center">
+                              {isBalanced ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-apple-green" />
+                                  Bilanciato
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200/50">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-apple-red" />
+                                  Sbilanciato
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="bg-slate-50/70">
+                              <td colSpan={6} className="py-2.5 px-6">
+                                <div className="max-w-[620px] bg-white border border-apple-border rounded-lg shadow-xs overflow-hidden">
+                                  <table className="w-full text-left border-collapse text-[12px]">
+                                    <thead className="bg-slate-50 border-b border-apple-border text-[11px] uppercase font-semibold text-apple-subtle tracking-wider">
+                                      <tr>
+                                        <th className="py-1.5 px-3 border-r border-apple-border/70">Conto Contabile</th>
+                                        <th className="py-1.5 px-3 border-r border-apple-border/70 text-right w-28">
+                                          Dare (€)
+                                        </th>
+                                        <th className="py-1.5 px-3 text-right w-28">Avere (€)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-apple-border/40 font-mono">
+                                      {entry.lines.map((line) => (
+                                        <tr key={line.id} className="hover:bg-slate-50/50">
+                                          <td className="py-1.5 px-3 border-r border-apple-border/70 font-sans text-apple-text font-medium">
+                                            {line.account_name}
+                                          </td>
+                                          <td className="py-1.5 px-3 border-r border-apple-border/70 text-right text-apple-text">
+                                            {line.type === 'debit' ? formatCurrency(line.amount) : '-'}
+                                          </td>
+                                          <td className="py-1.5 px-3 text-right text-apple-text">
+                                            {line.type === 'credit' ? formatCurrency(line.amount) : '-'}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      <tr className="bg-slate-50 border-t border-apple-border font-bold text-[12px]">
+                                        <td className="py-1.5 px-3 border-r border-apple-border/70 font-sans text-apple-text">
+                                          Totale Registrazione
+                                        </td>
+                                        <td className="py-1.5 px-3 border-r border-apple-border/70 text-right text-apple-text">
+                                          {formatCurrency(totalAmount)}
+                                        </td>
+                                        <td className="py-1.5 px-3 text-right text-apple-text">
+                                          {formatCurrency(totalCredit)}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* Bottom bar */}
+            <div className="h-8 px-3 bg-slate-50 border-t border-apple-border flex items-center justify-between text-[12px] text-apple-secondary font-mono flex-shrink-0">
+              <span>{clientJournal.length} registrazioni in Prima Nota</span>
+              <span className="font-semibold text-apple-text">
+                Partita Doppia Quadrata
+              </span>
+            </div>
           </div>
         )}
       </div>
@@ -1122,32 +1419,37 @@ export default function Customers() {
       <Modal
         isOpen={receiptModalOpen}
         onClose={() => setReceiptModalOpen(false)}
-        title="Registra Incasso Avanzato"
+        title="Registra Incasso"
       >
-        <form onSubmit={handleRegisterReceipt} className="flex flex-col gap-4">
-          {receiptError && <p className="text-error font-label-md text-label-md">{receiptError}</p>}
+        <form onSubmit={handleRegisterReceipt} className="space-y-4">
+          {receiptError && (
+            <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200/60 text-[12px] text-rose-600 font-medium">
+              {receiptError}
+            </div>
+          )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-label-sm text-label-sm text-on-surface mb-1">
-                Importo Ricevuto (€) <span className="text-error">*</span>
+              <label className="block text-[12px] font-medium text-apple-secondary mb-1">
+                Importo Ricevuto (€) <span className="text-rose-600">*</span>
               </label>
               <input
-                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface text-body-md text-on-surface focus:outline-none focus:border-primary"
+                className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text font-mono"
                 placeholder="0.00"
                 type="number"
                 step="0.01"
                 value={receiptAmount}
                 onChange={(e) => setReceiptAmount(e.target.value)}
                 required
+                autoFocus
               />
             </div>
             <div>
-              <label className="block font-label-sm text-label-sm text-on-surface mb-1">
-                Data Incasso
+              <label className="block text-[12px] font-medium text-apple-secondary mb-1">
+                Data Incasso <span className="text-rose-600">*</span>
               </label>
               <input
-                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface text-body-md text-on-surface focus:outline-none focus:border-primary"
+                className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text font-mono"
                 type="date"
                 value={receiptDate}
                 onChange={(e) => setReceiptDate(e.target.value)}
@@ -1157,33 +1459,31 @@ export default function Customers() {
           </div>
 
           <div>
-            <label className="block font-label-sm text-label-sm text-on-surface mb-1">
+            <label className="block text-[12px] font-medium text-apple-secondary mb-1">
               Metodo di Pagamento
             </label>
             <select
-              className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface text-body-md text-on-surface focus:outline-none focus:border-primary"
+              className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text"
               value={receiptMethod}
               onChange={(e) => setReceiptMethod(e.target.value)}
             >
+              <option value="Contanti">Contanti</option>
               <option value="Bonifico">Bonifico Bancario</option>
               <option value="Carta">Carta di Credito</option>
-              <option value="Contanti">Contanti</option>
               <option value="Altro">Altro</option>
             </select>
           </div>
 
-          <div className="border-t border-outline-variant pt-3">
+          <div className="border-t border-apple-border pt-3">
             {unpaidInvoices.length === 0 && (
-              <div className="bg-primary/10 border border-primary/20 rounded p-3 text-xs mb-3 flex items-start gap-2">
-                <span className="material-symbols-outlined text-[18px] text-primary">info</span>
+              <div className="bg-blue-50/70 border border-blue-200/60 rounded-lg p-2.5 text-[12px] mb-3 flex items-start gap-2">
+                <span className="material-symbols-outlined text-[16px] text-apple-accent mt-0.5">info</span>
                 <div>
-                  <p className="font-semibold text-on-surface">
+                  <p className="font-semibold text-apple-text">
                     Nessuna fattura scoperta da saldare
                   </p>
-                  <p className="text-on-surface-variant mt-0.5">
-                    {
-                      "Tutte le fatture di questo cliente risultano pagate. L'intero importo dell'incasso verrà registrato come acconto (credito disponibile)."
-                    }
+                  <p className="text-apple-secondary mt-0.5">
+                    Tutte le fatture risultano pagate. L&apos;intero importo verrà registrato come credito/acconto libero del cliente.
                   </p>
                 </div>
               </div>
@@ -1191,16 +1491,16 @@ export default function Customers() {
 
             {unpaidInvoices.length > 0 && (
               <>
-                <span className="block font-label-sm text-label-sm text-on-surface mb-2 font-semibold">
+                <span className="block text-[12px] font-medium text-apple-secondary mb-1.5">
                   Modalità Distribuzione Fondi
                 </span>
                 <div className="grid grid-cols-3 gap-2 mb-3">
                   <button
                     type="button"
-                    className={`py-2 px-2 border rounded text-xs font-semibold cursor-pointer text-center ${
+                    className={`py-1.5 px-2 border rounded-lg text-[12px] font-medium transition cursor-pointer text-center ${
                       allocType === 'auto'
-                        ? 'border-primary bg-primary/10 text-primary font-bold'
-                        : 'border-outline-variant text-on-surface-variant'
+                        ? 'border-apple-accent bg-apple-accent text-white shadow-xs font-semibold'
+                        : 'border-apple-border bg-white text-apple-secondary hover:text-apple-text hover:bg-slate-50'
                     }`}
                     onClick={() => setAllocType('auto')}
                   >
@@ -1208,10 +1508,10 @@ export default function Customers() {
                   </button>
                   <button
                     type="button"
-                    className={`py-2 px-2 border rounded text-xs font-semibold cursor-pointer text-center ${
+                    className={`py-1.5 px-2 border rounded-lg text-[12px] font-medium transition cursor-pointer text-center ${
                       allocType === 'manual'
-                        ? 'border-primary bg-primary/10 text-primary font-bold'
-                        : 'border-outline-variant text-on-surface-variant'
+                        ? 'border-apple-accent bg-apple-accent text-white shadow-xs font-semibold'
+                        : 'border-apple-border bg-white text-apple-secondary hover:text-apple-text hover:bg-slate-50'
                     }`}
                     onClick={() => setAllocType('manual')}
                   >
@@ -1219,10 +1519,10 @@ export default function Customers() {
                   </button>
                   <button
                     type="button"
-                    className={`py-2 px-2 border rounded text-xs font-semibold cursor-pointer text-center ${
+                    className={`py-1.5 px-2 border rounded-lg text-[12px] font-medium transition cursor-pointer text-center ${
                       allocType === 'acconto'
-                        ? 'border-primary bg-primary/10 text-primary font-bold'
-                        : 'border-outline-variant text-on-surface-variant'
+                        ? 'border-apple-accent bg-apple-accent text-white shadow-xs font-semibold'
+                        : 'border-apple-border bg-white text-apple-secondary hover:text-apple-text hover:bg-slate-50'
                     }`}
                     onClick={() => setAllocType('acconto')}
                   >
@@ -1232,10 +1532,10 @@ export default function Customers() {
               </>
             )}
 
-            {/* Render conditional inputs for manual allocation */}
+            {/* Manual allocation table */}
             {unpaidInvoices.length > 0 && allocType === 'manual' && (
               <>
-                <div className="space-y-2 max-h-[160px] overflow-y-auto border border-outline-variant/60 rounded p-2 bg-surface-container-lowest">
+                <div className="space-y-1.5 max-h-[160px] overflow-y-auto border border-apple-border rounded-lg p-2 bg-slate-50/50">
                   {unpaidInvoices.map((inv) => {
                     const remaining = inv.remaining_amount ?? inv.amount
                     const val = parseFloat(manualAllocations[inv.id])
@@ -1243,19 +1543,22 @@ export default function Customers() {
                     return (
                       <div
                         key={inv.id}
-                        className="flex flex-col gap-1 py-1 border-b border-outline-variant/30 last:border-b-0"
+                        className="flex flex-col gap-0.5 py-1 border-b border-apple-border/40 last:border-b-0"
                       >
-                        <div className="flex justify-between items-center text-xs">
+                        <div className="flex justify-between items-center text-[12px]">
                           <span
-                            className={`font-medium ${inputError ? 'text-error font-bold' : 'text-on-surface'}`}
+                            className={`font-medium ${inputError ? 'text-rose-600 font-bold' : 'text-apple-text'}`}
                           >
-                            #{inv.id} (Rimanente: {formatCurrency(remaining)})
+                            Fattura #{inv.id}{' '}
+                            <span className="text-apple-secondary font-mono text-[11px]">
+                              (Residuo: {formatCurrency(remaining)})
+                            </span>
                           </span>
                           <input
-                            className={`w-24 border rounded px-2 py-1 bg-surface text-right tabular-nums text-on-surface focus:outline-none ${
+                            className={`w-28 px-2 py-1 rounded border text-right font-mono text-[12px] bg-white transition focus:outline-none ${
                               inputError
-                                ? 'border-error focus:border-error text-error bg-error-container/20 font-bold'
-                                : 'border-outline-variant focus:border-primary'
+                                ? 'border-rose-500 focus:border-rose-500 text-rose-600 bg-rose-50 font-bold'
+                                : 'border-apple-border focus:border-apple-accent'
                             }`}
                             placeholder="0.00"
                             type="number"
@@ -1270,10 +1573,10 @@ export default function Customers() {
                           />
                         </div>
                         {inputError && (
-                          <span className="text-[10px] text-error text-right font-medium">
+                          <span className="text-[10px] text-rose-600 text-right font-medium">
                             {val < 0
                               ? "L'importo deve essere positivo"
-                              : `Supera il saldo di ${formatCurrency(remaining)}`}
+                              : `Supera il residuo di ${formatCurrency(remaining)}`}
                           </span>
                         )}
                       </div>
@@ -1284,18 +1587,18 @@ export default function Customers() {
                   const restante = getManualRemaining()
                   return (
                     <div
-                      className={`mt-2 p-2 rounded text-xs font-semibold flex justify-between items-center ${
+                      className={`mt-2 p-2 rounded-lg text-[12px] font-semibold flex justify-between items-center ${
                         restante > 0.005
-                          ? 'bg-primary-container/20 text-primary border border-primary/20'
+                          ? 'bg-blue-50 text-apple-accent border border-blue-200/60'
                           : Math.abs(restante) <= 0.005
-                            ? 'bg-success-container/20 text-success border border-success/20'
-                            : 'bg-error-container/20 text-error border border-error/20'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                            : 'bg-rose-50 text-rose-600 border border-rose-200/60'
                       }`}
                     >
-                      <span>Restante da attribuire:</span>
-                      <span className="tabular-nums font-bold">
+                      <span>Restante da distribuire:</span>
+                      <span className="font-mono font-bold">
                         {formatCurrency(restante)}
-                        {restante > 0.005 && ' (in acconto)'}
+                        {restante > 0.005 && ' (in acconto libero)'}
                       </span>
                     </div>
                   )
@@ -1305,9 +1608,9 @@ export default function Customers() {
 
             {unpaidInvoices.length > 0 && allocType === 'auto' && (
               <>
-                <p className="text-xs text-on-surface-variant/80 italic mb-2">
-                  I fondi verranno usati per pagare le fatture scoperte partendo dalla più vecchia
-                  (data scadenza). Eventuali eccedenze verranno registrate come acconto.
+                <p className="text-[12px] text-apple-secondary italic mb-2">
+                  I fondi verranno usati per estinguere le fatture partendo dalla più vecchia
+                  (per scadenza). L&apos;eventuale surplus verrà salvato come credito acconto.
                 </p>
                 {(() => {
                   const total = parseFloat(receiptAmount) || 0
@@ -1320,14 +1623,14 @@ export default function Customers() {
                     remaining -= toPay
                   }
                   return (
-                    <div className="p-2 rounded text-xs bg-surface-container-low border border-outline-variant/30 text-on-surface-variant space-y-1">
+                    <div className="p-2.5 rounded-lg text-[12px] bg-slate-50 border border-apple-border text-apple-secondary space-y-1 font-mono">
                       <div className="flex justify-between">
-                        <span>Assegnato a fatture scoperte:</span>
-                        <span className="font-semibold">{formatCurrency(allocated)}</span>
+                        <span>Assegnato a fatture:</span>
+                        <span className="font-semibold text-apple-text">{formatCurrency(allocated)}</span>
                       </div>
                       {remaining > 0 && (
-                        <div className="flex justify-between text-primary font-semibold">
-                          <span>Eccedenza (in acconto):</span>
+                        <div className="flex justify-between text-emerald-700 font-semibold">
+                          <span>Eccedenza (acconto cliente):</span>
                           <span>{formatCurrency(remaining)}</span>
                         </div>
                       )}
@@ -1338,25 +1641,23 @@ export default function Customers() {
             )}
 
             {(unpaidInvoices.length === 0 || allocType === 'acconto') && (
-              <p className="text-xs text-on-surface-variant/80 italic">
-                {
-                  "L'intero importo verrà registrato come acconto sul conto del cliente, per essere allocato successivamente."
-                }
+              <p className="text-[12px] text-apple-secondary italic">
+                L&apos;intero importo verrà registrato come credito acconto disponibile nel conto del cliente.
               </p>
             )}
           </div>
 
-          <div className="mt-4 flex justify-end gap-3 pt-3 border-t border-outline-variant">
+          <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-apple-border">
             <button
               type="button"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-white border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium transition cursor-pointer shadow-xs"
               onClick={() => setReceiptModalOpen(false)}
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-primary hover:bg-primary/90 text-on-primary transition-colors shadow-sm cursor-pointer"
+              className="px-4 py-1.5 rounded-lg bg-apple-accent hover:bg-apple-accent-hover text-white font-medium text-[12px] shadow-xs transition cursor-pointer"
             >
               Registra Incasso
             </button>
@@ -1370,21 +1671,26 @@ export default function Customers() {
         onClose={() => setAllocateModalOpen(false)}
         title="Alloca Credito Acconto"
       >
-        <form onSubmit={handleAllocateCredit} className="flex flex-col gap-4">
+        <form onSubmit={handleAllocateCredit} className="space-y-4">
           {allocCreditError && (
-            <p className="text-error font-label-md text-label-md">{allocCreditError}</p>
+            <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200/60 text-[12px] text-rose-600 font-medium">
+              {allocCreditError}
+            </div>
           )}
 
-          <div>
-            <span className="block font-label-sm text-label-sm text-on-surface-variant mb-1">
-              Credito Disponibile:{' '}
-              <strong className="text-primary">{formatCurrency(availableCredit)}</strong>
+          <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200/60 flex items-center justify-between text-[12px]">
+            <span className="text-emerald-800 font-medium">Credito Disponibile da Allocare:</span>
+            <span className="font-mono font-bold text-emerald-800 text-[14px]">
+              {formatCurrency(availableCredit)}
             </span>
-            <label className="block font-label-sm text-label-sm text-on-surface mb-1 mt-2">
-              Importo da Allocare (€) <span className="text-error">*</span>
+          </div>
+
+          <div>
+            <label className="block text-[12px] font-medium text-apple-secondary mb-1">
+              Importo da Allocare (€) <span className="text-rose-600">*</span>
             </label>
             <input
-              className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface text-body-md text-on-surface focus:outline-none focus:border-primary"
+              className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text font-mono"
               placeholder="0.00"
               type="number"
               step="0.01"
@@ -1392,26 +1698,30 @@ export default function Customers() {
               value={allocCreditAmount}
               onChange={(e) => setAllocCreditAmount(e.target.value)}
               required
+              autoFocus
             />
           </div>
 
-          <div className="border-t border-outline-variant pt-3">
-            <span className="block font-label-sm text-label-sm text-on-surface mb-2 font-semibold">
+          <div className="border-t border-apple-border pt-3">
+            <span className="block text-[12px] font-medium text-apple-secondary mb-1.5">
               Distribuzione su Fatture Scoperte
             </span>
-            <div className="space-y-2 max-h-[200px] overflow-y-auto border border-outline-variant/60 rounded p-2 bg-surface-container-lowest">
+            <div className="space-y-1.5 max-h-[200px] overflow-y-auto border border-apple-border rounded-lg p-2 bg-slate-50/50">
               {unpaidInvoices.length === 0 ? (
-                <p className="text-xs text-on-surface-variant text-center py-2">
+                <p className="text-[12px] text-apple-subtle text-center py-4">
                   Nessuna fattura scoperta da saldare.
                 </p>
               ) : (
                 unpaidInvoices.map((inv) => (
-                  <div key={inv.id} className="flex justify-between items-center text-xs">
-                    <span className="font-medium text-on-surface font-semibold">
-                      #{inv.id} (Rimanente: {formatCurrency(inv.remaining_amount)})
+                  <div key={inv.id} className="flex justify-between items-center text-[12px] py-1 border-b border-apple-border/40 last:border-b-0">
+                    <span className="font-medium text-apple-text">
+                      Fattura #{inv.id}{' '}
+                      <span className="text-apple-secondary font-mono text-[11px]">
+                        (Residuo: {formatCurrency(inv.remaining_amount)})
+                      </span>
                     </span>
                     <input
-                      className="w-24 border border-outline-variant rounded px-2 py-1 bg-surface text-right tabular-nums text-on-surface focus:outline-none"
+                      className="w-28 px-2 py-1 rounded border border-apple-border text-right font-mono text-[12px] bg-white focus:outline-none focus:border-apple-accent"
                       placeholder="0.00"
                       type="number"
                       step="0.01"
@@ -1429,17 +1739,17 @@ export default function Customers() {
             </div>
           </div>
 
-          <div className="mt-4 flex justify-end gap-3 pt-3 border-t border-outline-variant">
+          <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-apple-border">
             <button
               type="button"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-white border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium transition cursor-pointer shadow-xs"
               onClick={() => setAllocateModalOpen(false)}
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-primary hover:bg-primary/90 text-on-primary transition-colors shadow-sm cursor-pointer"
+              className="px-4 py-1.5 rounded-lg bg-apple-accent hover:bg-apple-accent-hover text-white font-medium text-[12px] shadow-xs transition cursor-pointer"
             >
               Alloca Credito
             </button>
@@ -1451,49 +1761,52 @@ export default function Customers() {
       <Modal
         isOpen={editCustomerModalOpen}
         onClose={() => setEditCustomerModalOpen(false)}
-        title="Modifica Cliente"
+        title="Modifica Anagrafica Cliente"
       >
-        <form onSubmit={handleEditCustomerSubmit} className="flex flex-col gap-5">
+        <form onSubmit={handleEditCustomerSubmit} className="space-y-4">
           {editFormError && (
-            <p className="text-error font-label-md text-label-md">{editFormError}</p>
+            <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200/60 text-[12px] text-rose-600 font-medium">
+              {editFormError}
+            </div>
           )}
 
           <div>
-            <label className="block font-label-md text-label-md text-on-surface mb-1">
-              Ragione Sociale / Nome <span className="text-error">*</span>
+            <label className="block text-[12px] font-medium text-apple-secondary mb-1">
+              Ragione Sociale / Nome <span className="text-rose-600">*</span>
             </label>
             <input
-              className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+              className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text"
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               required
+              autoFocus
             />
           </div>
 
           <div>
-            <label className="block font-label-md text-label-md text-on-surface mb-1">
+            <label className="block text-[12px] font-medium text-apple-secondary mb-1">
               Indirizzo Email Principale
             </label>
             <input
-              className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+              className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text font-mono"
               type="email"
               value={editEmail}
               onChange={(e) => setEditEmail(e.target.value)}
             />
           </div>
 
-          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-outline-variant">
+          <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-apple-border">
             <button
               type="button"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-white border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium transition cursor-pointer shadow-xs"
               onClick={() => setEditCustomerModalOpen(false)}
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-primary hover:bg-primary/90 text-on-primary transition-colors shadow-sm cursor-pointer"
+              className="px-4 py-1.5 rounded-lg bg-apple-accent hover:bg-apple-accent-hover text-white font-medium text-[12px] shadow-xs transition cursor-pointer"
             >
               Salva Modifiche
             </button>
@@ -1507,23 +1820,30 @@ export default function Customers() {
         onClose={() => setDeleteConfirmOpen(false)}
         title="Elimina Cliente"
       >
-        <div className="flex flex-col gap-4">
-          {deleteError && <p className="text-error font-label-md text-label-md">{deleteError}</p>}
-          <p className="text-body-md text-on-surface">
-            Sei sicuro di voler eliminare il cliente <strong>{selectedCustomer?.name}</strong>?
-            Questa operazione è irreversibile.
-          </p>
-          <div className="mt-4 flex justify-end gap-3 pt-3 border-t border-outline-variant">
+        <div className="space-y-4">
+          {deleteError && (
+            <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200/60 text-[12px] text-rose-600 font-medium">
+              {deleteError}
+            </div>
+          )}
+          <div className="p-3 bg-slate-50 border border-apple-border rounded-lg text-[13px] text-apple-text">
+            Sei sicuro di voler eliminare definitivamente il cliente{' '}
+            <strong className="text-apple-text">{selectedCustomer?.name}</strong>?
+            <p className="text-[12px] text-apple-subtle mt-1">
+              Questa operazione è irreversibile e cancellerà l&apos;anagrafica.
+            </p>
+          </div>
+          <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-apple-border">
             <button
               type="button"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-white border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium transition cursor-pointer shadow-xs"
               onClick={() => setDeleteConfirmOpen(false)}
             >
               Annulla
             </button>
             <button
               type="button"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-error hover:bg-error/90 text-on-error transition-colors shadow-sm cursor-pointer"
+              className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium text-[12px] shadow-xs transition cursor-pointer"
               onClick={handleDeleteCustomer}
             >
               Conferma Eliminazione
@@ -1536,47 +1856,49 @@ export default function Customers() {
       <Modal
         isOpen={invoiceEditModalOpen}
         onClose={() => setInvoiceEditModalOpen(false)}
-        title={`Dettaglio e Modifica Fattura ${selectedInvoiceToEdit?.id}`}
+        title={`Dettaglio Fattura #${selectedInvoiceToEdit?.id || ''}`}
       >
-        <form onSubmit={handleUpdateInvoice} className="flex flex-col gap-5">
+        <form onSubmit={handleUpdateInvoice} className="space-y-4">
           {invoiceEditError && (
-            <p className="text-error font-label-md text-label-md">{invoiceEditError}</p>
+            <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200/60 text-[12px] text-rose-600 font-medium">
+              {invoiceEditError}
+            </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-1">
+              <label className="block text-[12px] font-medium text-apple-secondary mb-1">
                 ID Fattura (Immutabile)
               </label>
               <input
-                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface-container-low text-on-surface-variant font-body-md opacity-75 cursor-not-allowed"
+                className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-slate-100 text-apple-subtle font-mono cursor-not-allowed"
                 type="text"
                 value={selectedInvoiceToEdit?.id || ''}
                 disabled
               />
             </div>
             <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-1">
-                Cliente <span className="text-error">*</span>
+              <label className="block text-[12px] font-medium text-apple-secondary mb-1">
+                Cliente <span className="text-rose-600">*</span>
               </label>
               <SearchableSelect
                 options={customers}
                 value={invoiceEditCustomerId}
                 onChange={setInvoiceEditCustomerId}
-                placeholder="Seleziona o cerca cliente..."
+                placeholder="Seleziona cliente..."
                 noResultsText="Nessun cliente trovato"
                 required
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-1">
-                Data Emissione <span className="text-error">*</span>
+              <label className="block text-[12px] font-medium text-apple-secondary mb-1">
+                Data Emissione <span className="text-rose-600">*</span>
               </label>
               <input
-                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+                className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text font-mono"
                 type="date"
                 value={invoiceEditIssueDate}
                 onChange={(e) => setInvoiceEditIssueDate(e.target.value)}
@@ -1584,11 +1906,11 @@ export default function Customers() {
               />
             </div>
             <div>
-              <label className="block font-label-md text-label-md text-on-surface mb-1">
-                Scadenza <span className="text-error">*</span>
+              <label className="block text-[12px] font-medium text-apple-secondary mb-1">
+                Scadenza <span className="text-rose-600">*</span>
               </label>
               <input
-                className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+                className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text font-mono"
                 type="date"
                 value={invoiceEditDueDate}
                 onChange={(e) => setInvoiceEditDueDate(e.target.value)}
@@ -1598,11 +1920,11 @@ export default function Customers() {
           </div>
 
           <div>
-            <label className="block font-label-md text-label-md text-on-surface mb-1">
-              Importo (€) <span className="text-error">*</span>
+            <label className="block text-[12px] font-medium text-apple-secondary mb-1">
+              Importo Fattura (€) <span className="text-rose-600">*</span>
             </label>
             <input
-              className="w-full border border-outline-variant rounded-md px-3 py-2 bg-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-body-md font-body-md text-on-surface"
+              className="w-full px-3 py-1.5 rounded-lg border border-apple-border text-[13px] bg-white focus:outline-none focus:border-apple-accent focus:ring-1 focus:ring-apple-accent transition text-apple-text font-mono"
               placeholder="0.00"
               type="number"
               step="0.01"
@@ -1613,33 +1935,33 @@ export default function Customers() {
           </div>
 
           {selectedInvoiceToEdit && (
-            <div className="bg-surface-container-low border border-outline-variant/60 rounded p-3 text-xs space-y-1">
+            <div className="bg-slate-50 border border-apple-border rounded-lg p-2.5 text-[12px] space-y-1 font-mono">
               <div className="flex justify-between">
-                <span className="text-on-surface-variant font-medium">Totale Incassato:</span>
-                <span className="font-semibold text-secondary tabular-nums">
+                <span className="text-apple-secondary font-sans">Totale Già Incassato:</span>
+                <span className="font-semibold text-emerald-700">
                   {formatCurrency(selectedInvoiceToEdit.total_paid || 0)}
                 </span>
               </div>
-              <div className="flex justify-between border-t border-outline-variant/30 pt-1">
-                <span className="text-on-surface-variant font-medium">Saldo Residuo:</span>
-                <span className="font-semibold text-error tabular-nums">
+              <div className="flex justify-between border-t border-apple-border/40 pt-1">
+                <span className="text-apple-secondary font-sans">Saldo Residuo:</span>
+                <span className="font-semibold text-rose-600">
                   {formatCurrency(selectedInvoiceToEdit.remaining_amount || 0)}
                 </span>
               </div>
             </div>
           )}
 
-          <div className="mt-6 flex justify-end gap-3 pt-4 border-t border-outline-variant">
+          <div className="mt-5 flex justify-end gap-2 pt-3 border-t border-apple-border">
             <button
               type="button"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg bg-white border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium transition cursor-pointer shadow-xs"
               onClick={() => setInvoiceEditModalOpen(false)}
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-md font-label-md text-label-md bg-primary hover:bg-primary/90 text-on-primary transition-colors shadow-sm cursor-pointer"
+              className="px-4 py-1.5 rounded-lg bg-apple-accent hover:bg-apple-accent-hover text-white font-medium text-[12px] shadow-xs transition cursor-pointer"
             >
               Salva Modifiche
             </button>

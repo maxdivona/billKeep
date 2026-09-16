@@ -1,96 +1,72 @@
 import { NavLink } from 'react-router-dom'
-import { useStore } from '../store/useStore'
 
 export default function Sidebar({ isOpen = false, onNavigate }) {
-  const setSpotlightOpen = useStore((state) => state.setSpotlightOpen)
-
-  const linkClass = ({ isActive }) =>
-    `flex items-center gap-md px-sm py-sm rounded-lg transition-colors duration-200 ease-in-out ${
-      isActive
-        ? 'text-primary dark:text-inverse-primary font-bold border-r-4 border-primary dark:border-inverse-primary bg-surface-container-low'
-        : 'text-on-surface-variant hover:text-primary hover:bg-surface-container-low'
-    }`
+  const navItems = [
+    { to: '/', label: 'Dashboard', icon: 'dashboard' },
+    { to: '/invoices', label: 'Fatture', icon: 'receipt_long' },
+    { to: '/clients', label: 'Clienti', icon: 'group' },
+    { to: '/payments', label: 'Pagamenti', icon: 'payments' }
+  ]
 
   return (
-    <nav
-      className={`bg-surface text-primary font-body-md text-body-md h-screen w-64 fixed left-0 top-0 border-r border-outline-variant flex flex-col py-md px-md z-30 transform transition-transform duration-200 ease-in-out md:translate-x-0 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
-    >
-      <div className="mb-lg mt-sm">
-        <h1 className="font-headline-lg text-headline-lg font-bold text-primary">BillKeep</h1>
-        <p className="font-label-sm text-label-sm text-on-surface-variant mt-xs">
-          Gestione Finanziaria
-        </p>
-      </div>
-
-      <div className="mb-md">
-        <button
-          onClick={() => setSpotlightOpen(true)}
-          className="flex items-center justify-between gap-md px-sm py-[7px] rounded-lg border border-outline-variant/50 hover:border-outline-variant/80 transition-all duration-200 text-on-surface-variant hover:text-primary hover:bg-surface-container-low cursor-pointer w-full text-left font-body-md text-body-md"
-          title="Cerca globalmente o digita comandi (Alt+S o Alt+F)"
-        >
-          <div className="flex items-center gap-md">
-            <span className="material-symbols-outlined">search</span>
-            <span className="text-on-surface-variant/70">Cerca...</span>
+    <aside className="w-60 bg-apple-sidebar border-r border-apple-border flex flex-col justify-between py-2 select-none flex-shrink-0 z-20">
+      <div className="flex-1 overflow-y-auto px-2 space-y-3.5">
+        {/* Section: Operatività */}
+        <div className="pt-1">
+          <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-apple-subtle">
+            Operatività
           </div>
-          <span className="text-[10px] font-medium text-on-surface-variant/50 tracking-wider">
-            Alt+S
-          </span>
-        </button>
-      </div>
-
-      <hr className="border-t border-outline-variant/40 mb-md" />
-
-      <ul className="flex flex-col gap-sm flex-grow">
-        <li>
-          <NavLink to="/" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined fill">dashboard</span>
-            Dashboard
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/clients" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">group</span>
-            Clienti
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/invoices" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">receipt_long</span>
-            Fatture
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/payments" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">payments</span>
-            Pagamenti
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/journal" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">menu_book</span>
-            Prima Nota
-          </NavLink>
-        </li>
-        <li>
-          <NavLink to="/settings" className={linkClass} onClick={onNavigate}>
-            <span className="material-symbols-outlined">settings</span>
-            Impostazioni
-          </NavLink>
-        </li>
-      </ul>
-
-      <div className="mt-auto pt-md border-t border-outline-variant">
-        <div className="flex items-center gap-md">
-          <span className="material-symbols-outlined text-[36px] text-on-surface-variant">
-            account_circle
-          </span>
-          <div className="flex flex-col">
-            <span className="font-label-md text-label-md text-on-surface">Amministratore</span>
-          </div>
+          <nav className="space-y-0.5 text-[14px]">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  `flex items-center gap-2 px-2.5 py-1.5 rounded transition ${
+                    isActive
+                      ? 'bg-black/[0.08] text-apple-text font-semibold'
+                      : 'text-apple-secondary hover:bg-black/[0.04] hover:text-apple-text font-medium'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span
+                      className={`material-symbols-outlined text-[17px] ${
+                        isActive ? 'text-apple-accent' : ''
+                      }`}
+                    >
+                      {item.icon}
+                    </span>
+                    <span>{item.label}</span>
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </nav>
         </div>
       </div>
-    </nav>
+
+      {/* Bottom Sidebar Footer */}
+      <div className="px-2 pt-2 border-t border-apple-border/70">
+        <NavLink
+          to="/settings"
+          onClick={onNavigate}
+          className={({ isActive }) =>
+            `px-2.5 py-1.5 flex items-center justify-between text-[13px] rounded transition cursor-pointer ${
+              isActive
+                ? 'bg-black/[0.08] text-apple-text font-semibold'
+                : 'text-apple-secondary hover:bg-black/[0.04] hover:text-apple-text font-medium'
+            }`
+          }
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[17px]">settings</span>
+            <span className="font-medium">Preferenze</span>
+          </div>
+        </NavLink>
+      </div>
+    </aside>
   )
 }
