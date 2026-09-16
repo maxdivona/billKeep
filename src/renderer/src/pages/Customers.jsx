@@ -799,28 +799,28 @@ export default function Customers() {
     <div className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden select-none font-sans">
       {/* 1. Desktop Workstation Toolbar */}
       <div className="h-10 bg-slate-50/70 border-b border-apple-border px-4 flex items-center justify-between text-[13px] flex-shrink-0">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <button
             type="button"
             onClick={() => setSelectedCustomer(null)}
-            className="h-7 px-2.5 bg-white hover:bg-slate-100 border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium rounded flex items-center gap-1 transition cursor-pointer shadow-xs"
+            className="h-7 px-2.5 bg-white hover:bg-slate-100 border border-apple-border text-apple-secondary hover:text-apple-text text-[12px] font-medium rounded flex items-center gap-1 transition cursor-pointer shadow-xs flex-shrink-0"
           >
             <span className="material-symbols-outlined text-[15px]">arrow_back</span>
-            <span>Tutti i Clienti</span>
+            <span className="hidden sm:inline">Tutti i Clienti</span>
           </button>
-          <div className="h-4 w-px bg-apple-border" />
-          <div className="flex items-center gap-2">
+          <div className="h-4 w-px bg-apple-border flex-shrink-0" />
+          <div className="flex items-center gap-2 min-w-0">
             <div className="w-6 h-6 rounded-full bg-apple-accent/10 text-apple-accent font-bold text-[10px] flex items-center justify-center border border-apple-accent/20 flex-shrink-0">
               {getInitials(selectedCustomer.name)}
             </div>
-            <span className="font-bold text-apple-text text-[13px] truncate max-w-[200px] sm:max-w-xs">
+            <span className="font-bold text-apple-text text-[13px] truncate min-w-0">
               {selectedCustomer.name}
             </span>
           </div>
         </div>
 
         {/* Action Panel Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button
             type="button"
             className="h-7 px-3 bg-apple-accent hover:bg-apple-accent-hover text-white text-[12px] font-medium rounded flex items-center gap-1.5 transition cursor-pointer shadow-xs"
