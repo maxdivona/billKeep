@@ -35,7 +35,7 @@ export const useStore = create((set, get) => ({
     totalCount: 0,
     hasMore: false,
     search: '',
-    status: ''
+    status: 'unpaid'
   },
 
   paginatedPayments: [],
