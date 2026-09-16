@@ -1,4 +1,4 @@
-# 📘 Manuale Tecnico e Linee Guida di Sviluppo: BillKeep (v1.3.2)
+# 📘 Manuale Tecnico e Linee Guida di Sviluppo: BillKeep (v1.6.1)
 
 Questo documento stabilisce l'architettura tecnica, le best practices e gli standard di codifica per lo sviluppo dell'applicazione desktop locale di gestione fatture, pagamenti e contabilità in partita doppia (Prima Nota).
 
@@ -314,3 +314,50 @@ Tutte le modifiche (UPDATE) e le cancellazioni (DELETE) su clienti, fatture e pa
 3. **Pagamenti (Payments)**:
    - **Modifica**: L'aggiornamento di importo, data o metodo ricalcola lo stato della fattura collegata e aggiorna la prima nota. Le righe generate tramite compensazione (metodo `Uso Credito`) non possono essere modificate direttamente.
    - **Cancellazione**: Cancella il pagamento e la prima nota correlata, ricalcola lo stato della fattura e, se si tratta di un'allocazione (metodo `Uso Credito`), ripristina automaticamente l'acconto di origine come credito libero per il cliente.
+
+---
+
+## 🔄 10. Aggiornamenti Automatici (Tauri Updater) e Release
+
+L'app usa `tauri-plugin-updater` + `tauri-plugin-process` per controllare, scaricare e installare da sola le nuove versioni, con prompt una tantum per versione (se l'utente rifiuta, non viene più interrotto finché non esce una versione successiva — vedi `src/renderer/src/components/UpdateManager.jsx` e `UpdateModal.jsx`).
+
+### Come funziona
+
+- Ad ogni build, `tauri build` genera `latest.json` (grazie a `"createUpdaterArtifacts": true` in `tauri.conf.json`) insieme agli installer, e lo firma con la chiave privata dell'updater.
+- L'app, all'avvio, scarica `https://github.com/maxdivona/billKeep/releases/latest/download/latest.json` (endpoint configurato in `tauri.conf.json > plugins.updater.endpoints`), verifica la firma con la chiave pubblica incorporata (`plugins.updater.pubkey`) e propone l'installazione.
+
+### Vincolo: il repository deve restare pubblico
+
+L'endpoint sopra è una richiesta anonima, senza autenticazione. Su un repository **privato** GitHub risponde 404 e l'updater fallisce con `"Could not fetch a valid release JSON from the remote"`. Se in futuro serve tornare privati, l'auto-update va ripensato (es. proxy pubblico che si autentica al posto dell'app) prima di farlo.
+
+### Chiave di firma: dove vive e cosa succede se si perde
+
+La chiave privata **non è nel repository** (mai committarla). Vive esclusivamente come due secret di GitHub Actions:
+
+- `TAURI_SIGNING_PRIVATE_KEY` (contenuto del file `.key` generato con `tauri signer generate`)
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+
+Se si perde la chiave (o la password), **non è più possibile firmare nuove release compatibili**: tutte le installazioni esistenti smettono di poter aggiornarsi automaticamente e va rigenerata una nuova coppia di chiavi (nuovo `pubkey` in `tauri.conf.json`, nuovi secret), il che equivale a "ripartire da zero" per l'auto-update — gli utenti esistenti dovranno reinstallare manualmente almeno una volta.
+
+Quando si incolla il valore dei secret su GitHub, controllare che non ci siano righe vuote o a-capo aggiunti in coda (errore comune copiando da un blocco di codice): causa errori come `Invalid symbol 10` (chiave) o `Wrong password for that key` (password) al momento della build.
+
+### Pubblicare una nuova release
+
+```bash
+# 1. Aggiorna la versione ovunque (mantenendole allineate):
+#    package.json, package-lock.json, src-tauri/tauri.conf.json,
+#    src-tauri/Cargo.toml, src-tauri/Cargo.lock
+
+# 2. Verifica localmente prima di pushare
+npm run lint
+npm run vite-build
+cd src-tauri && cargo check
+
+# 3. Commit e push su main
+git push origin main
+
+# 4. Avvia il workflow "Release Windows" da GitHub Actions
+#    (workflow_dispatch, oppure push di un tag v*)
+```
+
+Il workflow compila su `windows-latest`, pubblica una GitHub Release (non-draft, non-prerelease) con installer NSIS/MSI, le rispettive firme `.sig` e `latest.json`.
